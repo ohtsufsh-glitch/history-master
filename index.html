@@ -50,6 +50,8 @@
     #import-preview { white-space:pre-wrap; line-height:1.65; overflow-wrap:anywhere; }
     .import-error { color:#a33723; font-weight:600; }
     .import-success { color:#1b7056; font-weight:600; }
+    .backup-status { white-space:pre-wrap; line-height:1.65; overflow-wrap:anywhere; }
+    .backup-warn { padding:10px 12px; border-radius:10px; border:1px solid #edcda8; background:#fff7ec; color:#794d1c; font-size:.9rem; line-height:1.6; }
     #notice { color: #98571d; min-height: 1.5em; }
     @media (max-width: 430px) {
       header { flex-wrap: wrap; }
@@ -83,6 +85,19 @@
       <div id="import-preview" class="small" role="status" aria-live="polite">ファイル選択後、内容を検査します。</div>
       <button id="import-apply" type="button" class="primary hidden">検査した新規問題を追加する</button>
       <p class="muted small">※ 同じ問題IDは追加しません。問題の削除・上書きは行いません。教材データをGitHubの公開リポジトリに置かないでください。</p>
+    </div>
+    <button id="toggle-backup" class="import-toggle" type="button" aria-expanded="false">＋ バックアップ・復元</button>
+    <div id="backup-panel" class="import-panel hidden">
+      <h3>学習データのバックアップ</h3>
+      <p class="muted small">取り込んだ問題・娘さんの学習履歴・テスト履歴・回答記録・中断状態をまとめてJSONに書き出します。ファイルは外部サーバーに送信しません。</p>
+      <button id="backup-export" class="primary" type="button">バックアップJSONを書き出す</button>
+      <p class="muted small">Safariのダウンロード先を確認し、必要に応じて「ファイル」アプリからiCloud Driveへ保存してください。書き出したJSONをGitHubにアップロードしないでください。</p>
+      <h3 style="margin-top:24px">バックアップから復元</h3>
+      <div class="backup-warn">注意：復元すると、現在の取り込み問題・両モードの学習履歴・途中状態を、バックアップの内容で<strong>すべて置き換えます</strong>。復元する前に、現在のデータもバックアップしてください。</div>
+      <label for="backup-file" style="display:block;margin-top:14px"><strong>復元するJSONファイルを選択</strong></label>
+      <input id="backup-file" type="file" accept=".json,application/json">
+      <div id="backup-preview" class="backup-status small" role="status" aria-live="polite">ファイルを選択すると、復元前に内容を検査します。</div>
+      <button id="backup-restore" class="primary hidden" type="button">現在のデータを置き換えて復元する</button>
     </div>
     <p class="muted small" style="margin-top:18px">※ 内蔵問題は公開可能な自作サンプルです。外部から読み込んだ問題はこの端末のSafariにのみ保存されます。</p>
   </section>
@@ -140,6 +155,8 @@ const DB_VERSION = 2; // questionsストアを追加するだけの安全な更�
 let QUESTIONS = [...SAMPLE_QUESTIONS];
 let pendingImport = null;
 let importing = false;
+let backingUp = false;
+let pendingRestore = null;
 let db;
 let profile = "test"; // 安全のため、起動時は毎回テスト用。
 let currentEra = null;
@@ -249,7 +266,7 @@ function setImportPreview(message, cssClass="") {
   out.className = `small ${cssClass}`;
 }
 async function previewImport() {
-  if (importing || saving) return;
+  if (importing || saving || backingUp) return;
   pendingImport = null;
   $("import-apply").classList.add("hidden");
   const file = $("import-file").files?.[0];
@@ -283,7 +300,7 @@ function saveNewQuestions(newQuestions) {
   });
 }
 async function applyImport() {
-  if (importing || saving || !pendingImport?.length) return;
+  if (importing || saving || backingUp || !pendingImport?.length) return;
   importing = true;
   $("import-apply").disabled = true;
   const toAdd = pendingImport;
@@ -305,6 +322,173 @@ async function applyImport() {
   }
 }
 
+
+// バックアップは端末内でJSONファイルを生成するのみ。ネットワーク通信は行わない。
+const BACKUP_FORMAT = "history-master-backup";
+const BACKUP_VERSION = 1;
+const BACKUP_STORES = ["questions", "progress", "sessions", "answers"];
+function snapshotAllStores() {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(BACKUP_STORES, "readonly");
+    const requests = Object.fromEntries(BACKUP_STORES.map(name => [name, tx.objectStore(name).getAll()]));
+    tx.oncomplete = () => resolve(Object.fromEntries(BACKUP_STORES.map(name => [name, requests[name].result])));
+    tx.onerror = () => reject(tx.error || new Error("読み出しエラー"));
+    tx.onabort = () => reject(tx.error || new Error("読み出し中止"));
+  });
+}
+async function exportBackup() {
+  if (saving || importing || backingUp) return;
+  backingUp = true;
+  $("backup-export").disabled = true;
+  try {
+    const snapshot = await snapshotAllStores();
+    const now = new Date();
+    const content = JSON.stringify({
+      backupFormat: BACKUP_FORMAT,
+      backupVersion: BACKUP_VERSION,
+      exportedAt: now.toISOString(),
+      data: snapshot
+    }, null, 2);
+    const blob = new Blob([content], {type: "application/json"});
+    const objectURL = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectURL;
+    link.download = `history-master-backup-${now.toISOString().slice(0,10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(objectURL), 60000);
+    notice("バックアップの書き出しを開始しました。Safariのダウンロード先を確認してください。");
+  } catch (error) {
+    console.error(error);
+    notice("バックアップを書き出せませんでした。データは変更されていません。");
+  } finally {
+    backingUp = false;
+    $("backup-export").disabled = false;
+  }
+}
+function isNonemptyString(value, max=4000) {
+  return typeof value === "string" && value.trim().length > 0 && value.length <= max;
+}
+function isProfile(value) { return value === "test" || value === "student"; }
+function validIndexList(values, max) {
+  return Array.isArray(values) && new Set(values).size === values.length && values.every(i => Number.isInteger(i) && i >= 0 && i < max);
+}
+function validateBackup(obj) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.backupFormat !== BACKUP_FORMAT || obj.backupVersion !== BACKUP_VERSION || !obj.data || typeof obj.data !== "object") {
+    throw new Error("このアプリのバックアップ形式ではありません（バージョン1が必要です）。");
+  }
+  const data = obj.data;
+  const maxSizes = {questions:20000, progress:100000, sessions:100, answers:300000};
+  for (const name of BACKUP_STORES) {
+    if (!Array.isArray(data[name]) || data[name].length > maxSizes[name]) throw new Error(`${name} のデータ件数が不正です。`);
+  }
+  const eras = new Set(ERAS.map(x => x[0]));
+  const builtinIDs = new Set(SAMPLE_QUESTIONS.map(q => q.id));
+  const allQuestions = new Map(SAMPLE_QUESTIONS.map(q => [q.id, q]));
+  for (const q of data.questions) {
+    if (!q || !isNonemptyString(q.id,64) || !/^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$/.test(q.id) || builtinIDs.has(q.id) || allQuestions.has(q.id) || !eras.has(q.era) || !isNonemptyString(q.q,2000) || !Array.isArray(q.options) || q.options.length < 2 || q.options.length > 6 || !q.options.every(opt => isNonemptyString(opt,500)) || !validIndexList(q.answers,q.options.length) || q.answers.length === 0 || !isNonemptyString(q.why,4000)) {
+      throw new Error("問題データが不正、または問題IDが重複しています。");
+    }
+    allQuestions.set(q.id,q);
+  }
+  const seenProgress = new Set();
+  for (const p of data.progress) {
+    if (!p || !isProfile(p.profile) || !allQuestions.has(p.questionId) || p.key !== `${p.profile}:${p.questionId}` || seenProgress.has(p.key) || !Number.isSafeInteger(p.attempts) || p.attempts < 1 || !Number.isSafeInteger(p.streak) || p.streak < 0 || typeof p.everWrong !== "boolean" || typeof p.mastered !== "boolean" || p.mastered !== (p.streak >= 2) || !isNonemptyString(p.lastAnsweredAt,64)) {
+      throw new Error("学習履歴の形式または問題IDの対応が不正です。");
+    }
+    seenProgress.add(p.key);
+  }
+  const seenSessions = new Set();
+  for (const ss of data.sessions) {
+    const q = allQuestions.get(ss?.questionId);
+    if (!ss || !isProfile(ss.profile) || !eras.has(ss.era) || ss.key !== `${ss.profile}:${ss.era}` || seenSessions.has(ss.key) || !q || q.era !== ss.era || !["question", "result"].includes(ss.phase) || !validIndexList(ss.selected,q.options.length)) {
+      throw new Error("中断・再開情報に不整合があります。");
+    }
+    if (ss.phase === "result" && !ss.selected.length) throw new Error("回答済み状態の選択情報がありません。");
+    seenSessions.add(ss.key);
+  }
+  const seenAnswers = new Set();
+  for (const ev of data.answers) {
+    const q = allQuestions.get(ev?.questionId);
+    if (!ev || !Number.isSafeInteger(ev.id) || ev.id < 1 || seenAnswers.has(ev.id) || !isProfile(ev.profile) || !q || typeof ev.correct !== "boolean" || !validIndexList(ev.selected,q.options.length) || ev.selected.length === 0 || !isNonemptyString(ev.at,64)) {
+      throw new Error("回答記録の形式が不正です。");
+    }
+    seenAnswers.add(ev.id);
+  }
+  return data;
+}
+function setBackupPreview(message, cssClass="") {
+  $("backup-preview").textContent = message;
+  $("backup-preview").className = `backup-status small ${cssClass}`;
+}
+async function previewRestore() {
+  if (saving || importing || backingUp) return;
+  pendingRestore = null;
+  $("backup-restore").classList.add("hidden");
+  const file = $("backup-file").files?.[0];
+  if (!file) return;
+  if (file.size > 40 * 1024 * 1024) {
+    setBackupPreview("40MB以下のバックアップファイルを選択してください。", "import-error");
+    return;
+  }
+  try {
+    const data = validateBackup(JSON.parse(await file.text()));
+    pendingRestore = data;
+    setBackupPreview(`検査OK（${file.name}）\n取り込み問題：${data.questions.length}問\n学習履歴：${data.progress.length}件\n中断情報：${data.sessions.length}件\n回答記録：${data.answers.length}件\n\n「復元する」を押すと、現在の問題と本番・テスト両方の学習履歴がすべて置き換わります。`);
+    $("backup-restore").classList.remove("hidden");
+  } catch (error) {
+    setBackupPreview("復元できません：" + error.message + "\n現在のデータは変更されていません。", "import-error");
+  }
+}
+function replaceAllStores(data) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(BACKUP_STORES, "readwrite");
+    for (const name of BACKUP_STORES) {
+      const store = tx.objectStore(name);
+      store.clear();
+      for (const entry of data[name]) store.put(entry);
+    }
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error || new Error("復元エラー"));
+    tx.onabort = () => reject(tx.error || new Error("復元中止"));
+  });
+}
+async function applyRestore() {
+  if (saving || importing || backingUp || !pendingRestore) return;
+  if (!confirm("現在の取り込み問題・娘さんの学習履歴・テスト履歴・中断情報を、バックアップの内容ですべて置き換えます。\n現在のデータのバックアップは作成しましたか？\n\n復元を実行しますか？")) return;
+  backingUp = true;
+  $("backup-restore").disabled = true;
+  const data = pendingRestore;
+  try {
+    validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:BACKUP_VERSION,data});
+    await replaceAllStores(data); // 1つのトランザクションで一括変更。途中失敗なら全変更がロールバックされる。
+    await loadImportedQuestions();
+    profile = "test";
+    currentEra = null;
+    currentQuestion = null;
+    selected = [];
+    phase = "question";
+    pendingRestore = null;
+    pendingImport = null;
+    $("backup-file").value = "";
+    $("import-file").value = "";
+    $("backup-restore").classList.add("hidden");
+    $("import-apply").classList.add("hidden");
+    setBackupPreview("復元が完了しました。問題と学習履歴を再読み込みしました。", "import-success");
+    setImportPreview("ファイル選択後、内容を検査します。");
+    updateModeButtons();
+    await renderHome();
+    notice("バックアップから復元しました。娘さん用とテスト用の履歴は分離されています。");
+  } catch (error) {
+    console.error(error);
+    setBackupPreview("復元に失敗しました。正常に復元されたか確認し、必要に応じてページを開き直してください。", "import-error");
+  } finally {
+    backingUp = false;
+    $("backup-restore").disabled = false;
+  }
+}
+
 function show(sectionId) {
   for (const id of ["home", "quiz", "finished"]) $(id).classList.toggle("hidden", id !== sectionId);
 }
@@ -320,7 +504,7 @@ function updateModeButtons() {
   }
 }
 async function switchMode(mode) {
-  if (saving || importing || mode === profile) return;
+  if (saving || importing || backingUp || mode === profile) return;
   if (!confirm((mode === "student" ? "娘さん用の学習モード" : "保護者用のテストモード") + "に切り替えますか？\n※ 学習履歴は混ざりません。")) return;
   profile = mode;
   currentEra = null;
@@ -380,6 +564,7 @@ function pickQuestion(era, records, previousId) {
   return group.items[0];
 }
 async function startEra(era) {
+  if (saving || importing || backingUp) return;
   currentEra = era;
   notice("");
   const session = await readOne("sessions", `${profile}:${era}`);
@@ -459,7 +644,7 @@ function isCorrect(q, answer) {
   return answer.length === q.answers.length && answer.every(i => q.answers.includes(i));
 }
 async function grade() {
-  if (saving || importing || phase !== "question" || !selected.length) return;
+  if (saving || importing || backingUp || phase !== "question" || !selected.length) return;
   saving = true;
   updateChoices();
   const q = currentQuestion;
@@ -510,18 +695,29 @@ function showResult() {
 }
 
 $("toggle-import").addEventListener("click", () => {
-  if (saving || importing) return;
+  if (saving || importing || backingUp) return;
   const panel = $("import-panel");
   const opening = panel.classList.contains("hidden");
   panel.classList.toggle("hidden", !opening);
   $("toggle-import").setAttribute("aria-expanded", String(opening));
   $("toggle-import").textContent = opening ? "－ 問題ファイルの取り込みを閉じる" : "＋ 問題ファイルを取り込む";
 });
+$("toggle-backup").addEventListener("click", () => {
+  if (saving || importing || backingUp) return;
+  const panel = $("backup-panel");
+  const opening = panel.classList.contains("hidden");
+  panel.classList.toggle("hidden", !opening);
+  $("toggle-backup").setAttribute("aria-expanded", String(opening));
+  $("toggle-backup").textContent = opening ? "－ バックアップ・復元を閉じる" : "＋ バックアップ・復元";
+});
+$("backup-export").addEventListener("click", () => exportBackup().catch(err));
+$("backup-file").addEventListener("change", () => previewRestore().catch(err));
+$("backup-restore").addEventListener("click", () => applyRestore().catch(err));
 $("import-file").addEventListener("change", () => previewImport().catch(err));
 $("import-apply").addEventListener("click", () => applyImport().catch(err));
 $("mode-test").addEventListener("click", () => switchMode("test").catch(err));
 $("mode-student").addEventListener("click", () => switchMode("student").catch(err));
-$("back-home").addEventListener("click", () => { if (!saving && !importing) renderHome().catch(err); });
+$("back-home").addEventListener("click", () => { if (!saving && !importing && !backingUp) renderHome().catch(err); });
 $("finish-home").addEventListener("click", () => renderHome().catch(err));
 $("check").addEventListener("click", grade);
 $("next").addEventListener("click", () => advance(currentEra, currentQuestion.id).catch(err));
