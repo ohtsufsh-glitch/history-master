@@ -38,7 +38,14 @@
     .nav { background: transparent; border: 0; padding: 12px 4px; color: #286b94; font-weight: 600; }
     .tag { border-radius: 99px; background: #e7eff6; color: #275a79; padding: 6px 10px; font-size: .78rem; }
     .testtag { background: #fef0d8; color: #7d5209; }
-    .question { font-size: 1.15rem; font-weight: 700; line-height: 1.75; margin: 14px 0 18px; }
+    /* 長文・会話文：JSONの改行を維持しつつ、狭い画面でも文字がはみ出さない */
+    .question { font-size: 1.15rem; font-weight: 700; line-height: 1.8; margin: 14px 0 18px; white-space: pre-wrap; overflow-wrap:anywhere; line-break:strict; }
+    .question.long-reading { font-size: 1.05rem; font-weight: 500; line-height: 1.95; padding: 16px; border-radius: 14px; border: 1px solid #d6e5ef; background: #f7fafc; margin-top: 16px; }
+    .choice .choice-text { flex:1; min-width:0; white-space:pre-wrap; overflow-wrap:anywhere; line-break:strict; line-height:1.7; font-size:1rem; }
+    .result p { white-space:pre-wrap; overflow-wrap:anywhere; line-break:strict; line-height:1.8; }
+    #question-kind { line-height:1.65; }
+    @media (max-width:430px) { .question.long-reading { padding:13px; font-size:1rem; } .choice { padding:12px; gap:10px; align-items:flex-start; } .choice .marker { margin-top:2px; } }
+
     .choice { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 14px; margin-bottom: 10px; border: 2px solid #dbe5ef; border-radius: 13px; background: #fff; text-align: left; color: inherit; }
     .choice.selected { border-color: #217fb0; background: #e8f5ff; }
     .choice .marker { display: grid; place-items: center; flex: 0 0 25px; height: 25px; border: 2px solid #91a4ba; border-radius: 7px; font-weight: 700; font-size: 12px; }
@@ -91,6 +98,8 @@
     .manager-item { padding:14px 0; border-top:1px solid #dbe5ef; }
     .manager-item:first-child { border-top:0; }
     .manager-item p { margin:6px 0; overflow-wrap:anywhere; }
+    /* 管理画面でも取り込んだ問題文・選択肢・解説の改行を保持する。 */
+    .manager-item p, .manager-item li { white-space:pre-wrap; overflow-wrap:anywhere; }
     .manager-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
     .manager-actions button, .small-action { width:auto; margin:0; padding:9px 12px; border:1px solid #88a9c0; border-radius:10px; background:white; color:#235d80; font-size:.9rem; }
     .manager-actions button.danger { border-color:#db9c91; color:#a0392d; }
@@ -976,6 +985,8 @@ function renderQuestion() {
   $("quiz-status").classList.toggle("testtag", profile === "test");
   $("question-kind").textContent = `${q.answers.length > 1 ? "当てはまるものをすべて選んでください" : "正解を1つ選んでください"}　｜　難易度：${difficultyLabel(q)}`;
   $("question-text").textContent = q.q;
+  // 80文字以上や改行を含む設問は読解向けの文章表示にする（JSONの構造変更は不要）。
+  $("question-text").classList.toggle("long-reading", q.q.length >= 80 || q.q.includes("\n"));
   $("result").classList.add("hidden");
   $("next").classList.add("hidden");
   const choices = $("choices");
@@ -993,6 +1004,7 @@ function renderQuestion() {
     marker.className = "marker";
     marker.textContent = selected.includes(i) ? "✓" : "";
     const txt = document.createElement("span");
+    txt.className = "choice-text";
     txt.textContent = option;
     btn.append(marker, txt);
     btn.addEventListener("click", () => {
