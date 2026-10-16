@@ -75,6 +75,27 @@
     .award-banner .trophy-icon { font-size:2.5rem; }
     .award-banner strong { display:block; }
     .achievement-note { margin:12px 0; color:#596b7b; font-size:.86rem; }
+    .manager-controls { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:12px 0; }
+    .manager-controls select, .manager-controls input, .edit-form input, .edit-form select, .edit-form textarea {
+      width:100%; min-width:0; padding:11px; border:1px solid #b8c9d7; border-radius:10px; background:#fff;
+      color:#253244; font:inherit; font-size:1rem;
+    }
+    .manager-controls label, .edit-form label { display:block; font-size:.87rem; font-weight:650; line-height:1.6; }
+    .manager-controls label input, .manager-controls label select, .edit-form label input, .edit-form label select, .edit-form label textarea { margin-top:5px; }
+    .manager-item { padding:14px 0; border-top:1px solid #dbe5ef; }
+    .manager-item:first-child { border-top:0; }
+    .manager-item p { margin:6px 0; overflow-wrap:anywhere; }
+    .manager-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .manager-actions button, .small-action { width:auto; margin:0; padding:9px 12px; border:1px solid #88a9c0; border-radius:10px; background:white; color:#235d80; font-size:.9rem; }
+    .manager-actions button.danger { border-color:#db9c91; color:#a0392d; }
+    .manager-actions button:disabled { opacity:.48; }
+    .manager-meta { font-size:.8rem; color:#607086; }
+    .edit-form { margin-top:14px; padding:14px; background:#fff; border:1px solid #b8cfdd; border-radius:14px; }
+    .edit-form label { margin-top:12px; }
+    .edit-form textarea { resize:vertical; min-height:75px; }
+    .edit-form .manager-actions { margin-top:16px; }
+    .warning-text { color:#99502d; font-size:.85rem; line-height:1.65; }
+    @media (max-width: 430px) { .manager-controls {grid-template-columns:1fr;} }
     @media(min-width:640px) { .trophy-grid {grid-template-columns:repeat(5,minmax(0,1fr));} }
     @media (max-width: 430px) {
       header { flex-wrap: wrap; }
@@ -118,12 +139,25 @@
       <input id="import-file" type="file" accept=".json,application/json">
       <div id="import-preview" class="small" role="status" aria-live="polite">ファイル選択後、内容を検査します。</div>
       <button id="import-apply" type="button" class="primary hidden">検査した新規問題を追加する</button>
-      <p class="muted small">※ 同じ問題IDは追加しません。問題の削除・上書きは行いません。教材データをGitHubの公開リポジトリに置かないでください。</p>
+      <p class="muted small">※ 同じ問題IDや内容が完全一致する問題は追加しません。問題を修正するときは「問題一覧・修正・削除」を使用してください。教材データは公開しないでください。</p>
+    </div>
+    <button id="toggle-manage" class="import-toggle" type="button" aria-expanded="false">＋ 問題一覧・修正・削除</button>
+    <div id="manage-panel" class="import-panel hidden">
+      <h3>登録問題の管理</h3>
+      <p class="muted small">問題文・正解・解説の確認、取り込み問題の修正・削除（復元可能）ができます。内蔵サンプルは修正できませんが、表示・非表示を切り替えられます。</p>
+      <div class="manager-controls">
+        <label>時代<select id="manage-era"><option value="all">すべての時代</option></select></label>
+        <label>状態<select id="manage-state"><option value="active">出題中</option><option value="deleted">削除・非表示</option><option value="all">すべて</option></select></label>
+        <label style="grid-column:1/-1">問題文・IDで検索<input id="manage-search" type="search" maxlength="200" placeholder="検索する言葉を入力"></label>
+      </div>
+      <div id="manage-summary" class="muted small" role="status" aria-live="polite"></div>
+      <div id="manage-list"></div>
+      <div id="manage-edit" class="hidden"></div>
     </div>
     <button id="toggle-backup" class="import-toggle" type="button" aria-expanded="false">＋ バックアップ・復元</button>
     <div id="backup-panel" class="import-panel hidden">
       <h3>学習データのバックアップ</h3>
-      <p class="muted small">取り込んだ問題・両モードの学習履歴・回答記録・中断状態・獲得カードをまとめてJSONに書き出します。ファイルは外部サーバーに送信しません。</p>
+      <p class="muted small">取り込んだ問題（削除・非表示分を含む）・両モードの学習履歴・回答記録・中断状態・獲得カード・サンプルの非表示設定をまとめてJSONに書き出します。ファイルは外部サーバーに送信しません。</p>
       <button id="backup-export" class="primary" type="button">バックアップJSONを書き出す</button>
       <p class="muted small">Safariのダウンロード先を確認し、必要に応じて「ファイル」アプリからiCloud Driveへ保存してください。書き出したJSONをGitHubにアップロードしないでください。</p>
       <h3 style="margin-top:24px">バックアップから復元</h3>
@@ -185,8 +219,10 @@ const SAMPLE_QUESTIONS = [
 
 // データベース名は以前と同じ（回答履歴を引き継ぐため変更しない）。
 const DB_NAME = "history-master-sample-v1";
-const DB_VERSION = 3; // awardsストアを追加。既存の回答履歴・問題データは消さない。
-let QUESTIONS = [...SAMPLE_QUESTIONS];
+const DB_VERSION = 4; // sampleSettingsを追加。以前のストアは保持する。
+let QUESTIONS = [...SAMPLE_QUESTIONS]; // 出題対象（削除・非表示を除く）
+let importedQuestions = []; // 削除済みも含めて保管
+let hiddenSampleIds = new Set();
 let pendingImport = null;
 let importing = false;
 let backingUp = false;
@@ -198,6 +234,8 @@ let currentQuestion = null;
 let selected = [];
 let phase = "question";
 let saving = false;
+let managing = false;
+let editingId = null;
 const CARD_MIN_QUESTIONS = 50;
 const RANKS = [
   {min:0, title:"🥚 れきしのたまご"},
@@ -220,9 +258,24 @@ const CARDS = {
   E09:{icon:"🌅", name:"明治の夜明け"},
   E10:{icon:"✨", name:"未来への光"}
 };
+function questionRevision(q) { return q.revision || 1; }
+function activeProgress(q, record) { return record && (record.revision || 1) === questionRevision(q) ? record : null; }
+function normalized(value) { return String(value).normalize("NFKC").toLowerCase().replace(/\s+/g," ").trim(); }
+function contentKey(q) { return JSON.stringify([q.era,normalized(q.q),q.options.map(normalized),[...q.answers].sort((a,b)=>a-b)]); }
+function promptKey(q) { return `${q.era}:${normalized(q.q)}`; }
+function allQuestionRecords() { return [...SAMPLE_QUESTIONS,...importedQuestions]; }
+function isSample(id) { return SAMPLE_QUESTIONS.some(q=>q.id===id); }
+function isInactive(q) { return isSample(q.id) ? hiddenSampleIds.has(q.id) : !!q.deleted; }
+function invalidateImportPreview() {
+  if (!pendingImport) return;
+  pendingImport=null;
+  $("import-apply").classList.add("hidden");
+  setImportPreview("問題が更新されたため、ファイルを選び直して検査してください。");
+  $("import-file").value="";
+}
 function masteryStats(era, progressByQuestion) {
   const qs = QUESTIONS.filter(q => q.era === era);
-  const mastered = qs.filter(q => progressByQuestion.get(q.id)?.mastered).length;
+  const mastered = qs.filter(q => activeProgress(q,progressByQuestion.get(q.id))?.mastered).length;
   const percentage = qs.length ? mastered / qs.length * 100 : null;
   return {count:qs.length, mastered, percentage, display:percentage === null ? "—" : String(Math.floor(percentage))};
 }
@@ -341,6 +394,7 @@ function openDatabase() {
       if (!database.objectStoreNames.contains("answers")) database.createObjectStore("answers", {keyPath:"id", autoIncrement:true});
       if (!database.objectStoreNames.contains("questions")) database.createObjectStore("questions", {keyPath:"id"});
       if (!database.objectStoreNames.contains("awards")) database.createObjectStore("awards", {keyPath:"key"});
+      if (!database.objectStoreNames.contains("sampleSettings")) database.createObjectStore("sampleSettings", {keyPath:"id"});
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -383,8 +437,12 @@ function saveAnswer(progress, session, answerEvent, award=null) {
 }
 // 公開プログラムには問題データを含めない。選択したJSONだけを端末内で取り込む。
 async function loadImportedQuestions() {
-  const stored = await readAll("questions");
-  QUESTIONS = [...SAMPLE_QUESTIONS, ...stored];
+  importedQuestions = await readAll("questions");
+  hiddenSampleIds = new Set((await readAll("sampleSettings")).filter(x=>x.hidden).map(x=>x.id));
+  QUESTIONS = [
+    ...SAMPLE_QUESTIONS.filter(q=>!hiddenSampleIds.has(q.id)),
+    ...importedQuestions.filter(q=>!q.deleted)
+  ];
 }
 function validateImportObject(obj) {
   if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.schemaVersion !== 1 || !Array.isArray(obj.questions)) {
@@ -445,11 +503,27 @@ async function previewImport() {
   try {
     const parsed = JSON.parse(await file.text());
     const valid = validateImportObject(parsed);
-    const known = new Set(QUESTIONS.map(q => q.id));
-    const fresh = valid.filter(q => !known.has(q.id));
-    const duplicates = valid.length - fresh.length;
+    const known = new Map(allQuestionRecords().map(q => [q.id,q]));
+    const knownContents=new Set(allQuestionRecords().map(contentKey));
+    const knownPrompts=new Set(allQuestionRecords().map(promptKey));
+    const fresh=[];
+    let duplicateIds=0, changedIds=0, duplicateContents=0, similar=0;
+    const examples=[];
+    for (const q of valid) {
+      const sameId=known.get(q.id);
+      if (sameId) {
+        duplicateIds++;
+        if (contentKey(q)!==contentKey(sameId)) {changedIds++;if(examples.length<4)examples.push(q.id+"（同一IDで内容が異なる）");}
+        continue;
+      }
+      if (knownContents.has(contentKey(q))) { duplicateContents++; continue; }
+      if (knownPrompts.has(promptKey(q))) {similar++;if(examples.length<4)examples.push(q.id+"（設問が類似）");}
+      fresh.push(q);
+      knownContents.add(contentKey(q));
+      knownPrompts.add(promptKey(q));
+    }
     pendingImport = fresh;
-    setImportPreview(`検査OK（${file.name}）\n全${valid.length}問／新規${fresh.length}問／既存IDの重複${duplicates}問\n${fresh.length ? "『検査した新規問題を追加する』を押すと、端末内に保存します。" : "追加できる新規問題はありません。"}`);
+    setImportPreview(`検査OK（${file.name}）\n全${valid.length}問／追加候補${fresh.length}問／同じID ${duplicateIds}問（内容違い ${changedIds}問）／内容完全一致 ${duplicateContents}問／設問文が同じ可能性 ${similar}問\n${examples.length?"要確認: "+examples.join("、")+"\n":""}${fresh.length ? "『検査した新規問題を追加する』を押すと、端末内に保存します。設問が似ている問題は内容を確認してください。" : "追加できる新規問題はありません。"}`);
     if (fresh.length) $("import-apply").classList.remove("hidden");
   } catch (error) {
     setImportPreview("取り込みできません：" + error.message + "\n問題データは変更されていません。", "import-error");
@@ -480,6 +554,7 @@ async function applyImport() {
     $("import-file").value = "";
     setImportPreview(`${toAdd.length}問を追加しました！\n既存問題と学習履歴は変更されていません。`, "import-success");
     await renderHome();
+    if (!$("manage-panel").classList.contains("hidden")) renderManager();
     notice(`${toAdd.length}問を端末内に保存しました。`);
   } catch (error) {
     console.error(error);
@@ -493,8 +568,8 @@ async function applyImport() {
 
 // バックアップは端末内でJSONファイルを生成するのみ。ネットワーク通信は行わない。
 const BACKUP_FORMAT = "history-master-backup";
-const BACKUP_VERSION = 2;
-const BACKUP_STORES = ["questions", "progress", "sessions", "answers", "awards"];
+const BACKUP_VERSION = 3;
+const BACKUP_STORES = ["questions", "progress", "sessions", "answers", "awards", "sampleSettings"];
 function snapshotAllStores() {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(BACKUP_STORES, "readonly");
@@ -543,12 +618,13 @@ function validIndexList(values, max) {
   return Array.isArray(values) && new Set(values).size === values.length && values.every(i => Number.isInteger(i) && i >= 0 && i < max);
 }
 function validateBackup(obj) {
-  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.backupFormat !== BACKUP_FORMAT || ![1, BACKUP_VERSION].includes(obj.backupVersion) || !obj.data || typeof obj.data !== "object") {
-    throw new Error("このアプリのバックアップ形式ではありません（バージョン1または2が必要です）。");
+  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.backupFormat !== BACKUP_FORMAT || ![1, 2, BACKUP_VERSION].includes(obj.backupVersion) || !obj.data || typeof obj.data !== "object") {
+    throw new Error("このアプリのバックアップ形式ではありません（バージョン1〜3が必要です）。");
   }
-  // バージョン1はカード機能実装前のバックアップ。awardsを空配列として読み込む。
-  const data = {...obj.data, awards: obj.backupVersion===1 ? [] : obj.data.awards};
-  const maxSizes = {questions:20000, progress:100000, sessions:100, answers:300000, awards:20};
+  // 旧形式(v1/v2)も復元可能。サンプルの表示状態はv3で追加。
+  const data = {...obj.data, awards: obj.backupVersion===1 ? [] : obj.data.awards,
+    sampleSettings:obj.backupVersion<3 ? [] : obj.data.sampleSettings};
+  const maxSizes = {questions:20000, progress:100000, sessions:100, answers:300000, awards:20, sampleSettings:9};
   for (const name of BACKUP_STORES) {
     if (!Array.isArray(data[name]) || data[name].length > maxSizes[name]) throw new Error(`${name} のデータ件数が不正です。`);
   }
@@ -556,14 +632,20 @@ function validateBackup(obj) {
   const builtinIDs = new Set(SAMPLE_QUESTIONS.map(q => q.id));
   const allQuestions = new Map(SAMPLE_QUESTIONS.map(q => [q.id, q]));
   for (const q of data.questions) {
-    if (!q || !isNonemptyString(q.id,64) || !/^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$/.test(q.id) || builtinIDs.has(q.id) || allQuestions.has(q.id) || !eras.has(q.era) || !isNonemptyString(q.q,2000) || !Array.isArray(q.options) || q.options.length < 2 || q.options.length > 6 || !q.options.every(opt => isNonemptyString(opt,500)) || !validIndexList(q.answers,q.options.length) || q.answers.length === 0 || !isNonemptyString(q.why,4000)) {
+    if (!q || !isNonemptyString(q.id,64) || !/^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$/.test(q.id) || builtinIDs.has(q.id) || allQuestions.has(q.id) || !eras.has(q.era) || !isNonemptyString(q.q,2000) || !Array.isArray(q.options) || q.options.length < 2 || q.options.length > 6 || !q.options.every(opt => isNonemptyString(opt,500)) || !validIndexList(q.answers,q.options.length) || q.answers.length === 0 || !isNonemptyString(q.why,4000) || (q.revision !== undefined && (!Number.isSafeInteger(q.revision) || q.revision < 1)) || (q.deleted !== undefined && typeof q.deleted !== "boolean")) {
       throw new Error("問題データが不正、または問題IDが重複しています。");
     }
     allQuestions.set(q.id,q);
   }
+  const sampleIDs = new Set(SAMPLE_QUESTIONS.map(q => q.id));
+  const seenSamples = new Set();
+  for (const item of data.sampleSettings) {
+    if (!item || !sampleIDs.has(item.id) || item.hidden !== true || seenSamples.has(item.id)) throw new Error("内蔵サンプルの非表示設定が不正です。");
+    seenSamples.add(item.id);
+  }
   const seenProgress = new Set();
   for (const p of data.progress) {
-    if (!p || !isProfile(p.profile) || !allQuestions.has(p.questionId) || p.key !== `${p.profile}:${p.questionId}` || seenProgress.has(p.key) || !Number.isSafeInteger(p.attempts) || p.attempts < 1 || !Number.isSafeInteger(p.streak) || p.streak < 0 || typeof p.everWrong !== "boolean" || typeof p.mastered !== "boolean" || p.mastered !== (p.streak >= 2) || !isNonemptyString(p.lastAnsweredAt,64)) {
+    if (!p || !isProfile(p.profile) || !allQuestions.has(p.questionId) || p.key !== `${p.profile}:${p.questionId}` || seenProgress.has(p.key) || !Number.isSafeInteger(p.attempts) || p.attempts < 1 || !Number.isSafeInteger(p.streak) || p.streak < 0 || typeof p.everWrong !== "boolean" || typeof p.mastered !== "boolean" || p.mastered !== (p.streak >= 2) || !isNonemptyString(p.lastAnsweredAt,64) || (p.revision !== undefined && (!Number.isSafeInteger(p.revision) || p.revision < 1))) {
       throw new Error("学習履歴の形式または問題IDの対応が不正です。");
     }
     seenProgress.add(p.key);
@@ -571,7 +653,7 @@ function validateBackup(obj) {
   const seenSessions = new Set();
   for (const ss of data.sessions) {
     const q = allQuestions.get(ss?.questionId);
-    if (!ss || !isProfile(ss.profile) || !eras.has(ss.era) || ss.key !== `${ss.profile}:${ss.era}` || seenSessions.has(ss.key) || !q || q.era !== ss.era || !["question", "result"].includes(ss.phase) || !validIndexList(ss.selected,q.options.length)) {
+    if (!ss || !isProfile(ss.profile) || !eras.has(ss.era) || ss.key !== `${ss.profile}:${ss.era}` || seenSessions.has(ss.key) || !q || q.era !== ss.era || !["question", "result"].includes(ss.phase) || !validIndexList(ss.selected,ss.revision && ss.revision!==questionRevision(q) ? 6 : q.options.length) || (ss.revision !== undefined && (!Number.isSafeInteger(ss.revision)||ss.revision<1))) {
       throw new Error("中断・再開情報に不整合があります。");
     }
     if (ss.phase === "result" && !ss.selected.length) throw new Error("回答済み状態の選択情報がありません。");
@@ -580,7 +662,7 @@ function validateBackup(obj) {
   const seenAnswers = new Set();
   for (const ev of data.answers) {
     const q = allQuestions.get(ev?.questionId);
-    if (!ev || !Number.isSafeInteger(ev.id) || ev.id < 1 || seenAnswers.has(ev.id) || !isProfile(ev.profile) || !q || typeof ev.correct !== "boolean" || !validIndexList(ev.selected,q.options.length) || ev.selected.length === 0 || !isNonemptyString(ev.at,64)) {
+    if (!ev || !Number.isSafeInteger(ev.id) || ev.id < 1 || seenAnswers.has(ev.id) || !isProfile(ev.profile) || !q || typeof ev.correct !== "boolean" || !validIndexList(ev.selected,(ev.revision||1)===questionRevision(q) ? q.options.length : 6) || ev.selected.length === 0 || !isNonemptyString(ev.at,64) || (ev.revision !== undefined && (!Number.isSafeInteger(ev.revision)||ev.revision<1))) {
       throw new Error("回答記録の形式が不正です。");
     }
     seenAnswers.add(ev.id);
@@ -611,7 +693,7 @@ async function previewRestore() {
   try {
     const data = validateBackup(JSON.parse(await file.text()));
     pendingRestore = data;
-    setBackupPreview(`検査OK（${file.name}）\n取り込み問題：${data.questions.length}問\n学習履歴：${data.progress.length}件\n中断情報：${data.sessions.length}件\n回答記録：${data.answers.length}件\n獲得カード：${data.awards.length}枚\n\n「復元する」を押すと、現在の問題と本番・テスト両方の学習履歴がすべて置き換わります。`);
+    setBackupPreview(`検査OK（${file.name}）\n取り込み問題：${data.questions.length}問\n学習履歴：${data.progress.length}件\n中断情報：${data.sessions.length}件\n回答記録：${data.answers.length}件\n獲得カード：${data.awards.length}枚\n非表示サンプル：${data.sampleSettings.length}問\n\n「復元する」を押すと、現在の問題と本番・テスト両方の学習履歴がすべて置き換わります。`);
     $("backup-restore").classList.remove("hidden");
   } catch (error) {
     setBackupPreview("復元できません：" + error.message + "\n現在のデータは変更されていません。", "import-error");
@@ -656,6 +738,7 @@ async function applyRestore() {
     setImportPreview("ファイル選択後、内容を検査します。");
     updateModeButtons();
     await renderHome();
+    if (!$("manage-panel").classList.contains("hidden")) renderManager();
     notice("バックアップから復元しました。娘さん用とテスト用の履歴は分離されています。");
   } catch (error) {
     console.error(error);
@@ -731,13 +814,13 @@ async function renderHome() {
   show("home");
 }
 function pickQuestion(era, records, previousId) {
-  let remaining = QUESTIONS.filter(q => q.era === era && !records.get(q.id)?.mastered);
+  let remaining = QUESTIONS.filter(q => q.era === era && !activeProgress(q,records.get(q.id))?.mastered);
   if (!remaining.length) return null;
   if (remaining.length > 1) remaining = remaining.filter(q => q.id !== previousId);
   const groups = [
-    {weight:40, items:remaining.filter(q => !records.has(q.id))},
-    {weight:40, items:remaining.filter(q => records.get(q.id)?.everWrong)},
-    {weight:20, items:remaining.filter(q => records.has(q.id) && !records.get(q.id)?.everWrong)}
+    {weight:40, items:remaining.filter(q => !activeProgress(q,records.get(q.id)))},
+    {weight:40, items:remaining.filter(q => activeProgress(q,records.get(q.id))?.everWrong)},
+    {weight:20, items:remaining.filter(q => activeProgress(q,records.get(q.id)) && !activeProgress(q,records.get(q.id)).everWrong)}
   ].filter(group => group.items.length > 0);
   const total = groups.reduce((sum, group) => sum + group.weight, 0);
   let roll = Math.random() * total;
@@ -755,8 +838,8 @@ async function startEra(era) {
   const session = await readOne("sessions", `${profile}:${era}`);
   const question = session && QUESTIONS.find(q => q.id === session.questionId && q.era === era);
   if (question) {
-    const progress = await readOne("progress", `${profile}:${question.id}`);
-    if (!progress?.mastered || session.phase === "result") {
+    const progress = activeProgress(question,await readOne("progress", `${profile}:${question.id}`));
+    if ((!progress?.mastered || session.phase === "result") && (session.revision||1)===questionRevision(question)) {
       currentQuestion = question;
       selected = session.selected || [];
       phase = session.phase;
@@ -774,7 +857,7 @@ async function advance(era, previousId) {
     show("finished");
     return;
   }
-  const session = { key:`${profile}:${era}`, profile, era, questionId:question.id, phase:"question", selected:[] };
+  const session = { key:`${profile}:${era}`, profile, era, questionId:question.id, revision:questionRevision(question), phase:"question", selected:[] };
   await writeSession(session);
   currentEra = era;
   currentQuestion = question;
@@ -839,24 +922,24 @@ async function grade() {
   const correct = isCorrect(q, answerAtSubmit);
   try {
     const key = `${profileAtSubmit}:${q.id}`;
-    const before = await readOne("progress", key);
+    const before = activeProgress(q,await readOne("progress", key));
     const streak = correct ? (before?.streak || 0) + 1 : 0;
     const now = new Date().toISOString();
     const progress = {
-      key, profile:profileAtSubmit, questionId:q.id,
+      key, profile:profileAtSubmit, questionId:q.id, revision:questionRevision(q),
       attempts:(before?.attempts || 0) + 1,
       streak, everWrong:!!before?.everWrong || !correct,
       mastered:streak >= 2, lastAnsweredAt:now
     };
-    const session = { key:`${profileAtSubmit}:${eraAtSubmit}`, profile:profileAtSubmit, era:eraAtSubmit, questionId:q.id, phase:"result", selected:answerAtSubmit };
-    const event = { profile:profileAtSubmit, questionId:q.id, correct, selected:answerAtSubmit, at:now };
+    const session = { key:`${profileAtSubmit}:${eraAtSubmit}`, profile:profileAtSubmit, era:eraAtSubmit, questionId:q.id, revision:questionRevision(q), phase:"result", selected:answerAtSubmit };
+    const event = { profile:profileAtSubmit, questionId:q.id, revision:questionRevision(q), correct, selected:answerAtSubmit, at:now };
     let award=null;
     const eraQuestions=QUESTIONS.filter(item=>item.era===eraAtSubmit);
     if (progress.mastered && eraQuestions.length>=CARD_MIN_QUESTIONS) {
       const allProgress=await readAll("progress");
       const byId=new Map(allProgress.filter(item=>item.profile===profileAtSubmit).map(item=>[item.questionId,item]));
       byId.set(q.id,progress);
-      if (eraQuestions.every(item=>byId.get(item.id)?.mastered)) {
+      if (eraQuestions.every(item=>activeProgress(item,byId.get(item.id))?.mastered)) {
         const cardKey=`${profileAtSubmit}:${eraAtSubmit}`;
         if (!await readOne("awards",cardKey)) {
           award={key:cardKey,profile:profileAtSubmit,era:eraAtSubmit,earnedAt:now,questionCountAtEarn:eraQuestions.length};
@@ -901,6 +984,166 @@ function showResult(newAward=null) {
   $("next").classList.remove("hidden");
 }
 
+// 問題管理：削除は論理削除。回答履歴と問題データを保存したまま出題対象から外す。
+function makeAction(text, className, handler) {
+  const button=document.createElement("button");
+  button.type="button";button.textContent=text;
+  if (className) button.className=className;
+  button.addEventListener("click",()=>Promise.resolve(handler()).catch(err));
+  return button;
+}
+function populateManagementEras() {
+  const select=$("manage-era");
+  for (const [id,label] of ERAS) {
+    const option=document.createElement("option");option.value=id;option.textContent=label;select.appendChild(option);
+  }
+}
+function renderManager() {
+  const era=$("manage-era").value;
+  const state=$("manage-state").value;
+  const search=normalized($("manage-search").value);
+  const filtered=allQuestionRecords().filter(q=>{
+    const hidden=isInactive(q);
+    if (era!=="all"&&q.era!==era) return false;
+    if (state==="active"&&hidden || state==="deleted"&&!hidden) return false;
+    return !search || normalized(q.id+" "+q.q+" "+q.options.join(" ")).includes(search);
+  }).sort((a,b)=>a.era.localeCompare(b.era)||a.id.localeCompare(b.id));
+  const list=$("manage-list");list.replaceChildren();
+  const count=Math.min(filtered.length,100);
+  const activeCount=QUESTIONS.length;
+  $("manage-summary").textContent=`出題中 ${activeCount}問／削除・非表示 ${allQuestionRecords().length-activeCount}問。検索結果 ${filtered.length}問${filtered.length>count?"（先頭100問を表示。検索で絞り込めます）":""}`;
+  if (!filtered.length) {
+    const p=document.createElement("p");p.className="muted";p.textContent="該当する問題はありません。";list.appendChild(p);
+  }
+  for (const q of filtered.slice(0,100)) {
+    const sample=isSample(q.id), hidden=isInactive(q);
+    const row=document.createElement("div");row.className="manager-item";
+    const meta=document.createElement("div");meta.className="manager-meta";
+    const eraName=ERAS.find(e=>e[0]===q.era)?.[1]||q.era;
+    meta.textContent=`${eraName} · ${q.id} · ${sample?"内蔵サンプル":"取り込み問題"}${hidden?" · 削除・非表示":""}${!sample&&questionRevision(q)>1?` · 改訂${questionRevision(q)}版`:""}`;
+    const title=document.createElement("p");title.style.fontWeight="700";title.textContent=q.q;
+    const preview=document.createElement("p");preview.className="manager-meta";
+    preview.textContent=`正解：${q.answers.map(i=>q.options[i]).join("、")}（${q.answers.length>1?"複数選択":"単一選択"}）`;
+    const details=document.createElement("details");
+    details.style.marginTop="8px";
+    const summary=document.createElement("summary");summary.textContent="選択肢と解説を確認";summary.className="manager-meta";
+    const optionList=document.createElement("ol");optionList.className="small";optionList.style.lineHeight="1.7";
+    q.options.forEach((option,i)=>{const item=document.createElement("li");item.textContent=option+(q.answers.includes(i)?" ✓ 正解":"");optionList.appendChild(item);});
+    const explanation=document.createElement("p");explanation.className="small";explanation.textContent="解説："+q.why;
+    details.append(summary,optionList,explanation);
+    const actions=document.createElement("div");actions.className="manager-actions";
+    if (!sample&&!hidden) actions.appendChild(makeAction("修正する","",()=>openQuestionEditor(q.id)));
+    actions.appendChild(makeAction(hidden?"出題に戻す":sample?"サンプルを非表示":"削除する（復元可）",hidden?"":"danger",()=>changeQuestionVisibility(q.id,!hidden)));
+    row.append(meta,title,preview,details,actions);list.appendChild(row);
+  }
+}
+function closeQuestionEditor() { editingId=null;$("manage-edit").replaceChildren();$("manage-edit").classList.add("hidden"); }
+function openQuestionEditor(id) {
+  if (saving||importing||backingUp||managing) return;
+  const q=importedQuestions.find(item=>item.id===id&&!item.deleted);
+  if (!q) return;
+  editingId=id;
+  const area=$("manage-edit");area.replaceChildren();area.classList.remove("hidden");
+  const form=document.createElement("form");form.className="edit-form";
+  const heading=document.createElement("h3");heading.textContent="問題を修正："+id;form.appendChild(heading);
+  function field(labelText,kind,value,rows=2) {
+    const label=document.createElement("label");label.textContent=labelText;
+    const control=document.createElement(kind);control.value=value;
+    if (kind==="textarea") control.rows=rows;
+    label.appendChild(control);form.appendChild(label);
+    return control;
+  }
+  const eraLabel=document.createElement("label");eraLabel.textContent="時代";
+  const eraInput=document.createElement("select");
+  for (const [eraId,label] of ERAS) {const opt=document.createElement("option");opt.value=eraId;opt.textContent=label;eraInput.appendChild(opt);}
+  eraInput.value=q.era;eraLabel.appendChild(eraInput);form.appendChild(eraLabel);
+  const questionInput=field("問題文","textarea",q.q,4);
+  const choicesInput=field("選択肢（1行に1つ、2〜6行）","textarea",q.options.join("\n"),6);
+  const correctInput=field("正解の選択肢番号（例：1 または 1,3）","input",q.answers.map(i=>i+1).join(","));
+  const explanationInput=field("解説","textarea",q.why,4);
+  const caution=document.createElement("p");caution.className="warning-text";
+  caution.textContent="※ 解説だけの修正では習得状況を引き継ぎます。問題文・選択肢・正解・時代を変更すると、この問題の習得判定を最初からやり直します。古い回答記録は保管し、ほかの問題の履歴は変えません。";
+  const error=document.createElement("div");error.className="import-error small";error.setAttribute("role","alert");
+  const buttons=document.createElement("div");buttons.className="manager-actions";
+  const apply=makeAction("修正内容を保存","",()=>{});apply.type="submit";
+  const cancel=makeAction("キャンセル","",closeQuestionEditor);
+  buttons.append(apply,cancel);form.append(caution,error,buttons);
+  form.addEventListener("submit", async event=>{
+    event.preventDefault();
+    if (saving||importing||backingUp||managing) return;
+    try {
+      const optionTexts=choicesInput.value.split(/\r?\n/).map(s=>s.trim());
+      if (optionTexts.some(x=>!x)) throw new Error("選択肢に空行が含まれています。");
+      const input=correctInput.value.replace(/，/g,",").split(",").map(s=>s.trim());
+      if (!input.length || input.some(s=>!/^[1-6]$/.test(s))) throw new Error("正解は1〜6の番号を、例『1,3』のように入力してください。");
+      const answers=input.map(Number);
+      if (new Set(answers).size!==answers.length || answers.some(i=>i>optionTexts.length)) throw new Error("正解番号が重複しているか、選択肢数を超えています。");
+      const obj={schemaVersion:1,questions:[{id,eraId:eraInput.value,question:questionInput.value,
+        type:answers.length===1?"single":"multiple",options:optionTexts.map((text,i)=>({id:String(i+1),text})),
+        correctAnswers:answers.map(String),explanation:explanationInput.value}]};
+      const updated=validateImportObject(obj)[0];
+      const conflict=allQuestionRecords().find(other=>other.id!==id&&!isInactive(other)&&contentKey(other)===contentKey(updated));
+      if (conflict) throw new Error(`別の問題（${conflict.id}）と内容が完全一致しています。`);
+      const similar=allQuestionRecords().filter(other=>other.id!==id&&!isInactive(other)&&promptKey(other)===promptKey(updated));
+      if (similar.length && !confirm(`設問文が似た問題が${similar.length}問あります。重複ではないことを確認しましたか？`)) return;
+      const saved=await saveQuestionRevision(q,updated);
+      if (!saved) return;
+      closeQuestionEditor();await renderHome();renderManager();
+      notice("問題の修正を保存しました。");
+    } catch (e) {error.textContent="修正できません："+e.message;}
+  });
+  area.appendChild(form);
+  area.scrollIntoView({behavior:"smooth",block:"start"});
+}
+async function saveQuestionRevision(oldQ,changed) {
+  if (managing||saving||importing||backingUp) return;
+  const semanticChange=contentKey(oldQ)!==contentKey(changed);
+  const target={...oldQ,...changed,revision:questionRevision(oldQ)+(semanticChange?1:0),deleted:false};
+  if (semanticChange && !confirm("問題の内容または正解・時代が変わります。この問題の習得状況だけをリセットして保存しますか？\n※ 過去の回答記録と、ほかの問題の履歴は保持します。")) return false;
+  managing=true;
+  try {
+    const oldSessions=semanticChange?(await readAll("sessions")).filter(s=>s.questionId===oldQ.id):[];
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(["questions","sessions"],"readwrite");
+      tx.objectStore("questions").put(target);
+      for (const sess of oldSessions) tx.objectStore("sessions").delete(sess.key);
+      tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
+    });
+    await loadImportedQuestions();
+    invalidateImportPreview();
+    return true;
+  } finally {managing=false;}
+}
+async function changeQuestionVisibility(id,hide) {
+  if (saving||importing||backingUp||managing) return;
+  const sample=isSample(id);
+  const q=allQuestionRecords().find(item=>item.id===id);
+  if (!q) return;
+  const message=hide?
+    `「${q.q.slice(0,65)}」を出題対象から外しますか？\n回答履歴・問題データは残り、後から復元できます。理解度は再計算されます。`:
+    `「${q.q.slice(0,65)}」を出題対象に戻しますか？`;
+  if (!confirm(message)) return;
+  managing=true;
+  try {
+    await new Promise((resolve,reject)=>{
+      const storeName=sample?"sampleSettings":"questions";
+      const tx=db.transaction(storeName,"readwrite");
+      if (sample) {
+        if (hide) tx.objectStore(storeName).put({id,hidden:true});
+        else tx.objectStore(storeName).delete(id);
+      } else tx.objectStore(storeName).put({...q,deleted:hide});
+      tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
+    });
+    await loadImportedQuestions();
+    await ensureEarnedCards();
+    invalidateImportPreview();
+    closeQuestionEditor();
+    await renderHome();
+    renderManager();
+    notice(hide?"出題対象から外しました。いつでも復元できます。":"出題対象に戻しました。");
+  } catch(error) {err(error);} finally {managing=false;}
+}
+
 $("toggle-import").addEventListener("click", () => {
   if (saving || importing || backingUp) return;
   const panel = $("import-panel");
@@ -909,6 +1152,16 @@ $("toggle-import").addEventListener("click", () => {
   $("toggle-import").setAttribute("aria-expanded", String(opening));
   $("toggle-import").textContent = opening ? "－ 問題ファイルの取り込みを閉じる" : "＋ 問題ファイルを取り込む";
 });
+$("toggle-manage").addEventListener("click",()=>{
+  if (saving||importing||backingUp||managing) return;
+  const panel=$("manage-panel");
+  const opening=panel.classList.contains("hidden");
+  panel.classList.toggle("hidden",!opening);
+  $("toggle-manage").setAttribute("aria-expanded",String(opening));
+  $("toggle-manage").textContent=opening?"－ 問題一覧・修正・削除を閉じる":"＋ 問題一覧・修正・削除";
+  if (opening) renderManager(); else closeQuestionEditor();
+});
+for (const id of ["manage-era","manage-state","manage-search"]) $(id).addEventListener(id==="manage-search"?"input":"change",()=>{closeQuestionEditor();renderManager();});
 $("toggle-backup").addEventListener("click", () => {
   if (saving || importing || backingUp) return;
   const panel = $("backup-panel");
@@ -931,6 +1184,7 @@ $("next").addEventListener("click", () => advance(currentEra, currentQuestion.id
 (async () => {
   try {
     db = await openDatabase();
+    populateManagementEras();
     await loadImportedQuestions();
     await ensureEarnedCards();
     updateModeButtons();
