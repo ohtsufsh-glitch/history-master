@@ -65,6 +65,15 @@
     .import-success { color:#1b7056; font-weight:600; }
     .backup-status { white-space:pre-wrap; line-height:1.65; overflow-wrap:anywhere; }
     .backup-warn { padding:10px 12px; border-radius:10px; border:1px solid #edcda8; background:#fff7ec; color:#794d1c; font-size:.9rem; line-height:1.6; }
+    .reset-option { display:flex; align-items:flex-start; gap:10px; padding:12px 0; border-bottom:1px solid #dce6ed; line-height:1.6; cursor:pointer; }
+    .reset-option input { width:22px; height:22px; flex:0 0 22px; margin:2px 0 0; accent-color:#286f9a; }
+    .reset-option strong { display:block; font-size:.95rem; }
+    .reset-option span span { display:block; font-size:.82rem; color:#607086; }
+    .reset-status { white-space:pre-wrap; line-height:1.7; overflow-wrap:anywhere; margin:14px 0 0; }
+    .reset-danger { border-top:1px solid #edcda8; padding-top:18px; margin-top:24px; }
+    .reset-danger-button { width:100%; border:1px solid #bb5248; border-radius:12px; padding:14px 12px; background:#fff2f0; color:#9c2e28; font-weight:700; min-height:48px; }
+    .reset-ack { font-size:.88rem; display:flex; align-items:start; gap:9px; line-height:1.6; margin-top:14px; }
+    .reset-ack input { width:20px; height:20px; flex:0 0 20px; margin-top:2px; accent-color:#286f9a; }
     #notice { color: #98571d; min-height: 1.5em; }
     .dashboard-lead { margin-top: 2px; }
     .dashboard-title { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; }
@@ -202,6 +211,24 @@
       <input id="backup-file" type="file" accept=".json,application/json">
       <div id="backup-preview" class="backup-status small" role="status" aria-live="polite">ファイルを選択すると、復元前に内容を検査します。</div>
       <button id="backup-restore" class="primary hidden" type="button">現在のデータを置き換えて復元する</button>
+    </div>
+    <button id="toggle-reset" class="import-toggle" type="button" aria-expanded="false">＋ データ初期化（保護者用）</button>
+    <div id="reset-panel" class="import-panel hidden">
+      <h3>🧹 サンプル・学習データの整理</h3>
+      <p class="muted small">初期化する対象を選んでください。<strong>チェックしなかった項目は変更しません。</strong> 実行前に、必要なバックアップJSONを保存してください。</p>
+      <div class="backup-warn">問題の一括削除は「復元可能な非表示」です。一方、学習履歴の初期化・完全初期化は取り消せません。バックアップがあれば元に戻せます。</div>
+      <label class="reset-option"><input id="reset-hide-samples" type="checkbox"><span><strong>内蔵サンプルをすべて非表示にする</strong><span>内蔵の9問を出題対象から外します。いつでも個別に再表示できます。</span></span></label>
+      <label class="reset-option"><input id="reset-hide-imported" type="checkbox"><span><strong>取り込み問題をすべて出題対象から外す</strong><span>削除済みを除く取り込み問題を一括で論理削除します。問題と履歴は保持され、個別に復元可能です。</span></span></label>
+      <label class="reset-option"><input id="reset-student" type="checkbox"><span><strong>娘さん用の学習データを初期化する</strong><span>娘さん用の回答履歴・習得状況・途中状態・獲得カードを削除します。テスト用は保持します。</span></span></label>
+      <label class="reset-option"><input id="reset-test" type="checkbox"><span><strong>テスト用の学習データを初期化する</strong><span>テスト用の回答履歴・習得状況・途中状態・獲得カードを削除します。娘さん用は保持します。</span></span></label>
+      <div id="reset-preview" class="reset-status small" role="status" aria-live="polite">初期化する項目を選択すると、対象件数が表示されます。</div>
+      <label class="reset-ack"><input id="reset-ack" type="checkbox"><span>必要なバックアップを保存したか確認し、選択したデータが変更・削除されることを理解しました。</span></label>
+      <button id="reset-apply" class="primary" type="button" disabled>選択した項目を初期化する</button>
+      <div class="reset-danger">
+        <h3>⚠️ 完全初期化（すべての端末内データを消去）</h3>
+        <p class="muted small">取り込み問題（削除済みも含む）・両モードの学習履歴・途中状態・獲得カード・サンプル非表示設定を<strong>すべて完全削除</strong>します。内蔵サンプル9問は再表示されます。取り消し不可です。</p>
+        <button id="reset-all" class="reset-danger-button" type="button">すべてのデータを完全初期化する</button>
+      </div>
     </div>
     <p class="muted small" style="margin-top:18px">※ 内蔵問題は公開可能な自作サンプルです。外部から読み込んだ問題はこの端末のSafariにのみ保存されます。</p>
   </section>
@@ -779,6 +806,169 @@ async function previewRestore() {
     setBackupPreview("復元できません：" + error.message + "\n現在のデータは変更されていません。", "import-error");
   }
 }
+// 保護者用初期化：問題の非表示は可逆、回答履歴の初期化は非可逆。
+const RESET_CHOICES = ["reset-hide-samples", "reset-hide-imported", "reset-student", "reset-test"];
+let resetting = false;
+let resetCounts = null;
+function resetSelection() {
+  return {
+    hideSamples: $("reset-hide-samples").checked,
+    hideImported: $("reset-hide-imported").checked,
+    student: $("reset-student").checked,
+    test: $("reset-test").checked
+  };
+}
+function activeResetLabels(choice, counts) {
+  return [
+    choice.hideSamples && `内蔵サンプルを非表示：${counts.visibleSamples}問`,
+    choice.hideImported && `取り込み問題を非表示：${counts.activeImported}問`,
+    choice.student && `娘さん用の履歴消去：回答${counts.student.answers}件／習得${counts.student.progress}件／途中${counts.student.sessions}件／カード${counts.student.awards}枚`,
+    choice.test && `テスト用の履歴消去：回答${counts.test.answers}件／習得${counts.test.progress}件／途中${counts.test.sessions}件／カード${counts.test.awards}枚`
+  ].filter(Boolean);
+}
+async function updateResetPreview() {
+  if (resetting) return;
+  const snapshot = await snapshotAllStores();
+  const countProfile = who => ({
+    progress: snapshot.progress.filter(x => x.profile === who).length,
+    sessions: snapshot.sessions.filter(x => x.profile === who).length,
+    answers: snapshot.answers.filter(x => x.profile === who).length,
+    awards: snapshot.awards.filter(x => x.profile === who).length
+  });
+  resetCounts = {
+    visibleSamples: SAMPLE_QUESTIONS.length - snapshot.sampleSettings.filter(x => x.hidden).length,
+    activeImported: snapshot.questions.filter(x => !x.deleted).length,
+    student: countProfile("student"),
+    test: countProfile("test"),
+    allStores: Object.fromEntries(BACKUP_STORES.map(name => [name, snapshot[name].length]))
+  };
+  const chosen = activeResetLabels(resetSelection(), resetCounts);
+  $("reset-preview").textContent = chosen.length ? `実行対象（現在の件数）：\n${chosen.join("\n")}\n\n選択していないデータは保持します。` : "初期化する項目を選択してください。";
+  $("reset-apply").disabled = !chosen.length || !$("reset-ack").checked || resetting;
+}
+// すべての操作を一つのトランザクションで実行する。途中の失敗では全処理が戻る。
+function performReset(choice, complete=false) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(BACKUP_STORES, "readwrite");
+    if (complete) {
+      for (const name of BACKUP_STORES) tx.objectStore(name).clear();
+    } else {
+      if (choice.hideSamples) {
+        const samples = tx.objectStore("sampleSettings");
+        for (const sample of SAMPLE_QUESTIONS) samples.put({id: sample.id, hidden: true});
+      }
+      if (choice.hideImported) {
+        const questions = tx.objectStore("questions");
+        const req = questions.openCursor();
+        req.onsuccess = () => {
+          const cursor = req.result;
+          if (!cursor) return;
+          if (!cursor.value.deleted) cursor.update({...cursor.value, deleted: true});
+          cursor.continue();
+        };
+      }
+      if (choice.student || choice.test) {
+        for (const name of ["progress", "sessions", "answers", "awards"]) {
+          const store = tx.objectStore(name);
+          if (choice.student && choice.test) {
+            store.clear();
+          } else {
+            const who = choice.student ? "student" : "test";
+            const req = store.openCursor();
+            req.onsuccess = () => {
+              const cursor = req.result;
+              if (!cursor) return;
+              if (cursor.value.profile === who) cursor.delete();
+              cursor.continue();
+            };
+          }
+        }
+      }
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error("初期化処理に失敗しました"));
+    tx.onabort = () => reject(tx.error || new Error("初期化処理が中止されました"));
+  });
+}
+async function resetFinished(complete) {
+  await loadImportedQuestions();
+  answerEvents = await readAll("answers");
+  if (!complete) await ensureEarnedCards();
+  pendingImport = null;
+  pendingRestore = null;
+  $("import-file").value = "";
+  $("backup-file").value = "";
+  $("import-apply").classList.add("hidden");
+  $("backup-restore").classList.add("hidden");
+  setImportPreview("ファイル選択後、内容を検査します。");
+  setBackupPreview("ファイルを選択すると、復元前に内容を検査します。");
+  closeQuestionEditor();
+  for (const id of RESET_CHOICES) $(id).checked = false;
+  $("reset-ack").checked = false;
+  profile = "student";
+  currentEra = null;
+  currentQuestion = null;
+  selected = [];
+  optionOrder = [];
+  phase = "question";
+  await refreshDashboardStay();
+  if (!$("manage-panel").classList.contains("hidden")) renderManager();
+}
+async function applySelectedReset() {
+  if (saving || importing || backingUp || managing || resetting) return;
+  const choice = resetSelection();
+  const selected = Object.values(choice).some(Boolean);
+  if (!selected || !$("reset-ack").checked) return;
+  // 実行時点で件数を再取得し、古いプレビューに依存しない。
+  await updateResetPreview();
+  const lines = activeResetLabels(choice, resetCounts);
+  if (!confirm(`次のデータを初期化します。\n\n${lines.join("\n")}\n\n※ 回答履歴の削除は取り消せません。\nバックアップが必要な場合は保存しましたか？\n\n実行しますか？`)) return;
+  resetting = true;
+  backingUp = true; // 問題取り込み・解答・復元等を同時操作させない。
+  $("reset-apply").disabled = true;
+  $("reset-all").disabled = true;
+  try {
+    await performReset(choice);
+    await resetFinished(false);
+    $("reset-preview").textContent = "選択した初期化が完了しました。残したデータは保持されています。";
+    notice("選択したデータを初期化しました。問題の復元は管理画面の問題一覧から行えます。");
+  } catch (error) {
+    console.error(error);
+    $("reset-preview").textContent = "初期化に失敗しました。データの状態を確認し、必要に応じてバックアップから復元してください。";
+  } finally {
+    resetting = false;
+    backingUp = false;
+    $("reset-all").disabled = false;
+    $("reset-apply").disabled = true;
+  }
+}
+async function applyFullReset() {
+  if (saving || importing || backingUp || managing || resetting) return;
+  const snapshot = await snapshotAllStores();
+  const count = snapshot.questions.length;
+  if (!confirm(`【完全初期化】\n取り込み問題 ${count}問（削除済みを含む）と、娘さん用・テスト用のすべての学習データ・獲得カード・サンプル非表示設定を永久に消去します。\n内蔵サンプル9問が再表示されます。\n\n必要なバックアップは保存しましたか？`)) return;
+  const typed = prompt("完全初期化するには『初期化』と入力してください。キャンセルや他の文字では実行しません。");
+  if (typed !== "初期化") return;
+  resetting = true;
+  backingUp = true;
+  $("reset-all").disabled = true;
+  $("reset-apply").disabled = true;
+  try {
+    await performReset({}, true);
+    await resetFinished(true);
+    $("reset-preview").textContent = "完全初期化しました。内蔵サンプル9問は再び出題されます。";
+    notice("端末内のデータを完全初期化しました。内蔵サンプルが再表示されています。");
+  } catch(error) {
+    console.error(error);
+    $("reset-preview").textContent = "完全初期化に失敗しました。データの状態を確認してください。";
+  } finally {
+    resetting = false;
+    backingUp = false;
+    $("reset-all").disabled = false;
+    $("reset-apply").disabled = true;
+  }
+}
+
 function replaceAllStores(data) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(BACKUP_STORES, "readwrite");
@@ -1338,6 +1528,18 @@ $("toggle-backup").addEventListener("click", () => {
 $("backup-export").addEventListener("click", () => exportBackup().catch(err));
 $("backup-file").addEventListener("change", () => previewRestore().catch(err));
 $("backup-restore").addEventListener("click", () => applyRestore().catch(err));
+$("toggle-reset").addEventListener("click", () => {
+  if (saving || importing || backingUp || managing || resetting) return;
+  const panel = $("reset-panel");
+  const opening = panel.classList.contains("hidden");
+  panel.classList.toggle("hidden", !opening);
+  $("toggle-reset").setAttribute("aria-expanded", String(opening));
+  $("toggle-reset").textContent = opening ? "－ データ初期化を閉じる" : "＋ データ初期化（保護者用）";
+  if (opening) updateResetPreview().catch(err);
+});
+for (const id of [...RESET_CHOICES, "reset-ack"]) $(id).addEventListener("change", () => updateResetPreview().catch(err));
+$("reset-apply").addEventListener("click", () => applySelectedReset().catch(err));
+$("reset-all").addEventListener("click", () => applyFullReset().catch(err));
 $("import-file").addEventListener("change", () => previewImport().catch(err));
 $("import-apply").addEventListener("click", () => applyImport().catch(err));
 $("open-admin").addEventListener("click", openAdmin);
