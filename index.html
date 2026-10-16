@@ -173,6 +173,7 @@
         <label>正答率の対象<select id="manage-profile"><option value="student">娘さん用</option><option value="test">テスト用</option></select></label>
         <label>並び順<select id="manage-sort"><option value="era">時代・問題ID順</option><option value="accuracy-asc">正答率が低い順</option><option value="accuracy-desc">正答率が高い順</option><option value="attempts-desc">回答回数が多い順</option></select></label>
         <label>時代<select id="manage-era"><option value="all">すべての時代</option></select></label>
+        <label>難易度<select id="manage-difficulty"><option value="all">すべて</option><option value="basic">基礎</option><option value="standard">標準</option><option value="advanced">応用</option><option value="unset">未設定</option></select></label>
         <label>状態<select id="manage-state"><option value="active">出題中</option><option value="deleted">削除・非表示</option><option value="all">すべて</option></select></label>
         <label style="grid-column:1/-1">問題文・IDで検索<input id="manage-search" type="search" maxlength="200" placeholder="検索する言葉を入力"></label>
       </div>
@@ -264,6 +265,9 @@ let managing = false;
 let editingId = null;
 let answerEvents = []; // 現行の回答記録。旧版の回答記録もバックアップには残す。
 let optionOrder = []; // 表示上の選択肢位置 -> JSON内の選択肢インデックス
+// JSONのdifficultyは問題そのものの属性。既存問題は未設定として扱う。
+const DIFFICULTIES = {basic:"基礎", standard:"標準", advanced:"応用"};
+function difficultyLabel(q) { return DIFFICULTIES[q.difficulty] || "未設定"; }
 const CARD_MIN_QUESTIONS = 50;
 const RANKS = [
   {min:0, title:"🥚 れきしのたまご"},
@@ -519,7 +523,9 @@ function validateImportObject(obj) {
   return obj.questions.map((entry, index) => {
     const prefix = `${index + 1}問目：`;
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new Error(prefix + "問題データの形式が不正です。");
-    const {id, eraId, question, type, options, correctAnswers, explanation, shuffleOptions} = entry;
+    const {id, eraId, question, type, options, correctAnswers, explanation, shuffleOptions, difficulty} = entry;
+    // 過去のschemaVersion:1のJSONも受け入れる。値があれば3区分だけ許容する。
+    if (difficulty !== undefined && !Object.hasOwn(DIFFICULTIES,difficulty)) throw new Error(prefix + "difficultyはbasic、standard、advancedのいずれかにしてください。");
     if (shuffleOptions !== undefined && typeof shuffleOptions !== "boolean") throw new Error(prefix + "shuffleOptionsはtrueかfalseにしてください。");
     if (typeof id !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$/.test(id)) throw new Error(prefix + "IDは3〜64文字の英数字、-、_を使ってください。");
     if (ids.has(id)) throw new Error(prefix + `ファイル内で問題ID「${id}」が重複しています。`);
@@ -545,7 +551,8 @@ function validateImportObject(obj) {
       id, era:eraId, q:question.trim(),
       options:options.map(opt => opt.text.trim()),
       answers:correctAnswers.map(answerId => options.findIndex(opt => opt.id === answerId)),
-      why:explanation.trim(), shuffleOptions:shuffleOptions !== false
+      why:explanation.trim(), shuffleOptions:shuffleOptions !== false,
+      ...(difficulty === undefined ? {} : {difficulty})
     };
   });
 }
@@ -696,7 +703,7 @@ function validateBackup(obj) {
   const builtinIDs = new Set(SAMPLE_QUESTIONS.map(q => q.id));
   const allQuestions = new Map(SAMPLE_QUESTIONS.map(q => [q.id, q]));
   for (const q of data.questions) {
-    if (!q || !isNonemptyString(q.id,64) || !/^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$/.test(q.id) || builtinIDs.has(q.id) || allQuestions.has(q.id) || !eras.has(q.era) || !isNonemptyString(q.q,2000) || !Array.isArray(q.options) || q.options.length < 2 || q.options.length > 6 || !q.options.every(opt => isNonemptyString(opt,500)) || !validIndexList(q.answers,q.options.length) || q.answers.length === 0 || !isNonemptyString(q.why,4000) || (q.revision !== undefined && (!Number.isSafeInteger(q.revision) || q.revision < 1)) || (q.deleted !== undefined && typeof q.deleted !== "boolean") || (q.shuffleOptions !== undefined && typeof q.shuffleOptions !== "boolean")) {
+    if (!q || !isNonemptyString(q.id,64) || !/^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$/.test(q.id) || builtinIDs.has(q.id) || allQuestions.has(q.id) || !eras.has(q.era) || !isNonemptyString(q.q,2000) || !Array.isArray(q.options) || q.options.length < 2 || q.options.length > 6 || !q.options.every(opt => isNonemptyString(opt,500)) || !validIndexList(q.answers,q.options.length) || q.answers.length === 0 || !isNonemptyString(q.why,4000) || (q.revision !== undefined && (!Number.isSafeInteger(q.revision) || q.revision < 1)) || (q.deleted !== undefined && typeof q.deleted !== "boolean") || (q.shuffleOptions !== undefined && typeof q.shuffleOptions !== "boolean") || (q.difficulty !== undefined && !Object.hasOwn(DIFFICULTIES,q.difficulty))) {
       throw new Error("問題データが不正、または問題IDが重複しています。");
     }
     allQuestions.set(q.id,q);
@@ -967,7 +974,7 @@ function renderQuestion() {
   $("quiz-era").textContent = ERAS.find(e => e[0] === currentEra)[1];
   $("quiz-status").textContent = profile === "test" ? "🔧 テスト用" : "👧 学習用";
   $("quiz-status").classList.toggle("testtag", profile === "test");
-  $("question-kind").textContent = q.answers.length > 1 ? "当てはまるものをすべて選んでください" : "正解を1つ選んでください";
+  $("question-kind").textContent = `${q.answers.length > 1 ? "当てはまるものをすべて選んでください" : "正解を1つ選んでください"}　｜　難易度：${difficultyLabel(q)}`;
   $("question-text").textContent = q.q;
   $("result").classList.add("hidden");
   $("next").classList.add("hidden");
@@ -1109,10 +1116,12 @@ function renderManager() {
   const sortBy=$("manage-sort").value;
   const rate=q=>{const s=stats.get(q.id);return s?.attempts?s.correct/s.attempts:null;};
   const state=$("manage-state").value;
+  const selectedDifficulty=$("manage-difficulty").value;
   const search=normalized($("manage-search").value);
   const filtered=allQuestionRecords().filter(q=>{
     const hidden=isInactive(q);
     if (era!=="all"&&q.era!==era) return false;
+    if (selectedDifficulty!=="all" && (q.difficulty||"unset")!==selectedDifficulty) return false;
     if (state==="active"&&hidden || state==="deleted"&&!hidden) return false;
     return !search || normalized(q.id+" "+q.q+" "+q.options.join(" ")).includes(search);
   }).sort((a,b)=>{
@@ -1130,7 +1139,8 @@ function renderManager() {
   const list=$("manage-list");list.replaceChildren();
   const count=Math.min(filtered.length,100);
   const activeCount=QUESTIONS.length;
-  $("manage-summary").textContent=`出題中 ${activeCount}問／削除・非表示 ${allQuestionRecords().length-activeCount}問。検索結果 ${filtered.length}問${filtered.length>count?"（先頭100問を表示。検索で絞り込めます）":""}`;
+  const difficultyCounts=Object.fromEntries(["basic","standard","advanced","unset"].map(d=>[d,QUESTIONS.filter(q=>(q.difficulty||"unset")===d).length]));
+  $("manage-summary").textContent=`出題中 ${activeCount}問（基礎${difficultyCounts.basic}・標準${difficultyCounts.standard}・応用${difficultyCounts.advanced}・未設定${difficultyCounts.unset}）／削除・非表示 ${allQuestionRecords().length-activeCount}問。検索結果 ${filtered.length}問${filtered.length>count?"（先頭100問を表示。検索で絞り込めます）":""}`;
   if (!filtered.length) {
     const p=document.createElement("p");p.className="muted";p.textContent="該当する問題はありません。";list.appendChild(p);
   }
@@ -1139,7 +1149,7 @@ function renderManager() {
     const row=document.createElement("div");row.className="manager-item";
     const meta=document.createElement("div");meta.className="manager-meta";
     const eraName=ERAS.find(e=>e[0]===q.era)?.[1]||q.era;
-    meta.textContent=`${eraName} · ${q.id} · ${sample?"内蔵サンプル":"取り込み問題"}${hidden?" · 削除・非表示":""}${!sample&&questionRevision(q)>1?` · 改訂${questionRevision(q)}版`:""}`;
+    meta.textContent=`${eraName} · 難易度：${difficultyLabel(q)} · ${q.id} · ${sample?"内蔵サンプル":"取り込み問題"}${hidden?" · 削除・非表示":""}${!sample&&questionRevision(q)>1?` · 改訂${questionRevision(q)}版`:""}`;
     const title=document.createElement("p");title.style.fontWeight="700";title.textContent=q.q;
     const preview=document.createElement("p");preview.className="manager-meta";
     preview.textContent=`正解：${q.answers.map(i=>q.options[i]).join("、")}（${q.answers.length>1?"複数選択":"単一選択"}）`;
@@ -1184,6 +1194,12 @@ function openQuestionEditor(id) {
   const eraInput=document.createElement("select");
   for (const [eraId,label] of ERAS) {const opt=document.createElement("option");opt.value=eraId;opt.textContent=label;eraInput.appendChild(opt);}
   eraInput.value=q.era;eraLabel.appendChild(eraInput);form.appendChild(eraLabel);
+  const difficultyLabelEl=document.createElement("label");difficultyLabelEl.textContent="難易度";
+  const difficultyInput=document.createElement("select");
+  for (const [value,name] of [["","未設定（既存問題のみ）"],...Object.entries(DIFFICULTIES)]) {
+    const option=document.createElement("option");option.value=value;option.textContent=name;difficultyInput.appendChild(option);
+  }
+  difficultyInput.value=q.difficulty||"";difficultyLabelEl.appendChild(difficultyInput);form.appendChild(difficultyLabelEl);
   const questionInput=field("問題文","textarea",q.q,4);
   const choicesInput=field("選択肢（1行に1つ、2〜6行）","textarea",q.options.join("\n"),6);
   const correctInput=field("正解の選択肢番号（例：1 または 1,3）","input",q.answers.map(i=>i+1).join(","));
@@ -1194,7 +1210,7 @@ function openQuestionEditor(id) {
   shuffleLabel.append(shuffleInput,document.createTextNode(" 選択肢を毎回シャッフルする（『上記のすべて』などはOFF）"));
   form.appendChild(shuffleLabel);
   const caution=document.createElement("p");caution.className="warning-text";
-  caution.textContent="※ 解説だけの修正では習得状況を引き継ぎます。問題文・選択肢・正解・時代を変更すると、この問題の習得判定を最初からやり直します。古い回答記録は保管し、ほかの問題の履歴は変えません。";
+  caution.textContent="※ 難易度・解説だけの修正では習得状況を引き継ぎます。問題文・選択肢・正解・時代を変更すると、この問題の習得判定を最初からやり直します。古い回答記録は保管し、ほかの問題の履歴は変えません。";
   const error=document.createElement("div");error.className="import-error small";error.setAttribute("role","alert");
   const buttons=document.createElement("div");buttons.className="manager-actions";
   const apply=makeAction("修正内容を保存","",()=>{});apply.type="submit";
@@ -1212,7 +1228,8 @@ function openQuestionEditor(id) {
       if (new Set(answers).size!==answers.length || answers.some(i=>i>optionTexts.length)) throw new Error("正解番号が重複しているか、選択肢数を超えています。");
       const obj={schemaVersion:1,questions:[{id,eraId:eraInput.value,question:questionInput.value,
         type:answers.length===1?"single":"multiple",options:optionTexts.map((text,i)=>({id:String(i+1),text})),
-        correctAnswers:answers.map(String),explanation:explanationInput.value,shuffleOptions:shuffleInput.checked}]};
+        correctAnswers:answers.map(String),explanation:explanationInput.value,shuffleOptions:shuffleInput.checked,
+        ...(difficultyInput.value ? {difficulty:difficultyInput.value} : {})}]};
       const updated=validateImportObject(obj)[0];
       const conflict=allQuestionRecords().find(other=>other.id!==id&&!isInactive(other)&&contentKey(other)===contentKey(updated));
       if (conflict) throw new Error(`別の問題（${conflict.id}）と内容が完全一致しています。`);
@@ -1231,7 +1248,9 @@ async function saveQuestionRevision(oldQ,changed) {
   if (managing||saving||importing||backingUp) return;
   const semanticChange=contentKey(oldQ)!==contentKey(changed);
   const orderSettingChanged=shuffleAllowed(oldQ)!==shuffleAllowed(changed);
+  // 未設定へ戻した場合は、古いdifficultyプロパティを残さない。
   const target={...oldQ,...changed,revision:questionRevision(oldQ)+(semanticChange?1:0),deleted:false};
+  if (changed.difficulty===undefined) delete target.difficulty;
   if (semanticChange && !confirm("問題の内容または正解・時代が変わります。この問題の習得状況だけをリセットして保存しますか？\n※ 過去の回答記録と、ほかの問題の履歴は保持します。")) return false;
   managing=true;
   try {
@@ -1295,7 +1314,7 @@ $("toggle-manage").addEventListener("click",()=>{
   $("toggle-manage").textContent=opening?"－ 問題一覧・修正・削除を閉じる":"＋ 問題一覧・修正・削除";
   if (opening) renderManager(); else closeQuestionEditor();
 });
-for (const id of ["manage-profile","manage-sort","manage-era","manage-state","manage-search"]) $(id).addEventListener(id==="manage-search"?"input":"change",()=>{closeQuestionEditor();renderManager();});
+for (const id of ["manage-profile","manage-sort","manage-era","manage-difficulty","manage-state","manage-search"]) $(id).addEventListener(id==="manage-search"?"input":"change",()=>{closeQuestionEditor();renderManager();});
 $("toggle-backup").addEventListener("click", () => {
   if (saving || importing || backingUp) return;
   const panel = $("backup-panel");
