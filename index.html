@@ -43,6 +43,13 @@
     .result.wrong { background: #fff6ee; border-color: #f6d9ba; }
     .result strong { display: block; margin-bottom: 8px; }
     .hidden { display: none !important; }
+    .import-toggle { display:block; width:100%; margin:18px 0 0; padding:14px; border:1px solid #8fb6ca; border-radius:12px; background:#f2f9fc; color:#245e80; font-weight:700; }
+    .import-panel { background:#f8fbfd; border:1px solid #d6e5ef; border-radius:14px; padding:16px; margin-top:12px; }
+    .import-panel input[type=file] { width:100%; max-width:100%; margin:10px 0; font-size:1rem; }
+    .import-panel button { margin-top:10px; }
+    #import-preview { white-space:pre-wrap; line-height:1.65; overflow-wrap:anywhere; }
+    .import-error { color:#a33723; font-weight:600; }
+    .import-success { color:#1b7056; font-weight:600; }
     #notice { color: #98571d; min-height: 1.5em; }
     @media (max-width: 430px) {
       header { flex-wrap: wrap; }
@@ -67,7 +74,17 @@
     <h2>学習する時代を選ぼう</h2>
     <p id="home-subtitle" class="muted">まずはサンプル問題で練習できます。</p>
     <div id="era-list"></div>
-    <p class="muted small" style="margin-top:18px">※ 今回は公開可能な自作サンプル問題だけを内蔵しています。実教材から作る問題の取り込みは次の段階で追加します。</p>
+    <button id="toggle-import" class="import-toggle" type="button" aria-expanded="false">＋ 問題ファイルを取り込む</button>
+    <div id="import-panel" class="import-panel hidden">
+      <h3>問題データの取り込み（JSON）</h3>
+      <p class="muted small">iPhone・iPad内のJSONファイルを選択します。問題文・正解・解説は端末内で処理し、GitHub Pagesには送信しません。</p>
+      <label for="import-file"><strong>追加するJSONファイルを選択</strong></label>
+      <input id="import-file" type="file" accept=".json,application/json">
+      <div id="import-preview" class="small" role="status" aria-live="polite">ファイル選択後、内容を検査します。</div>
+      <button id="import-apply" type="button" class="primary hidden">検査した新規問題を追加する</button>
+      <p class="muted small">※ 同じ問題IDは追加しません。問題の削除・上書きは行いません。教材データをGitHubの公開リポジトリに置かないでください。</p>
+    </div>
+    <p class="muted small" style="margin-top:18px">※ 内蔵問題は公開可能な自作サンプルです。外部から読み込んだ問題はこの端末のSafariにのみ保存されます。</p>
   </section>
 
   <section id="quiz" class="hidden">
@@ -84,7 +101,7 @@
   </section>
 
   <section id="finished" class="card hidden">
-    <h2>🎉 この時代のサンプル問題をすべて習得！</h2>
+    <h2>🎉 この時代の問題をすべて習得！</h2>
     <p>すべての問題で2回連続正解できました。おつかれさま！</p>
     <button id="finish-home" class="primary" type="button">ホームへ戻る</button>
   </section>
@@ -105,7 +122,7 @@ const ERAS = [
   ["E09", "明治・大正"],
   ["E10", "昭和・平成・令和"]
 ];
-const QUESTIONS = [
+const SAMPLE_QUESTIONS = [
   { id:"SAMPLE-E01-001", era:"E01", q:"縄文時代の名前のもとになった土器はどれ？", options:["縄文土器","須恵器","三彩","磁器"], answers:[0], why:"縄文土器には、縄目のような文様が見られるものがあります。" },
   { id:"SAMPLE-E01-002", era:"E01", q:"弥生時代の日本で広がったものをすべて選ぼう。", options:["水田稲作","高床倉庫","蒸気機関車","土偶の制作が初めて始まった"], answers:[0,1], why:"弥生時代には水田稲作が広まり、収穫した米を保存する高床倉庫も使われました。土偶は縄文時代に作られています。" },
   { id:"SAMPLE-E01-003", era:"E01", q:"古い時代から新しい時代への並びとして正しいものは？", options:["弥生→縄文→旧石器","旧石器→縄文→弥生","縄文→旧石器→弥生"], answers:[1], why:"日本の先史時代は、一般に旧石器時代、縄文時代、弥生時代の順に学びます。" },
@@ -117,8 +134,12 @@ const QUESTIONS = [
   { id:"SAMPLE-E05-003", era:"E05", q:"鎌倉幕府で、御家人が幕府のために戦うなどして務めを果たすことを何という？", options:["御恩","奉公","参勤交代","大政奉還"], answers:[1], why:"将軍が御家人に領地の保護などを行うのが御恩、御家人が軍役などで応えるのが奉公です。" }
 ];
 
+// データベース名は以前と同じ（回答履歴を引き継ぐため変更しない）。
 const DB_NAME = "history-master-sample-v1";
-const DB_VERSION = 1;
+const DB_VERSION = 2; // questionsストアを追加するだけの安全な更新。
+let QUESTIONS = [...SAMPLE_QUESTIONS];
+let pendingImport = null;
+let importing = false;
 let db;
 let profile = "test"; // 安全のため、起動時は毎回テスト用。
 let currentEra = null;
@@ -136,6 +157,7 @@ function openDatabase() {
       if (!database.objectStoreNames.contains("progress")) database.createObjectStore("progress", {keyPath:"key"});
       if (!database.objectStoreNames.contains("sessions")) database.createObjectStore("sessions", {keyPath:"key"});
       if (!database.objectStoreNames.contains("answers")) database.createObjectStore("answers", {keyPath:"id", autoIncrement:true});
+      if (!database.objectStoreNames.contains("questions")) database.createObjectStore("questions", {keyPath:"id"});
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -175,6 +197,114 @@ function saveAnswer(progress, session, answerEvent) {
     tx.onabort = () => reject(tx.error);
   });
 }
+// 公開プログラムには問題データを含めない。選択したJSONだけを端末内で取り込む。
+async function loadImportedQuestions() {
+  const stored = await readAll("questions");
+  QUESTIONS = [...SAMPLE_QUESTIONS, ...stored];
+}
+function validateImportObject(obj) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.schemaVersion !== 1 || !Array.isArray(obj.questions)) {
+    throw new Error("JSONの最上位は {schemaVersion:1, questions:[...]} としてください。");
+  }
+  if (obj.questions.length === 0 || obj.questions.length > 5000) {
+    throw new Error("問題数は1〜5000問の範囲で指定してください。");
+  }
+  const validEra = new Set(ERAS.map(e => e[0]));
+  const ids = new Set();
+  return obj.questions.map((entry, index) => {
+    const prefix = `${index + 1}問目：`;
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new Error(prefix + "問題データの形式が不正です。");
+    const {id, eraId, question, type, options, correctAnswers, explanation} = entry;
+    if (typeof id !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$/.test(id)) throw new Error(prefix + "IDは3〜64文字の英数字、-、_を使ってください。");
+    if (ids.has(id)) throw new Error(prefix + `ファイル内で問題ID「${id}」が重複しています。`);
+    ids.add(id);
+    if (!validEra.has(eraId)) throw new Error(prefix + `不明な時代ID「${String(eraId)}」です。`);
+    if (typeof question !== "string" || !question.trim() || question.length > 2000) throw new Error(prefix + "問題文は1〜2000文字にしてください。");
+    if (type !== "single" && type !== "multiple") throw new Error(prefix + "typeはsingleまたはmultipleです。");
+    if (!Array.isArray(options) || options.length < 2 || options.length > 6) throw new Error(prefix + "選択肢は2〜6個にしてください。");
+    const optionIds = new Set();
+    for (const opt of options) {
+      if (!opt || typeof opt.id !== "string" || !/^[A-Za-z0-9_-]{1,24}$/.test(opt.id) || optionIds.has(opt.id)) throw new Error(prefix + "選択肢IDが不正または重複しています。");
+      if (typeof opt.text !== "string" || !opt.text.trim() || opt.text.length > 500) throw new Error(prefix + "選択肢の文章は1〜500文字にしてください。");
+      optionIds.add(opt.id);
+    }
+    if (!Array.isArray(correctAnswers) || correctAnswers.length < 1 || correctAnswers.length > options.length || new Set(correctAnswers).size !== correctAnswers.length || !correctAnswers.every(a => optionIds.has(a))) {
+      throw new Error(prefix + "正解IDが選択肢と一致していないか、重複しています。");
+    }
+    if (type === "single" && correctAnswers.length !== 1 || type === "multiple" && correctAnswers.length < 2) {
+      throw new Error(prefix + "typeと正解数が一致していません。");
+    }
+    if (typeof explanation !== "string" || !explanation.trim() || explanation.length > 4000) throw new Error(prefix + "解説は1〜4000文字にしてください。");
+    return {
+      id, era:eraId, q:question.trim(),
+      options:options.map(opt => opt.text.trim()),
+      answers:correctAnswers.map(answerId => options.findIndex(opt => opt.id === answerId)),
+      why:explanation.trim()
+    };
+  });
+}
+function setImportPreview(message, cssClass="") {
+  const out = $("import-preview");
+  out.textContent = message;
+  out.className = `small ${cssClass}`;
+}
+async function previewImport() {
+  if (importing || saving) return;
+  pendingImport = null;
+  $("import-apply").classList.add("hidden");
+  const file = $("import-file").files?.[0];
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) {
+    setImportPreview("ファイルサイズは8MB以下にしてください。", "import-error");
+    return;
+  }
+  try {
+    const parsed = JSON.parse(await file.text());
+    const valid = validateImportObject(parsed);
+    const known = new Set(QUESTIONS.map(q => q.id));
+    const fresh = valid.filter(q => !known.has(q.id));
+    const duplicates = valid.length - fresh.length;
+    pendingImport = fresh;
+    setImportPreview(`検査OK（${file.name}）\n全${valid.length}問／新規${fresh.length}問／既存IDの重複${duplicates}問\n${fresh.length ? "『検査した新規問題を追加する』を押すと、端末内に保存します。" : "追加できる新規問題はありません。"}`);
+    if (fresh.length) $("import-apply").classList.remove("hidden");
+  } catch (error) {
+    setImportPreview("取り込みできません：" + error.message + "\n問題データは変更されていません。", "import-error");
+  }
+}
+function saveNewQuestions(newQuestions) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("questions", "readwrite");
+    const store = tx.objectStore("questions");
+    // すべての問題を1つのトランザクションで登録する。
+    for (const q of newQuestions) store.add(q);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+async function applyImport() {
+  if (importing || saving || !pendingImport?.length) return;
+  importing = true;
+  $("import-apply").disabled = true;
+  const toAdd = pendingImport;
+  try {
+    await saveNewQuestions(toAdd);
+    await loadImportedQuestions();
+    pendingImport = null;
+    $("import-apply").classList.add("hidden");
+    $("import-file").value = "";
+    setImportPreview(`${toAdd.length}問を追加しました！\n既存問題と学習履歴は変更されていません。`, "import-success");
+    await renderHome();
+    notice(`${toAdd.length}問を端末内に保存しました。`);
+  } catch (error) {
+    console.error(error);
+    setImportPreview("保存に失敗しました。空き容量やSafariのモードをご確認ください。データを変更せずにもう一度試してください。", "import-error");
+  } finally {
+    importing = false;
+    $("import-apply").disabled = false;
+  }
+}
+
 function show(sectionId) {
   for (const id of ["home", "quiz", "finished"]) $(id).classList.toggle("hidden", id !== sectionId);
 }
@@ -190,7 +320,7 @@ function updateModeButtons() {
   }
 }
 async function switchMode(mode) {
-  if (saving || mode === profile) return;
+  if (saving || importing || mode === profile) return;
   if (!confirm((mode === "student" ? "娘さん用の学習モード" : "保護者用のテストモード") + "に切り替えますか？\n※ 学習履歴は混ざりません。")) return;
   profile = mode;
   currentEra = null;
@@ -329,7 +459,7 @@ function isCorrect(q, answer) {
   return answer.length === q.answers.length && answer.every(i => q.answers.includes(i));
 }
 async function grade() {
-  if (saving || phase !== "question" || !selected.length) return;
+  if (saving || importing || phase !== "question" || !selected.length) return;
   saving = true;
   updateChoices();
   const q = currentQuestion;
@@ -379,15 +509,26 @@ function showResult() {
   $("next").classList.remove("hidden");
 }
 
+$("toggle-import").addEventListener("click", () => {
+  if (saving || importing) return;
+  const panel = $("import-panel");
+  const opening = panel.classList.contains("hidden");
+  panel.classList.toggle("hidden", !opening);
+  $("toggle-import").setAttribute("aria-expanded", String(opening));
+  $("toggle-import").textContent = opening ? "－ 問題ファイルの取り込みを閉じる" : "＋ 問題ファイルを取り込む";
+});
+$("import-file").addEventListener("change", () => previewImport().catch(err));
+$("import-apply").addEventListener("click", () => applyImport().catch(err));
 $("mode-test").addEventListener("click", () => switchMode("test").catch(err));
 $("mode-student").addEventListener("click", () => switchMode("student").catch(err));
-$("back-home").addEventListener("click", () => { if (!saving) renderHome().catch(err); });
+$("back-home").addEventListener("click", () => { if (!saving && !importing) renderHome().catch(err); });
 $("finish-home").addEventListener("click", () => renderHome().catch(err));
 $("check").addEventListener("click", grade);
 $("next").addEventListener("click", () => advance(currentEra, currentQuestion.id).catch(err));
 (async () => {
   try {
     db = await openDatabase();
+    await loadImportedQuestions();
     updateModeButtons();
     await renderHome();
   } catch (error) {
