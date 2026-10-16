@@ -16,9 +16,15 @@
     h3 { margin: 0; font-size: 1rem; }
     p { line-height: 1.7; }
     .card { background: #fff; border: 1px solid #e2e8f1; box-shadow: 0 2px 8px #18293e0b; border-radius: 18px; padding: 20px; margin-bottom: 14px; }
-    .mode { display: flex; gap: 6px; background: #e8eef5; border-radius: 12px; padding: 4px; }
-    .mode button { border: 0; border-radius: 9px; padding: 10px 13px; font-size: 14px; width: auto; margin: 0; background: transparent; }
-    .mode button.active { background: white; color: #175478; font-weight: 700; box-shadow: 0 1px 5px #0001; }
+    .header-actions { display:flex; align-items:center; gap:10px; }
+    .icon-button { border:1px solid #b8c9d7; border-radius:12px; padding:10px 13px; background:white; color:#235d80; font-weight:700; white-space:nowrap; min-height:44px; }
+    .admin-lead { margin:0 0 14px; }
+    .admin-test-area { padding:16px; border-radius:14px; background:#edf6fa; border:1px solid #cbdfea; }
+    .admin-test-area .primary { margin-top:12px; }
+    .test-banner { background:#fff6e4; border:1px solid #e8cc8b; border-radius:13px; padding:14px; margin:12px 0; }
+    .test-banner p { margin:4px 0 10px; }
+    .test-banner .small-action { background:#fff; }
+    .mode-indicator { color:#527086; font-size:.85rem; font-weight:650; }
     .muted { color: #607086; font-size: .91rem; }
     .small { font-size: .82rem; }
     button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -98,9 +104,11 @@
     @media (max-width: 430px) { .manager-controls {grid-template-columns:1fr;} }
     @media(min-width:640px) { .trophy-grid {grid-template-columns:repeat(5,minmax(0,1fr));} }
     @media (max-width: 430px) {
-      header { flex-wrap: wrap; }
-      .mode { width: 100%; }
-      .mode button { flex: 1; }
+      header { flex-wrap:nowrap; gap:8px; }
+      h1 { font-size:1.28rem; white-space:nowrap; }
+      .header-actions { flex-shrink:0; gap:6px; margin-left:auto; }
+      .mode-indicator { font-size:.76rem; }
+      .icon-button { padding:9px 10px; }
       .card { padding: 16px; }
     }
   </style>
@@ -109,20 +117,25 @@
 <main>
   <header>
     <h1>📚 歴史マスター</h1>
-    <div class="mode" aria-label="利用モード">
-      <button id="mode-test" class="active" type="button">🔧 テスト用</button>
-      <button id="mode-student" type="button">👧 学習用</button>
+    <div class="header-actions">
+      <span id="header-mode" class="mode-indicator" aria-live="polite">👧 学習用</span>
+      <button id="open-admin" class="icon-button" type="button" aria-label="保護者用の管理画面を開く">⚙️ 管理</button>
     </div>
   </header>
   <div id="notice" role="alert" class="small"></div>
 
   <section id="home" class="card">
+    <div id="test-home-panel" class="test-banner hidden">
+      <strong>🔧 テストモード</strong>
+      <p class="small">ここでの回答・理解度・カードはテスト用に保存され、娘さんの学習成績とは分離されます。</p>
+      <button id="test-return-admin" type="button" class="small-action">← 保護者用管理画面に戻る</button>
+    </div>
     <h2>学習する時代を選ぼう</h2>
     <p id="home-subtitle" class="muted">まずはサンプル問題で練習できます。</p>
     <div id="dashboard" aria-label="理解度と称号" class="hidden">
       <div class="dashboard-title"><h3>📊 10時代の理解度</h3><span id="dashboard-mode" class="profile-hint"></span></div>
       <div id="radar-chart" class="radar-wrap" role="img" aria-label="時代別の理解度レーダーチャート"></div>
-      <p class="radar-caption">100%＝全問題を2回連続正解して習得</p>
+      <p class="radar-caption">現在の理解度：2回連続正解で習得。習得後も再出題され、間違えると理解度が下がります。</p>
       <p id="radar-status" class="rank-note"></p>
     </div>
     <div id="era-list"></div>
@@ -130,6 +143,17 @@
       <div class="dashboard-title"><h3>🏆 時代制覇カード</h3><span id="card-total" class="rank-pill"></span></div>
       <p class="achievement-note">各時代で50問以上が登録され、理解度100%になると1枚獲得。獲得済みカードは取り消されません。</p>
       <div id="card-gallery" class="trophy-grid"></div>
+    </div>
+  </section>
+
+  <section id="admin" class="card hidden" aria-label="保護者用管理画面">
+    <button id="admin-back" class="nav" type="button">← 娘さんの学習ホームに戻る</button>
+    <h2>⚙️ 保護者用管理画面</h2>
+    <p class="muted admin-lead">教材の問題追加・修正・削除、バックアップ・復元を行います。問題データは端末内に保存されます。</p>
+    <div class="admin-test-area">
+      <h3>🔧 動作確認</h3>
+      <p class="muted small">テストモードで解いた結果は娘さんの学習履歴には反映されません。問題データ自体は共通です。</p>
+      <button id="admin-start-test" class="primary" type="button">テストモードで問題を解く</button>
     </div>
     <button id="toggle-import" class="import-toggle" type="button" aria-expanded="false">＋ 問題ファイルを取り込む</button>
     <div id="import-panel" class="import-panel hidden">
@@ -144,8 +168,10 @@
     <button id="toggle-manage" class="import-toggle" type="button" aria-expanded="false">＋ 問題一覧・修正・削除</button>
     <div id="manage-panel" class="import-panel hidden">
       <h3>登録問題の管理</h3>
-      <p class="muted small">問題文・正解・解説の確認、取り込み問題の修正・削除（復元可能）ができます。内蔵サンプルは修正できませんが、表示・非表示を切り替えられます。</p>
+      <p class="muted small">問題文・正解・解説・問題ごとの正答率を確認できます。取り込み問題は修正・削除（復元可能）に対応。内蔵サンプルは表示・非表示の切り替えができます。正答率は選択したモードの現行問題版への回答から集計します。</p>
       <div class="manager-controls">
+        <label>正答率の対象<select id="manage-profile"><option value="student">娘さん用</option><option value="test">テスト用</option></select></label>
+        <label>並び順<select id="manage-sort"><option value="era">時代・問題ID順</option><option value="accuracy-asc">正答率が低い順</option><option value="accuracy-desc">正答率が高い順</option><option value="attempts-desc">回答回数が多い順</option></select></label>
         <label>時代<select id="manage-era"><option value="all">すべての時代</option></select></label>
         <label>状態<select id="manage-state"><option value="active">出題中</option><option value="deleted">削除・非表示</option><option value="all">すべて</option></select></label>
         <label style="grid-column:1/-1">問題文・IDで検索<input id="manage-search" type="search" maxlength="200" placeholder="検索する言葉を入力"></label>
@@ -184,8 +210,8 @@
   </section>
 
   <section id="finished" class="card hidden">
-    <h2>🎉 この時代の問題をすべて習得！</h2>
-    <p>すべての問題で2回連続正解できました。おつかれさま！</p>
+    <h2>この時代は問題が未登録です</h2>
+    <p>管理画面から問題を追加してください。</p>
     <button id="finish-home" class="primary" type="button">ホームへ戻る</button>
   </section>
 </main>
@@ -228,7 +254,7 @@ let importing = false;
 let backingUp = false;
 let pendingRestore = null;
 let db;
-let profile = "test"; // 安全のため、起動時は毎回テスト用。
+let profile = "student"; // 娘さんが普段使う画面を起動する。テストは管理画面から開始。
 let currentEra = null;
 let currentQuestion = null;
 let selected = [];
@@ -236,15 +262,17 @@ let phase = "question";
 let saving = false;
 let managing = false;
 let editingId = null;
+let answerEvents = []; // 現行の回答記録。旧版の回答記録もバックアップには残す。
+let optionOrder = []; // 表示上の選択肢位置 -> JSON内の選択肢インデックス
 const CARD_MIN_QUESTIONS = 50;
 const RANKS = [
   {min:0, title:"🥚 れきしのたまご"},
   {min:20, title:"🔍 れきしのたんけんか"},
   {min:40, title:"🧭 れきしのぼうけんか"},
-  {min:60, title:"🎓 れきしのはかせ"},
-  {min:80, title:"⚔️ れきしのマスター"},
-  {min:95, title:"👑 れきしの伝説"},
-  {min:100, title:"🏆 時空の王者"}
+  {min:60, title:"🎓 歴史博士"},
+  {min:80, title:"⭐ 歴史名人"},
+  {min:95, title:"👑 歴史の達人"},
+  {min:100, title:"🏆 歴史マスター"}
 ];
 const CARDS = {
   E01:{icon:"🏺", name:"縄文の旅人"},
@@ -263,6 +291,41 @@ function activeProgress(q, record) { return record && (record.revision || 1) ===
 function normalized(value) { return String(value).normalize("NFKC").toLowerCase().replace(/\s+/g," ").trim(); }
 function contentKey(q) { return JSON.stringify([q.era,normalized(q.q),q.options.map(normalized),[...q.answers].sort((a,b)=>a-b)]); }
 function promptKey(q) { return `${q.era}:${normalized(q.q)}`; }
+function shuffleAllowed(q) { return q.shuffleOptions !== false; }
+function validOrder(order, size) {
+  return Array.isArray(order) && order.length === size && validIndexList(order, size);
+}
+function shuffledOrder(q) {
+  const indexes=q.options.map((_,i)=>i);
+  if (!shuffleAllowed(q)) return indexes;
+  for (let i=indexes.length-1;i>0;i--) {
+    const j=Math.floor(Math.random()*(i+1));
+    [indexes[i],indexes[j]]=[indexes[j],indexes[i]];
+  }
+  return indexes;
+}
+// 正答率は「現在の問題版に対する回答」だけで計算。旧版の回答記録は削除しない。
+function answerStatsFor(who) {
+  const currentQuestions=new Map(allQuestionRecords().map(q=>[q.id,q]));
+  const stats=new Map();
+  for (const event of answerEvents) {
+    if (event.profile!==who) continue;
+    const q=currentQuestions.get(event.questionId);
+    if (!q || (event.revision||1)!==questionRevision(q)) continue;
+    const stat=stats.get(q.id)||{attempts:0,correct:0};
+    stat.attempts++;
+    if (event.correct) stat.correct++;
+    stats.set(q.id,stat);
+  }
+  return stats;
+}
+// 未回答を優先しつつ、現在版への正答率が高いほど抽選重みを小さくする。
+// 少数回の偶然正解を過大評価しないよう事前分布を加えている。
+function questionWeight(stat) {
+  if (!stat?.attempts) return 5;
+  const smoothedAccuracy=(stat.correct+1)/(stat.attempts+2);
+  return 1+4*(1-smoothedAccuracy); // 正答率が高くても0にはならない
+}
 function allQuestionRecords() { return [...SAMPLE_QUESTIONS,...importedQuestions]; }
 function isSample(id) { return SAMPLE_QUESTIONS.some(q=>q.id===id); }
 function isInactive(q) { return isSample(q.id) ? hiddenSampleIds.has(q.id) : !!q.deleted; }
@@ -456,7 +519,8 @@ function validateImportObject(obj) {
   return obj.questions.map((entry, index) => {
     const prefix = `${index + 1}問目：`;
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new Error(prefix + "問題データの形式が不正です。");
-    const {id, eraId, question, type, options, correctAnswers, explanation} = entry;
+    const {id, eraId, question, type, options, correctAnswers, explanation, shuffleOptions} = entry;
+    if (shuffleOptions !== undefined && typeof shuffleOptions !== "boolean") throw new Error(prefix + "shuffleOptionsはtrueかfalseにしてください。");
     if (typeof id !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$/.test(id)) throw new Error(prefix + "IDは3〜64文字の英数字、-、_を使ってください。");
     if (ids.has(id)) throw new Error(prefix + `ファイル内で問題ID「${id}」が重複しています。`);
     ids.add(id);
@@ -481,7 +545,7 @@ function validateImportObject(obj) {
       id, era:eraId, q:question.trim(),
       options:options.map(opt => opt.text.trim()),
       answers:correctAnswers.map(answerId => options.findIndex(opt => opt.id === answerId)),
-      why:explanation.trim()
+      why:explanation.trim(), shuffleOptions:shuffleOptions !== false
     };
   });
 }
@@ -553,7 +617,7 @@ async function applyImport() {
     $("import-apply").classList.add("hidden");
     $("import-file").value = "";
     setImportPreview(`${toAdd.length}問を追加しました！\n既存問題と学習履歴は変更されていません。`, "import-success");
-    await renderHome();
+    await refreshDashboardStay();
     if (!$("manage-panel").classList.contains("hidden")) renderManager();
     notice(`${toAdd.length}問を端末内に保存しました。`);
   } catch (error) {
@@ -632,7 +696,7 @@ function validateBackup(obj) {
   const builtinIDs = new Set(SAMPLE_QUESTIONS.map(q => q.id));
   const allQuestions = new Map(SAMPLE_QUESTIONS.map(q => [q.id, q]));
   for (const q of data.questions) {
-    if (!q || !isNonemptyString(q.id,64) || !/^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$/.test(q.id) || builtinIDs.has(q.id) || allQuestions.has(q.id) || !eras.has(q.era) || !isNonemptyString(q.q,2000) || !Array.isArray(q.options) || q.options.length < 2 || q.options.length > 6 || !q.options.every(opt => isNonemptyString(opt,500)) || !validIndexList(q.answers,q.options.length) || q.answers.length === 0 || !isNonemptyString(q.why,4000) || (q.revision !== undefined && (!Number.isSafeInteger(q.revision) || q.revision < 1)) || (q.deleted !== undefined && typeof q.deleted !== "boolean")) {
+    if (!q || !isNonemptyString(q.id,64) || !/^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$/.test(q.id) || builtinIDs.has(q.id) || allQuestions.has(q.id) || !eras.has(q.era) || !isNonemptyString(q.q,2000) || !Array.isArray(q.options) || q.options.length < 2 || q.options.length > 6 || !q.options.every(opt => isNonemptyString(opt,500)) || !validIndexList(q.answers,q.options.length) || q.answers.length === 0 || !isNonemptyString(q.why,4000) || (q.revision !== undefined && (!Number.isSafeInteger(q.revision) || q.revision < 1)) || (q.deleted !== undefined && typeof q.deleted !== "boolean") || (q.shuffleOptions !== undefined && typeof q.shuffleOptions !== "boolean")) {
       throw new Error("問題データが不正、または問題IDが重複しています。");
     }
     allQuestions.set(q.id,q);
@@ -653,7 +717,7 @@ function validateBackup(obj) {
   const seenSessions = new Set();
   for (const ss of data.sessions) {
     const q = allQuestions.get(ss?.questionId);
-    if (!ss || !isProfile(ss.profile) || !eras.has(ss.era) || ss.key !== `${ss.profile}:${ss.era}` || seenSessions.has(ss.key) || !q || q.era !== ss.era || !["question", "result"].includes(ss.phase) || !validIndexList(ss.selected,ss.revision && ss.revision!==questionRevision(q) ? 6 : q.options.length) || (ss.revision !== undefined && (!Number.isSafeInteger(ss.revision)||ss.revision<1))) {
+    if (!ss || !isProfile(ss.profile) || !eras.has(ss.era) || ss.key !== `${ss.profile}:${ss.era}` || seenSessions.has(ss.key) || !q || q.era !== ss.era || !["question", "result"].includes(ss.phase) || !validIndexList(ss.selected,ss.revision && ss.revision!==questionRevision(q) ? 6 : q.options.length) || (ss.optionOrder !== undefined && !validOrder(ss.optionOrder,q.options.length)) || (ss.recentIds !== undefined && (!Array.isArray(ss.recentIds) || ss.recentIds.length>3 || !ss.recentIds.every(id=>typeof id === "string" && id.length<=64))) || (ss.revision !== undefined && (!Number.isSafeInteger(ss.revision)||ss.revision<1))) {
       throw new Error("中断・再開情報に不整合があります。");
     }
     if (ss.phase === "result" && !ss.selected.length) throw new Error("回答済み状態の選択情報がありません。");
@@ -722,8 +786,9 @@ async function applyRestore() {
     validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:BACKUP_VERSION,data});
     await replaceAllStores(data); // 1つのトランザクションで一括変更。途中失敗なら全変更がロールバックされる。
     await loadImportedQuestions();
+    answerEvents=await readAll("answers");
     await ensureEarnedCards();
-    profile = "test";
+    profile = "student";
     currentEra = null;
     currentQuestion = null;
     selected = [];
@@ -736,8 +801,7 @@ async function applyRestore() {
     $("import-apply").classList.add("hidden");
     setBackupPreview("復元が完了しました。問題と学習履歴を再読み込みしました。", "import-success");
     setImportPreview("ファイル選択後、内容を検査します。");
-    updateModeButtons();
-    await renderHome();
+    await refreshDashboardStay();
     if (!$("manage-panel").classList.contains("hidden")) renderManager();
     notice("バックアップから復元しました。娘さん用とテスト用の履歴は分離されています。");
   } catch (error) {
@@ -750,27 +814,50 @@ async function applyRestore() {
 }
 
 function show(sectionId) {
-  for (const id of ["home", "quiz", "finished"]) $(id).classList.toggle("hidden", id !== sectionId);
+  for (const id of ["home", "admin", "quiz", "finished"]) $(id).classList.toggle("hidden", id !== sectionId);
+  const inAdmin = sectionId === "admin";
+  $("header-mode").textContent = inAdmin ? "🔧 保護者用" : profile === "test" ? "🔧 テスト中" : "👧 学習用";
+  $("header-mode").classList.toggle("testtag", inAdmin || profile === "test");
+  $("open-admin").classList.toggle("hidden", inAdmin);
+  $("test-home-panel").classList.toggle("hidden", sectionId !== "home" || profile !== "test");
 }
 function notice(text = "") { $("notice").textContent = text; }
 function err(error) {
   console.error(error);
   notice("保存・読み込みに失敗しました。Safariのプライベートブラウズ設定や空き容量も確認してください。");
 }
-function updateModeButtons() {
-  for (const name of ["test", "student"]) {
-    $("mode-" + name).classList.toggle("active", profile === name);
-    $("mode-" + name).setAttribute("aria-pressed", String(profile === name));
-  }
+// 管理画面での編集後に進捗表示を更新しても、管理画面から離れない。
+async function refreshDashboardStay() {
+  const wasAdmin = !$("admin").classList.contains("hidden");
+  await renderHome();
+  if (wasAdmin) show("admin");
 }
-async function switchMode(mode) {
-  if (saving || importing || backingUp || mode === profile) return;
-  if (!confirm((mode === "student" ? "娘さん用の学習モード" : "保護者用のテストモード") + "に切り替えますか？\n※ 学習履歴は混ざりません。")) return;
-  profile = mode;
+function openAdmin() {
+  if (saving || importing || backingUp || managing) return;
+  notice("");
+  show("admin");
+}
+async function beginTestMode() {
+  if (saving || importing || backingUp || managing) return;
+  if (!confirm("テストモードを開始しますか？\n※ 娘さんの学習履歴には影響しません。")) return;
+  closeQuestionEditor();
+  profile = "test";
   currentEra = null;
   currentQuestion = null;
+  selected = [];
+  phase = "question";
   notice("");
-  updateModeButtons();
+  await renderHome();
+}
+async function returnToStudentHome() {
+  if (saving || importing || backingUp || managing) return;
+  closeQuestionEditor();
+  profile = "student";
+  currentEra = null;
+  currentQuestion = null;
+  selected = [];
+  phase = "question";
+  notice("");
   await renderHome();
 }
 async function renderHome() {
@@ -813,23 +900,26 @@ async function renderHome() {
   $("dashboard").classList.remove("hidden");
   show("home");
 }
-function pickQuestion(era, records, previousId) {
-  let remaining = QUESTIONS.filter(q => q.era === era && !activeProgress(q,records.get(q.id))?.mastered);
-  if (!remaining.length) return null;
-  if (remaining.length > 1) remaining = remaining.filter(q => q.id !== previousId);
-  const groups = [
-    {weight:40, items:remaining.filter(q => !activeProgress(q,records.get(q.id)))},
-    {weight:40, items:remaining.filter(q => activeProgress(q,records.get(q.id))?.everWrong)},
-    {weight:20, items:remaining.filter(q => activeProgress(q,records.get(q.id)) && !activeProgress(q,records.get(q.id)).everWrong)}
-  ].filter(group => group.items.length > 0);
-  const total = groups.reduce((sum, group) => sum + group.weight, 0);
-  let roll = Math.random() * total;
-  for (const group of groups) {
-    roll -= group.weight;
-    if (roll < 0) return group.items[Math.floor(Math.random() * group.items.length)];
+function pickQuestion(era, records, previousId, recentIds=[]) {
+  let candidates=QUESTIONS.filter(q=>q.era===era); // 習得済みも含めて再出題する
+  if (!candidates.length) return null;
+  // 原則、直近3問は避ける。ただし候補が少ない場合は再利用する。
+  const fresh=candidates.filter(q=>!recentIds.includes(q.id));
+  if (fresh.length) candidates=fresh;
+  else if (candidates.length>1) candidates=candidates.filter(q=>q.id!==previousId);
+  const stats=answerStatsFor(profile);
+  let total=0;
+  const weighted=candidates.map(q=>{
+    const weight=questionWeight(stats.get(q.id));
+    total+=weight;
+    return {q,weight};
+  });
+  let roll=Math.random()*total;
+  for (const item of weighted) {
+    roll-=item.weight;
+    if (roll<0) return item.q;
   }
-  const group = groups[groups.length - 1];
-  return group.items[0];
+  return weighted[weighted.length-1].q;
 }
 async function startEra(era) {
   if (saving || importing || backingUp) return;
@@ -839,10 +929,13 @@ async function startEra(era) {
   const question = session && QUESTIONS.find(q => q.id === session.questionId && q.era === era);
   if (question) {
     const progress = activeProgress(question,await readOne("progress", `${profile}:${question.id}`));
-    if ((!progress?.mastered || session.phase === "result") && (session.revision||1)===questionRevision(question)) {
+    if ((session.revision||1)===questionRevision(question)) {
       currentQuestion = question;
       selected = session.selected || [];
       phase = session.phase;
+      optionOrder=validOrder(session.optionOrder,question.options.length) ? [...session.optionOrder] : shuffledOrder(question);
+      // 古い保存形式の中断情報にもランダムな並び順を付与して保存。
+      if (!validOrder(session.optionOrder,question.options.length)) await writeSession({...session,optionOrder});
       renderQuestion();
       return;
     }
@@ -852,12 +945,16 @@ async function startEra(era) {
 async function advance(era, previousId) {
   const all = await readAll("progress");
   const records = new Map(all.filter(x => x.profile === profile).map(x => [x.questionId, x]));
-  const question = pickQuestion(era, records, previousId);
+  const previousSession=await readOne("sessions",`${profile}:${era}`);
+  const recentIds=Array.isArray(previousSession?.recentIds) ? previousSession.recentIds : (previousId?[previousId]:[]);
+  const question = pickQuestion(era, records, previousId, recentIds);
   if (!question) {
     show("finished");
     return;
   }
-  const session = { key:`${profile}:${era}`, profile, era, questionId:question.id, revision:questionRevision(question), phase:"question", selected:[] };
+  optionOrder=shuffledOrder(question);
+  const nextRecent=[question.id,...recentIds.filter(id=>id!==question.id)].slice(0,3);
+  const session = { key:`${profile}:${era}`, profile, era, questionId:question.id, revision:questionRevision(question), phase:"question", selected:[], optionOrder:[...optionOrder], recentIds:nextRecent };
   await writeSession(session);
   currentEra = era;
   currentQuestion = question;
@@ -876,8 +973,12 @@ function renderQuestion() {
   $("next").classList.add("hidden");
   const choices = $("choices");
   choices.replaceChildren();
-  q.options.forEach((option, i) => {
+  if (!validOrder(optionOrder,q.options.length)) optionOrder=shuffledOrder(q);
+  optionOrder.forEach((originalIndex) => {
+    const option=q.options[originalIndex];
+    const i=originalIndex;
     const btn = document.createElement("button");
+    btn.dataset.originalIndex=String(originalIndex);
     btn.type = "button";
     btn.className = "choice" + (q.answers.length === 1 ? " single" : "");
     btn.setAttribute("aria-pressed", String(selected.includes(i)));
@@ -900,7 +1001,8 @@ function renderQuestion() {
   show("quiz");
 }
 function updateChoices() {
-  $("choices").querySelectorAll("button").forEach((btn, i) => {
+  $("choices").querySelectorAll("button").forEach((btn) => {
+    const i=Number(btn.dataset.originalIndex);
     btn.classList.toggle("selected", selected.includes(i));
     btn.setAttribute("aria-pressed", String(selected.includes(i)));
     btn.querySelector(".marker").textContent = selected.includes(i) ? "✓" : "";
@@ -931,7 +1033,9 @@ async function grade() {
       streak, everWrong:!!before?.everWrong || !correct,
       mastered:streak >= 2, lastAnsweredAt:now
     };
-    const session = { key:`${profileAtSubmit}:${eraAtSubmit}`, profile:profileAtSubmit, era:eraAtSubmit, questionId:q.id, revision:questionRevision(q), phase:"result", selected:answerAtSubmit };
+    const previousSession=await readOne("sessions",`${profileAtSubmit}:${eraAtSubmit}`);
+    const session = { key:`${profileAtSubmit}:${eraAtSubmit}`, profile:profileAtSubmit, era:eraAtSubmit, questionId:q.id, revision:questionRevision(q), phase:"result", selected:answerAtSubmit,
+      optionOrder:[...optionOrder], recentIds:previousSession?.recentIds||[q.id] };
     const event = { profile:profileAtSubmit, questionId:q.id, revision:questionRevision(q), correct, selected:answerAtSubmit, at:now };
     let award=null;
     const eraQuestions=QUESTIONS.filter(item=>item.era===eraAtSubmit);
@@ -947,6 +1051,7 @@ async function grade() {
       }
     }
     await saveAnswer(progress, session, event, award);
+    answerEvents.push(event);
     phase = "result";
     showResult(award);
     notice("回答を保存しました。");
@@ -1000,6 +1105,9 @@ function populateManagementEras() {
 }
 function renderManager() {
   const era=$("manage-era").value;
+  const stats=answerStatsFor($("manage-profile").value);
+  const sortBy=$("manage-sort").value;
+  const rate=q=>{const s=stats.get(q.id);return s?.attempts?s.correct/s.attempts:null;};
   const state=$("manage-state").value;
   const search=normalized($("manage-search").value);
   const filtered=allQuestionRecords().filter(q=>{
@@ -1007,7 +1115,18 @@ function renderManager() {
     if (era!=="all"&&q.era!==era) return false;
     if (state==="active"&&hidden || state==="deleted"&&!hidden) return false;
     return !search || normalized(q.id+" "+q.q+" "+q.options.join(" ")).includes(search);
-  }).sort((a,b)=>a.era.localeCompare(b.era)||a.id.localeCompare(b.id));
+  }).sort((a,b)=>{
+    if (sortBy==="accuracy-asc"||sortBy==="accuracy-desc") {
+      const av=rate(a),bv=rate(b);
+      if (av===null && bv!==null) return 1;
+      if (bv===null && av!==null) return -1;
+      if (av!==null && bv!==null && av!==bv) return sortBy==="accuracy-asc" ? av-bv : bv-av;
+    } else if (sortBy==="attempts-desc") {
+      const diff=(stats.get(b.id)?.attempts||0)-(stats.get(a.id)?.attempts||0);
+      if (diff) return diff;
+    }
+    return a.era.localeCompare(b.era)||a.id.localeCompare(b.id);
+  });
   const list=$("manage-list");list.replaceChildren();
   const count=Math.min(filtered.length,100);
   const activeCount=QUESTIONS.length;
@@ -1034,7 +1153,15 @@ function renderManager() {
     const actions=document.createElement("div");actions.className="manager-actions";
     if (!sample&&!hidden) actions.appendChild(makeAction("修正する","",()=>openQuestionEditor(q.id)));
     actions.appendChild(makeAction(hidden?"出題に戻す":sample?"サンプルを非表示":"削除する（復元可）",hidden?"":"danger",()=>changeQuestionVisibility(q.id,!hidden)));
-    row.append(meta,title,preview,details,actions);list.appendChild(row);
+    const stat=stats.get(q.id);
+    const performance=document.createElement("div");performance.className="manager-performance";
+    const caption=document.createElement("span");caption.className="manager-meta";
+    caption.textContent=stat?.attempts ? `正答率 ${Math.round(stat.correct/stat.attempts*100)}%（${stat.correct} / ${stat.attempts}回正解）` : "正答率 —（未回答）";
+    const meter=document.createElement("div");meter.className="track";meter.style.marginTop="5px";
+    const fill=document.createElement("div");fill.className="fill";
+    fill.style.width=stat?.attempts ? `${100*stat.correct/stat.attempts}%` : "0%";
+    meter.append(fill);performance.append(caption,meter);
+    row.append(meta,title,preview,performance,details,actions);list.appendChild(row);
   }
 }
 function closeQuestionEditor() { editingId=null;$("manage-edit").replaceChildren();$("manage-edit").classList.add("hidden"); }
@@ -1061,6 +1188,11 @@ function openQuestionEditor(id) {
   const choicesInput=field("選択肢（1行に1つ、2〜6行）","textarea",q.options.join("\n"),6);
   const correctInput=field("正解の選択肢番号（例：1 または 1,3）","input",q.answers.map(i=>i+1).join(","));
   const explanationInput=field("解説","textarea",q.why,4);
+  const shuffleLabel=document.createElement("label");
+  const shuffleInput=document.createElement("input");shuffleInput.type="checkbox";
+  shuffleInput.checked=shuffleAllowed(q);shuffleInput.style.width="auto";
+  shuffleLabel.append(shuffleInput,document.createTextNode(" 選択肢を毎回シャッフルする（『上記のすべて』などはOFF）"));
+  form.appendChild(shuffleLabel);
   const caution=document.createElement("p");caution.className="warning-text";
   caution.textContent="※ 解説だけの修正では習得状況を引き継ぎます。問題文・選択肢・正解・時代を変更すると、この問題の習得判定を最初からやり直します。古い回答記録は保管し、ほかの問題の履歴は変えません。";
   const error=document.createElement("div");error.className="import-error small";error.setAttribute("role","alert");
@@ -1080,7 +1212,7 @@ function openQuestionEditor(id) {
       if (new Set(answers).size!==answers.length || answers.some(i=>i>optionTexts.length)) throw new Error("正解番号が重複しているか、選択肢数を超えています。");
       const obj={schemaVersion:1,questions:[{id,eraId:eraInput.value,question:questionInput.value,
         type:answers.length===1?"single":"multiple",options:optionTexts.map((text,i)=>({id:String(i+1),text})),
-        correctAnswers:answers.map(String),explanation:explanationInput.value}]};
+        correctAnswers:answers.map(String),explanation:explanationInput.value,shuffleOptions:shuffleInput.checked}]};
       const updated=validateImportObject(obj)[0];
       const conflict=allQuestionRecords().find(other=>other.id!==id&&!isInactive(other)&&contentKey(other)===contentKey(updated));
       if (conflict) throw new Error(`別の問題（${conflict.id}）と内容が完全一致しています。`);
@@ -1088,7 +1220,7 @@ function openQuestionEditor(id) {
       if (similar.length && !confirm(`設問文が似た問題が${similar.length}問あります。重複ではないことを確認しましたか？`)) return;
       const saved=await saveQuestionRevision(q,updated);
       if (!saved) return;
-      closeQuestionEditor();await renderHome();renderManager();
+      closeQuestionEditor();await refreshDashboardStay();renderManager();
       notice("問題の修正を保存しました。");
     } catch (e) {error.textContent="修正できません："+e.message;}
   });
@@ -1098,11 +1230,13 @@ function openQuestionEditor(id) {
 async function saveQuestionRevision(oldQ,changed) {
   if (managing||saving||importing||backingUp) return;
   const semanticChange=contentKey(oldQ)!==contentKey(changed);
+  const orderSettingChanged=shuffleAllowed(oldQ)!==shuffleAllowed(changed);
   const target={...oldQ,...changed,revision:questionRevision(oldQ)+(semanticChange?1:0),deleted:false};
   if (semanticChange && !confirm("問題の内容または正解・時代が変わります。この問題の習得状況だけをリセットして保存しますか？\n※ 過去の回答記録と、ほかの問題の履歴は保持します。")) return false;
   managing=true;
   try {
-    const oldSessions=semanticChange?(await readAll("sessions")).filter(s=>s.questionId===oldQ.id):[];
+    // シャッフル可否だけの変更は習得記録を維持し、表示順が古い中断情報のみ解除する。
+    const oldSessions=(semanticChange||orderSettingChanged)?(await readAll("sessions")).filter(s=>s.questionId===oldQ.id):[];
     await new Promise((resolve,reject)=>{
       const tx=db.transaction(["questions","sessions"],"readwrite");
       tx.objectStore("questions").put(target);
@@ -1138,7 +1272,7 @@ async function changeQuestionVisibility(id,hide) {
     await ensureEarnedCards();
     invalidateImportPreview();
     closeQuestionEditor();
-    await renderHome();
+    await refreshDashboardStay();
     renderManager();
     notice(hide?"出題対象から外しました。いつでも復元できます。":"出題対象に戻しました。");
   } catch(error) {err(error);} finally {managing=false;}
@@ -1161,7 +1295,7 @@ $("toggle-manage").addEventListener("click",()=>{
   $("toggle-manage").textContent=opening?"－ 問題一覧・修正・削除を閉じる":"＋ 問題一覧・修正・削除";
   if (opening) renderManager(); else closeQuestionEditor();
 });
-for (const id of ["manage-era","manage-state","manage-search"]) $(id).addEventListener(id==="manage-search"?"input":"change",()=>{closeQuestionEditor();renderManager();});
+for (const id of ["manage-profile","manage-sort","manage-era","manage-state","manage-search"]) $(id).addEventListener(id==="manage-search"?"input":"change",()=>{closeQuestionEditor();renderManager();});
 $("toggle-backup").addEventListener("click", () => {
   if (saving || importing || backingUp) return;
   const panel = $("backup-panel");
@@ -1175,8 +1309,10 @@ $("backup-file").addEventListener("change", () => previewRestore().catch(err));
 $("backup-restore").addEventListener("click", () => applyRestore().catch(err));
 $("import-file").addEventListener("change", () => previewImport().catch(err));
 $("import-apply").addEventListener("click", () => applyImport().catch(err));
-$("mode-test").addEventListener("click", () => switchMode("test").catch(err));
-$("mode-student").addEventListener("click", () => switchMode("student").catch(err));
+$("open-admin").addEventListener("click", openAdmin);
+$("admin-start-test").addEventListener("click", () => beginTestMode().catch(err));
+$("admin-back").addEventListener("click", () => returnToStudentHome().catch(err));
+$("test-return-admin").addEventListener("click", openAdmin);
 $("back-home").addEventListener("click", () => { if (!saving && !importing && !backingUp) renderHome().catch(err); });
 $("finish-home").addEventListener("click", () => renderHome().catch(err));
 $("check").addEventListener("click", grade);
@@ -1186,8 +1322,8 @@ $("next").addEventListener("click", () => advance(currentEra, currentQuestion.id
     db = await openDatabase();
     populateManagementEras();
     await loadImportedQuestions();
+    answerEvents=await readAll("answers");
     await ensureEarnedCards();
-    updateModeButtons();
     await renderHome();
   } catch (error) {
     err(error);
