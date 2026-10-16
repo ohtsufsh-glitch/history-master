@@ -53,6 +53,29 @@
     .backup-status { white-space:pre-wrap; line-height:1.65; overflow-wrap:anywhere; }
     .backup-warn { padding:10px 12px; border-radius:10px; border:1px solid #edcda8; background:#fff7ec; color:#794d1c; font-size:.9rem; line-height:1.6; }
     #notice { color: #98571d; min-height: 1.5em; }
+    .dashboard-lead { margin-top: 2px; }
+    .dashboard-title { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; }
+    .profile-hint { font-size:.83rem; color:#607086; }
+    .radar-wrap { max-width: 570px; margin: 4px auto 0; }
+    .radar-wrap svg { width:100%; height:auto; display:block; overflow:visible; }
+    .radar-caption { text-align:center; margin:2px 0 10px; font-size:.83rem; color:#607086; }
+    .rank-note { margin: 4px 0 12px; color:#607086; font-size:.87rem; }
+    .rank-pill { display:inline-flex; border-radius:99px; background:#eaf5f1; color:#206b59; padding:4px 9px; font-size:.78rem; font-weight:700; white-space:nowrap; }
+    .rank-pill.empty { background:#eff2f6; color:#66778a; }
+    .era-details { margin-top:10px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
+    .era-details .muted { font-size:.8rem; }
+    .trophy-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:14px; }
+    .trophy { padding:15px 9px; border-radius:15px; min-width:0; border:1px solid #e5d7b6; background:linear-gradient(140deg,#fff9e8,#fff,#f8f4eb); text-align:center; }
+    .trophy.locked { background:#f4f6f8; border-color:#e5eaf0; color:#67778b; }
+    .trophy-icon { font-size:2.1rem; line-height:1.5; }
+    .trophy-name { font-size:.88rem; font-weight:700; overflow-wrap:anywhere; }
+    .trophy-era { font-size:.78rem; color:#627186; margin:4px 0; }
+    .trophy-status { font-size:.76rem; line-height:1.5; color:#596b7b; margin-top:6px; }
+    .award-banner { margin-top:15px; padding:15px; text-align:center; border:2px solid #d9bb67; border-radius:14px; background:linear-gradient(130deg,#fff3cd,#fffdf5,#f8e2a2); color:#6d4a0f; }
+    .award-banner .trophy-icon { font-size:2.5rem; }
+    .award-banner strong { display:block; }
+    .achievement-note { margin:12px 0; color:#596b7b; font-size:.86rem; }
+    @media(min-width:640px) { .trophy-grid {grid-template-columns:repeat(5,minmax(0,1fr));} }
     @media (max-width: 430px) {
       header { flex-wrap: wrap; }
       .mode { width: 100%; }
@@ -75,7 +98,18 @@
   <section id="home" class="card">
     <h2>学習する時代を選ぼう</h2>
     <p id="home-subtitle" class="muted">まずはサンプル問題で練習できます。</p>
+    <div id="dashboard" aria-label="理解度と称号" class="hidden">
+      <div class="dashboard-title"><h3>📊 10時代の理解度</h3><span id="dashboard-mode" class="profile-hint"></span></div>
+      <div id="radar-chart" class="radar-wrap" role="img" aria-label="時代別の理解度レーダーチャート"></div>
+      <p class="radar-caption">100%＝全問題を2回連続正解して習得</p>
+      <p id="radar-status" class="rank-note"></p>
+    </div>
     <div id="era-list"></div>
+    <div id="collection" class="import-panel" style="margin-top:22px">
+      <div class="dashboard-title"><h3>🏆 時代制覇カード</h3><span id="card-total" class="rank-pill"></span></div>
+      <p class="achievement-note">各時代で50問以上が登録され、理解度100%になると1枚獲得。獲得済みカードは取り消されません。</p>
+      <div id="card-gallery" class="trophy-grid"></div>
+    </div>
     <button id="toggle-import" class="import-toggle" type="button" aria-expanded="false">＋ 問題ファイルを取り込む</button>
     <div id="import-panel" class="import-panel hidden">
       <h3>問題データの取り込み（JSON）</h3>
@@ -89,11 +123,11 @@
     <button id="toggle-backup" class="import-toggle" type="button" aria-expanded="false">＋ バックアップ・復元</button>
     <div id="backup-panel" class="import-panel hidden">
       <h3>学習データのバックアップ</h3>
-      <p class="muted small">取り込んだ問題・娘さんの学習履歴・テスト履歴・回答記録・中断状態をまとめてJSONに書き出します。ファイルは外部サーバーに送信しません。</p>
+      <p class="muted small">取り込んだ問題・両モードの学習履歴・回答記録・中断状態・獲得カードをまとめてJSONに書き出します。ファイルは外部サーバーに送信しません。</p>
       <button id="backup-export" class="primary" type="button">バックアップJSONを書き出す</button>
       <p class="muted small">Safariのダウンロード先を確認し、必要に応じて「ファイル」アプリからiCloud Driveへ保存してください。書き出したJSONをGitHubにアップロードしないでください。</p>
       <h3 style="margin-top:24px">バックアップから復元</h3>
-      <div class="backup-warn">注意：復元すると、現在の取り込み問題・両モードの学習履歴・途中状態を、バックアップの内容で<strong>すべて置き換えます</strong>。復元する前に、現在のデータもバックアップしてください。</div>
+      <div class="backup-warn">注意：復元すると、現在の取り込み問題・両モードの学習履歴・途中状態・獲得カードを、バックアップの内容で<strong>すべて置き換えます</strong>。復元する前に、現在のデータもバックアップしてください。</div>
       <label for="backup-file" style="display:block;margin-top:14px"><strong>復元するJSONファイルを選択</strong></label>
       <input id="backup-file" type="file" accept=".json,application/json">
       <div id="backup-preview" class="backup-status small" role="status" aria-live="polite">ファイルを選択すると、復元前に内容を検査します。</div>
@@ -151,7 +185,7 @@ const SAMPLE_QUESTIONS = [
 
 // データベース名は以前と同じ（回答履歴を引き継ぐため変更しない）。
 const DB_NAME = "history-master-sample-v1";
-const DB_VERSION = 2; // questionsストアを追加するだけの安全な更新。
+const DB_VERSION = 3; // awardsストアを追加。既存の回答履歴・問題データは消さない。
 let QUESTIONS = [...SAMPLE_QUESTIONS];
 let pendingImport = null;
 let importing = false;
@@ -164,6 +198,137 @@ let currentQuestion = null;
 let selected = [];
 let phase = "question";
 let saving = false;
+const CARD_MIN_QUESTIONS = 50;
+const RANKS = [
+  {min:0, title:"🥚 れきしのたまご"},
+  {min:20, title:"🔍 れきしのたんけんか"},
+  {min:40, title:"🧭 れきしのぼうけんか"},
+  {min:60, title:"🎓 れきしのはかせ"},
+  {min:80, title:"⚔️ れきしのマスター"},
+  {min:95, title:"👑 れきしの伝説"},
+  {min:100, title:"🏆 時空の王者"}
+];
+const CARDS = {
+  E01:{icon:"🏺", name:"縄文の旅人"},
+  E02:{icon:"🦋", name:"飛鳥の知恵"},
+  E03:{icon:"🦌", name:"奈良の宝物"},
+  E04:{icon:"🌙", name:"平安の月"},
+  E05:{icon:"🛡️", name:"鎌倉の守り刀"},
+  E06:{icon:"🏯", name:"戦国の旗"},
+  E07:{icon:"🪭", name:"天下統一の扇"},
+  E08:{icon:"🌸", name:"江戸の桜"},
+  E09:{icon:"🌅", name:"明治の夜明け"},
+  E10:{icon:"✨", name:"未来への光"}
+};
+function masteryStats(era, progressByQuestion) {
+  const qs = QUESTIONS.filter(q => q.era === era);
+  const mastered = qs.filter(q => progressByQuestion.get(q.id)?.mastered).length;
+  const percentage = qs.length ? mastered / qs.length * 100 : null;
+  return {count:qs.length, mastered, percentage, display:percentage === null ? "—" : String(Math.floor(percentage))};
+}
+function titleForMastery(stats) {
+  if (!stats.count) return "未登録";
+  return [...RANKS].reverse().find(rank => stats.percentage >= rank.min).title;
+}
+function createSVGElement(tag, attrs={}) {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [key,value] of Object.entries(attrs)) el.setAttribute(key,String(value));
+  return el;
+}
+function renderRadar(statsByEra) {
+  const host = $("radar-chart");
+  host.replaceChildren();
+  const svg = createSVGElement("svg", {viewBox:"0 0 560 520", "aria-hidden":"true", focusable:"false"});
+  const cx=280,cy=260,rad=150, n=ERAS.length;
+  const angle = i => -Math.PI/2 + 2*Math.PI*i/n;
+  const pos = (i,r) => [cx+r*Math.cos(angle(i)),cy+r*Math.sin(angle(i))];
+  const points = r => Array.from({length:n},(_,i)=>pos(i,r).map(v=>v.toFixed(1)).join(",")).join(" ");
+  for (const step of [25,50,75,100]) {
+    const polygon = createSVGElement("polygon", {points:points(rad*step/100),fill:"none",stroke:"#dce6ed", "stroke-width":"1.2"});
+    svg.appendChild(polygon);
+  }
+  const labels={E01:["旧石器・", "縄文・弥生"],E02:["古墳・飛鳥"],E03:["奈良"],E04:["平安"],E05:["鎌倉"],E06:["室町・戦国"],E07:["安土桃山"],E08:["江戸"],E09:["明治・大正"],E10:["昭和〜令和"]};
+  ERAS.forEach(([id],i)=>{
+    const [x,y]=pos(i,rad);
+    svg.appendChild(createSVGElement("line",{x1:cx,y1:cy,x2:x,y2:y,stroke:"#dce6ed","stroke-width":"1"}));
+    const [lx,ly]=pos(i,205);
+    const text=createSVGElement("text",{x:lx,y:ly-((labels[id].length-1)*8),"text-anchor":"middle","dominant-baseline":"middle",fill:"#43566d","font-size":"12.5","font-weight":"600"});
+    labels[id].forEach((line,lineIndex)=>{
+      const span=createSVGElement("tspan",{x:lx,dy:lineIndex?"15":"0"});
+      span.textContent=line;
+      text.appendChild(span);
+    });
+    svg.appendChild(text);
+  });
+  for (const step of [50,100]) {
+    const [x,y]=pos(0,rad*step/100);
+    const t=createSVGElement("text",{x:x+7,y:y-4,"font-size":"11",fill:"#75859a"});
+    t.textContent=`${step}%`;
+    svg.appendChild(t);
+  }
+  const values=ERAS.map(([id])=>statsByEra[id].percentage ?? 0);
+  const polygon=createSVGElement("polygon", {points:values.map((v,i)=>pos(i,rad*v/100).map(z=>z.toFixed(1)).join(",")).join(" "),fill:"#55b4a3","fill-opacity":"0.27",stroke:"#228a78","stroke-width":"2.6","stroke-linejoin":"round"});
+  svg.appendChild(polygon);
+  values.forEach((v,i)=>{
+    const [x,y]=pos(i,rad*v/100);
+    svg.appendChild(createSVGElement("circle",{cx:x,cy:y,r:"3.3",fill:"#228a78"}));
+  });
+  host.appendChild(svg);
+  const registered=Object.values(statsByEra).filter(x=>x.count).length;
+  $("radar-status").textContent=registered===0 ? "問題を取り込むと、ここに理解度が表示されます。" : `問題登録済み ${registered} / 10時代。未登録の時代は図上では0%の位置に表示します。`;
+  host.setAttribute("aria-label",ERAS.map(([id,name])=>`${name}: ${statsByEra[id].count ? statsByEra[id].display+"%" : "未登録"}`).join("、"));
+}
+function renderCollection(statsByEra, awards) {
+  const owned=new Map(awards.filter(x=>x.profile===profile).map(x=>[x.era,x]));
+  $("card-total").textContent=`${owned.size} / 10枚`;
+  const gallery=$("card-gallery");
+  gallery.replaceChildren();
+  for (const [id,label] of ERAS) {
+    const reward=CARDS[id];
+    const stat=statsByEra[id];
+    const earned=owned.get(id);
+    const card=document.createElement("div");
+    card.className="trophy"+(earned?"":" locked");
+    const icon=document.createElement("div"); icon.className="trophy-icon"; icon.textContent=earned?reward.icon:"🔒";
+    const era=document.createElement("div"); era.className="trophy-era"; era.textContent=label;
+    const name=document.createElement("div"); name.className="trophy-name"; name.textContent=earned?reward.name:"まだ秘密のカード";
+    const status=document.createElement("div"); status.className="trophy-status";
+    if (earned) status.textContent="獲得済み";
+    else if (stat.count < CARD_MIN_QUESTIONS) status.textContent=`登録あと${CARD_MIN_QUESTIONS-stat.count}問`;
+    else status.textContent=`習得あと${stat.count-stat.mastered}問`;
+    card.append(icon,era,name,status);
+    gallery.appendChild(card);
+  }
+}
+function writeAwards(awards) {
+  return new Promise((resolve,reject)=>{
+    if (!awards.length) {resolve();return;}
+    const tx=db.transaction("awards","readwrite");
+    const store=tx.objectStore("awards");
+    awards.forEach(award=>store.put(award));
+    tx.oncomplete=resolve;
+    tx.onerror=()=>reject(tx.error);
+    tx.onabort=()=>reject(tx.error);
+  });
+}
+async function ensureEarnedCards() {
+  // 旧版ですでに全問習得していた場合も、カード条件を満たせば引き継ぐ。
+  const progress=await readAll("progress");
+  const existing=await readAll("awards");
+  const recordsByProfile=Object.fromEntries(["student","test"].map(p=>[p,new Map(progress.filter(x=>x.profile===p).map(x=>[x.questionId,x]))]));
+  const existingKeys=new Set(existing.map(a=>a.key));
+  const newAwards=[];
+  for (const prof of ["student","test"]) for (const [era] of ERAS) {
+    const stats=masteryStats(era,recordsByProfile[prof]);
+    const key=`${prof}:${era}`;
+    if (stats.count>=CARD_MIN_QUESTIONS && stats.mastered===stats.count && !existingKeys.has(key)) {
+      const dates=QUESTIONS.filter(q=>q.era===era).map(q=>recordsByProfile[prof].get(q.id)?.lastAnsweredAt).filter(Boolean).sort();
+      newAwards.push({key,profile:prof,era,earnedAt:dates.at(-1)||new Date().toISOString(),questionCountAtEarn:stats.count});
+    }
+  }
+  await writeAwards(newAwards);
+}
+
 const $ = id => document.getElementById(id);
 
 function openDatabase() {
@@ -175,6 +340,7 @@ function openDatabase() {
       if (!database.objectStoreNames.contains("sessions")) database.createObjectStore("sessions", {keyPath:"key"});
       if (!database.objectStoreNames.contains("answers")) database.createObjectStore("answers", {keyPath:"id", autoIncrement:true});
       if (!database.objectStoreNames.contains("questions")) database.createObjectStore("questions", {keyPath:"id"});
+      if (!database.objectStoreNames.contains("awards")) database.createObjectStore("awards", {keyPath:"key"});
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -203,12 +369,13 @@ function writeSession(session) {
     tx.onabort = () => reject(tx.error);
   });
 }
-function saveAnswer(progress, session, answerEvent) {
+function saveAnswer(progress, session, answerEvent, award=null) {
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(["progress", "sessions", "answers"], "readwrite");
+    const tx = db.transaction(["progress", "sessions", "answers", "awards"], "readwrite");
     tx.objectStore("progress").put(progress);
     tx.objectStore("sessions").put(session);
     tx.objectStore("answers").add(answerEvent);
+    if (award) tx.objectStore("awards").put(award);
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);
     tx.onabort = () => reject(tx.error);
@@ -307,6 +474,7 @@ async function applyImport() {
   try {
     await saveNewQuestions(toAdd);
     await loadImportedQuestions();
+    await ensureEarnedCards();
     pendingImport = null;
     $("import-apply").classList.add("hidden");
     $("import-file").value = "";
@@ -325,8 +493,8 @@ async function applyImport() {
 
 // バックアップは端末内でJSONファイルを生成するのみ。ネットワーク通信は行わない。
 const BACKUP_FORMAT = "history-master-backup";
-const BACKUP_VERSION = 1;
-const BACKUP_STORES = ["questions", "progress", "sessions", "answers"];
+const BACKUP_VERSION = 2;
+const BACKUP_STORES = ["questions", "progress", "sessions", "answers", "awards"];
 function snapshotAllStores() {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(BACKUP_STORES, "readonly");
@@ -375,11 +543,12 @@ function validIndexList(values, max) {
   return Array.isArray(values) && new Set(values).size === values.length && values.every(i => Number.isInteger(i) && i >= 0 && i < max);
 }
 function validateBackup(obj) {
-  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.backupFormat !== BACKUP_FORMAT || obj.backupVersion !== BACKUP_VERSION || !obj.data || typeof obj.data !== "object") {
-    throw new Error("このアプリのバックアップ形式ではありません（バージョン1が必要です）。");
+  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.backupFormat !== BACKUP_FORMAT || ![1, BACKUP_VERSION].includes(obj.backupVersion) || !obj.data || typeof obj.data !== "object") {
+    throw new Error("このアプリのバックアップ形式ではありません（バージョン1または2が必要です）。");
   }
-  const data = obj.data;
-  const maxSizes = {questions:20000, progress:100000, sessions:100, answers:300000};
+  // バージョン1はカード機能実装前のバックアップ。awardsを空配列として読み込む。
+  const data = {...obj.data, awards: obj.backupVersion===1 ? [] : obj.data.awards};
+  const maxSizes = {questions:20000, progress:100000, sessions:100, answers:300000, awards:20};
   for (const name of BACKUP_STORES) {
     if (!Array.isArray(data[name]) || data[name].length > maxSizes[name]) throw new Error(`${name} のデータ件数が不正です。`);
   }
@@ -416,6 +585,13 @@ function validateBackup(obj) {
     }
     seenAnswers.add(ev.id);
   }
+  const seenAwards=new Set();
+  for (const a of data.awards) {
+    if (!a || !isProfile(a.profile) || !eras.has(a.era) || a.key!==`${a.profile}:${a.era}` || seenAwards.has(a.key) || !isNonemptyString(a.earnedAt,64) || !Number.isSafeInteger(a.questionCountAtEarn) || a.questionCountAtEarn<CARD_MIN_QUESTIONS) {
+      throw new Error("獲得カードのデータが不正です。");
+    }
+    seenAwards.add(a.key);
+  }
   return data;
 }
 function setBackupPreview(message, cssClass="") {
@@ -435,7 +611,7 @@ async function previewRestore() {
   try {
     const data = validateBackup(JSON.parse(await file.text()));
     pendingRestore = data;
-    setBackupPreview(`検査OK（${file.name}）\n取り込み問題：${data.questions.length}問\n学習履歴：${data.progress.length}件\n中断情報：${data.sessions.length}件\n回答記録：${data.answers.length}件\n\n「復元する」を押すと、現在の問題と本番・テスト両方の学習履歴がすべて置き換わります。`);
+    setBackupPreview(`検査OK（${file.name}）\n取り込み問題：${data.questions.length}問\n学習履歴：${data.progress.length}件\n中断情報：${data.sessions.length}件\n回答記録：${data.answers.length}件\n獲得カード：${data.awards.length}枚\n\n「復元する」を押すと、現在の問題と本番・テスト両方の学習履歴がすべて置き換わります。`);
     $("backup-restore").classList.remove("hidden");
   } catch (error) {
     setBackupPreview("復元できません：" + error.message + "\n現在のデータは変更されていません。", "import-error");
@@ -456,7 +632,7 @@ function replaceAllStores(data) {
 }
 async function applyRestore() {
   if (saving || importing || backingUp || !pendingRestore) return;
-  if (!confirm("現在の取り込み問題・娘さんの学習履歴・テスト履歴・中断情報を、バックアップの内容ですべて置き換えます。\n現在のデータのバックアップは作成しましたか？\n\n復元を実行しますか？")) return;
+  if (!confirm("現在の取り込み問題・娘さんの学習履歴・テスト履歴・中断情報・獲得カードを、バックアップの内容ですべて置き換えます。\n現在のデータのバックアップは作成しましたか？\n\n復元を実行しますか？")) return;
   backingUp = true;
   $("backup-restore").disabled = true;
   const data = pendingRestore;
@@ -464,6 +640,7 @@ async function applyRestore() {
     validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:BACKUP_VERSION,data});
     await replaceAllStores(data); // 1つのトランザクションで一括変更。途中失敗なら全変更がロールバックされる。
     await loadImportedQuestions();
+    await ensureEarnedCards();
     profile = "test";
     currentEra = null;
     currentQuestion = null;
@@ -514,35 +691,43 @@ async function switchMode(mode) {
   await renderHome();
 }
 async function renderHome() {
-  const allProgress = await readAll("progress");
-  const records = new Map(allProgress.filter(x => x.profile === profile).map(x => [x.questionId, x]));
-  $("home-subtitle").textContent = profile === "test" ? "🔧 保護者の動作確認用（娘さんの成績には影響しません）" : "👧 学習用の成績を記録しています";
-  const area = $("era-list");
+  const allProgress=await readAll("progress");
+  const records=new Map(allProgress.filter(x=>x.profile===profile).map(x=>[x.questionId,x]));
+  const awards=await readAll("awards");
+  $("home-subtitle").textContent=profile==="test" ? "🔧 保護者の動作確認用（娘さんの成績には影響しません）" : "👧 学習用の成績を記録しています";
+  $("dashboard-mode").textContent=profile==="test" ? "🔧 テスト用の理解度" : "👧 学習用の理解度";
+  const area=$("era-list");
   area.replaceChildren();
-  for (const [id, label] of ERAS) {
-    const qs = QUESTIONS.filter(q => q.era === id);
-    const mastered = qs.filter(q => records.get(q.id)?.mastered).length;
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "era";
-    btn.disabled = qs.length === 0;
-    const row = document.createElement("div");
-    row.className = "era-row";
-    const title = document.createElement("strong");
-    title.textContent = label;
-    const stats = document.createElement("span");
-    stats.textContent = qs.length ? `${mastered} / ${qs.length}問 習得` : "問題未登録";
-    row.append(title, stats);
-    const track = document.createElement("div");
-    track.className = "track";
-    const fill = document.createElement("div");
-    fill.className = "fill";
-    fill.style.width = qs.length ? `${mastered / qs.length * 100}%` : "0%";
+  const allStats={};
+  for (const [id,label] of ERAS) {
+    const stats=masteryStats(id,records);
+    allStats[id]=stats;
+    const btn=document.createElement("button");
+    btn.type="button";
+    btn.className="era";
+    btn.disabled=stats.count===0;
+    const row=document.createElement("div"); row.className="era-row";
+    const title=document.createElement("strong"); title.textContent=label;
+    const total=document.createElement("span");
+    total.textContent=stats.count ? `${stats.mastered} / ${stats.count}問 習得` : "問題未登録";
+    row.append(title,total);
+    const track=document.createElement("div"); track.className="track";
+    const fill=document.createElement("div"); fill.className="fill";
+    fill.style.width=stats.percentage===null ? "0%" : `${stats.percentage}%`;
     track.append(fill);
-    btn.append(row, track);
-    btn.addEventListener("click", () => startEra(id).catch(err));
-    area.append(btn);
+    const detail=document.createElement("div"); detail.className="era-details";
+    const rank=document.createElement("span"); rank.className="rank-pill"+(stats.count?"":" empty");
+    rank.textContent=titleForMastery(stats);
+    const pct=document.createElement("span"); pct.className="muted";
+    pct.textContent=stats.count ? `理解度 ${stats.display}%` : "問題を取り込んでね";
+    detail.append(rank,pct);
+    btn.append(row,track,detail);
+    btn.addEventListener("click",()=>startEra(id).catch(err));
+    area.appendChild(btn);
   }
+  renderRadar(allStats);
+  renderCollection(allStats,awards);
+  $("dashboard").classList.remove("hidden");
   show("home");
 }
 function pickQuestion(era, records, previousId) {
@@ -665,9 +850,22 @@ async function grade() {
     };
     const session = { key:`${profileAtSubmit}:${eraAtSubmit}`, profile:profileAtSubmit, era:eraAtSubmit, questionId:q.id, phase:"result", selected:answerAtSubmit };
     const event = { profile:profileAtSubmit, questionId:q.id, correct, selected:answerAtSubmit, at:now };
-    await saveAnswer(progress, session, event);
+    let award=null;
+    const eraQuestions=QUESTIONS.filter(item=>item.era===eraAtSubmit);
+    if (progress.mastered && eraQuestions.length>=CARD_MIN_QUESTIONS) {
+      const allProgress=await readAll("progress");
+      const byId=new Map(allProgress.filter(item=>item.profile===profileAtSubmit).map(item=>[item.questionId,item]));
+      byId.set(q.id,progress);
+      if (eraQuestions.every(item=>byId.get(item.id)?.mastered)) {
+        const cardKey=`${profileAtSubmit}:${eraAtSubmit}`;
+        if (!await readOne("awards",cardKey)) {
+          award={key:cardKey,profile:profileAtSubmit,era:eraAtSubmit,earnedAt:now,questionCountAtEarn:eraQuestions.length};
+        }
+      }
+    }
+    await saveAnswer(progress, session, event, award);
     phase = "result";
-    showResult();
+    showResult(award);
     notice("回答を保存しました。");
   } catch (error) {
     err(error);
@@ -676,7 +874,7 @@ async function grade() {
     updateChoices();
   }
 }
-function showResult() {
+function showResult(newAward=null) {
   const q = currentQuestion;
   const correct = isCorrect(q, selected);
   const result = $("result");
@@ -689,6 +887,15 @@ function showResult() {
   const explanation = document.createElement("p");
   explanation.textContent = q.why;
   result.append(heading, answerText, explanation);
+  if (newAward) {
+    const item=CARDS[newAward.era];
+    const banner=document.createElement("div"); banner.className="award-banner";
+    const icon=document.createElement("div"); icon.className="trophy-icon"; icon.textContent=item.icon;
+    const title=document.createElement("strong"); title.textContent="🎉 時代完全制覇！カードを獲得！";
+    const subtitle=document.createElement("div"); subtitle.textContent=`${item.name}（${profile === "test" ? "テスト用" : "学習用"}）`;
+    banner.append(icon,title,subtitle);
+    result.appendChild(banner);
+  }
   result.classList.remove("hidden");
   $("check").classList.add("hidden");
   $("next").classList.remove("hidden");
@@ -725,6 +932,7 @@ $("next").addEventListener("click", () => advance(currentEra, currentQuestion.id
   try {
     db = await openDatabase();
     await loadImportedQuestions();
+    await ensureEarnedCards();
     updateModeButtons();
     await renderHome();
   } catch (error) {
