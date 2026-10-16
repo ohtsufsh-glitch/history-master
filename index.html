@@ -1,182 +1,400 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>歴史マスター</title>
-<style>
-  body {
-    font-family: -apple-system, sans-serif;
-    background: #f1f5f9;
-    color: #243247;
-    margin: 0;
-    padding: 20px;
-  }
-  main {
-    max-width: 650px;
-    margin: auto;
-  }
-  h1 { text-align: center; }
-  .panel {
-    background: white;
-    padding: 22px;
-    border-radius: 16px;
-    margin-top: 20px;
-  }
-  button {
-    display: block;
-    width: 100%;
-    padding: 16px;
-    margin-top: 12px;
-    border: 1px solid #ccd5e0;
-    border-radius: 12px;
-    background: white;
-    color: #243247;
-    font-size: 17px;
-    text-align: left;
-    cursor: pointer;
-  }
-  button.selected {
-    border: 2px solid #287dca;
-    background: #e7f3ff;
-  }
-  button.primary {
-    background: #287dca;
-    color: white;
-    text-align: center;
-    border: none;
-  }
-  button:disabled { opacity: 0.45; }
-  #result { line-height: 1.7; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#376d8a">
+  <title>歴史マスター｜学習ゲーム</title>
+  <style>
+    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f3f7fb; color: #253244; }
+    main { max-width: 740px; margin: 0 auto; padding: 20px 16px 60px; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+    h1 { font-size: 1.55rem; margin: 0; }
+    h2 { font-size: 1.22rem; margin: 0 0 14px; }
+    h3 { margin: 0; font-size: 1rem; }
+    p { line-height: 1.7; }
+    .card { background: #fff; border: 1px solid #e2e8f1; box-shadow: 0 2px 8px #18293e0b; border-radius: 18px; padding: 20px; margin-bottom: 14px; }
+    .mode { display: flex; gap: 6px; background: #e8eef5; border-radius: 12px; padding: 4px; }
+    .mode button { border: 0; border-radius: 9px; padding: 10px 13px; font-size: 14px; width: auto; margin: 0; background: transparent; }
+    .mode button.active { background: white; color: #175478; font-weight: 700; box-shadow: 0 1px 5px #0001; }
+    .muted { color: #607086; font-size: .91rem; }
+    .small { font-size: .82rem; }
+    button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    button:disabled { cursor: not-allowed; opacity: .48; }
+    .era { width: 100%; border: 1px solid #e0e7f0; border-radius: 13px; padding: 15px; margin-top: 10px; background: #fff; color: inherit; text-align: left; }
+    .era:disabled { opacity: .68; }
+    .era-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+    .era-row span:last-child { white-space: nowrap; font-size: .86rem; color: #607086; }
+    .track { height: 7px; background: #e6edf4; border-radius: 99px; margin-top: 10px; overflow: hidden; }
+    .fill { height: 100%; background: #3e9b84; border-radius: 99px; }
+    .nav { background: transparent; border: 0; padding: 12px 4px; color: #286b94; font-weight: 600; }
+    .tag { border-radius: 99px; background: #e7eff6; color: #275a79; padding: 6px 10px; font-size: .78rem; }
+    .testtag { background: #fef0d8; color: #7d5209; }
+    .question { font-size: 1.15rem; font-weight: 700; line-height: 1.75; margin: 14px 0 18px; }
+    .choice { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 14px; margin-bottom: 10px; border: 2px solid #dbe5ef; border-radius: 13px; background: #fff; text-align: left; color: inherit; }
+    .choice.selected { border-color: #217fb0; background: #e8f5ff; }
+    .choice .marker { display: grid; place-items: center; flex: 0 0 25px; height: 25px; border: 2px solid #91a4ba; border-radius: 7px; font-weight: 700; font-size: 12px; }
+    .choice.single .marker { border-radius: 50%; }
+    .choice.selected .marker { border-color: #217fb0; background: #217fb0; color: white; }
+    .primary { display: block; margin-top: 20px; padding: 15px 16px; width: 100%; border: 0; border-radius: 12px; color: white; background: #286f9a; font-weight: 700; font-size: 1.02rem; text-align: center; }
+    .result { margin-top: 18px; padding: 16px; border-radius: 12px; background: #f0f7f5; border: 1px solid #d3e5df; }
+    .result.wrong { background: #fff6ee; border-color: #f6d9ba; }
+    .result strong { display: block; margin-bottom: 8px; }
+    .hidden { display: none !important; }
+    #notice { color: #98571d; min-height: 1.5em; }
+    @media (max-width: 430px) {
+      header { flex-wrap: wrap; }
+      .mode { width: 100%; }
+      .mode button { flex: 1; }
+      .card { padding: 16px; }
+    }
+  </style>
 </head>
 <body>
 <main>
-  <h1>📚 歴史マスター</h1>
-  <div class="panel">
-    <h2 id="era">時代を選ぼう</h2>
-    <p id="question">歴史の問題に挑戦！</p>
-    <div id="options"></div>
-    <button id="action" class="primary"
-            onclick="start()">学習を始める</button>
-    <div id="result" aria-live="polite"></div>
-  </div>
+  <header>
+    <h1>📚 歴史マスター</h1>
+    <div class="mode" aria-label="利用モード">
+      <button id="mode-test" class="active" type="button">🔧 テスト用</button>
+      <button id="mode-student" type="button">👧 学習用</button>
+    </div>
+  </header>
+  <div id="notice" role="alert" class="small"></div>
+
+  <section id="home" class="card">
+    <h2>学習する時代を選ぼう</h2>
+    <p id="home-subtitle" class="muted">まずはサンプル問題で練習できます。</p>
+    <div id="era-list"></div>
+    <p class="muted small" style="margin-top:18px">※ 今回は公開可能な自作サンプル問題だけを内蔵しています。実教材から作る問題の取り込みは次の段階で追加します。</p>
+  </section>
+
+  <section id="quiz" class="hidden">
+    <button class="nav" id="back-home" type="button">← ホームに戻る</button>
+    <div class="card">
+      <div class="era-row"><h2 id="quiz-era" style="margin:0"></h2><span id="quiz-status" class="tag"></span></div>
+      <p id="question-kind" class="muted small"></p>
+      <p id="question-text" class="question"></p>
+      <div id="choices"></div>
+      <button id="check" class="primary" type="button" disabled>答え合わせ</button>
+      <div id="result" class="result hidden" aria-live="polite"></div>
+      <button id="next" class="primary hidden" type="button">次の問題へ →</button>
+    </div>
+  </section>
+
+  <section id="finished" class="card hidden">
+    <h2>🎉 この時代のサンプル問題をすべて習得！</h2>
+    <p>すべての問題で2回連続正解できました。おつかれさま！</p>
+    <button id="finish-home" class="primary" type="button">ホームへ戻る</button>
+  </section>
 </main>
 
 <script>
-const questions = [
-  {
-    era: "平安時代",
-    text: "『源氏物語』の作者は誰？",
-    options: [
-      "清少納言", "紫式部",
-      "小野小町", "推古天皇"
-    ],
-    answers: [1],
-    explanation:
-      "紫式部は平安時代の作家で、『源氏物語』を書きました。"
-  },
-  {
-    era: "鎌倉時代",
-    text: "鎌倉幕府に関係する人物をすべて選ぼう。",
-    options: [
-      "源頼朝", "北条政子",
-      "徳川家康", "北条義時"
-    ],
-    answers: [0, 1, 3],
-    explanation:
-      "源頼朝、北条政子、北条義時は鎌倉幕府と深い関係があります。"
-  }
+"use strict";
+// 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
+const ERAS = [
+  ["E01", "旧石器・縄文・弥生"],
+  ["E02", "古墳・飛鳥"],
+  ["E03", "奈良"],
+  ["E04", "平安"],
+  ["E05", "鎌倉"],
+  ["E06", "室町・戦国"],
+  ["E07", "安土桃山"],
+  ["E08", "江戸"],
+  ["E09", "明治・大正"],
+  ["E10", "昭和・平成・令和"]
+];
+const QUESTIONS = [
+  { id:"SAMPLE-E01-001", era:"E01", q:"縄文時代の名前のもとになった土器はどれ？", options:["縄文土器","須恵器","三彩","磁器"], answers:[0], why:"縄文土器には、縄目のような文様が見られるものがあります。" },
+  { id:"SAMPLE-E01-002", era:"E01", q:"弥生時代の日本で広がったものをすべて選ぼう。", options:["水田稲作","高床倉庫","蒸気機関車","土偶の制作が初めて始まった"], answers:[0,1], why:"弥生時代には水田稲作が広まり、収穫した米を保存する高床倉庫も使われました。土偶は縄文時代に作られています。" },
+  { id:"SAMPLE-E01-003", era:"E01", q:"古い時代から新しい時代への並びとして正しいものは？", options:["弥生→縄文→旧石器","旧石器→縄文→弥生","縄文→旧石器→弥生"], answers:[1], why:"日本の先史時代は、一般に旧石器時代、縄文時代、弥生時代の順に学びます。" },
+  { id:"SAMPLE-E04-001", era:"E04", q:"『源氏物語』を書いた人物は誰？", options:["清少納言","紫式部","小野小町","推古天皇"], answers:[1], why:"『源氏物語』は、平安時代の紫式部が書いた物語です。" },
+  { id:"SAMPLE-E04-002", era:"E04", q:"平安時代の文学作品をすべて選ぼう。", options:["源氏物語","古今和歌集","東海道中膝栗毛","徒然草"], answers:[0,1], why:"『源氏物語』と『古今和歌集』は平安時代。『東海道中膝栗毛』は江戸時代、『徒然草』は鎌倉時代末期の作品です。" },
+  { id:"SAMPLE-E04-003", era:"E04", q:"平安時代に摂関政治を行った一族は？", options:["藤原氏","平氏","徳川氏","足利氏"], answers:[0], why:"藤原氏は天皇の外戚として摂政や関白となり、政治に大きな力を持ちました。" },
+  { id:"SAMPLE-E05-001", era:"E05", q:"鎌倉幕府と関係の深い人物をすべて選ぼう。", options:["源頼朝","北条政子","徳川家康","北条義時"], answers:[0,1,3], why:"源頼朝は鎌倉幕府を開き、北条政子・北条義時も鎌倉幕府の政治に関わりました。" },
+  { id:"SAMPLE-E05-002", era:"E05", q:"13世紀、鎌倉幕府の時代に日本へ攻めてきた国は？", options:["元","明","清","ローマ帝国"], answers:[0], why:"元の軍が1274年と1281年に日本へ攻めてきた出来事を、元寇といいます。" },
+  { id:"SAMPLE-E05-003", era:"E05", q:"鎌倉幕府で、御家人が幕府のために戦うなどして務めを果たすことを何という？", options:["御恩","奉公","参勤交代","大政奉還"], answers:[1], why:"将軍が御家人に領地の保護などを行うのが御恩、御家人が軍役などで応えるのが奉公です。" }
 ];
 
-let index = 0;
+const DB_NAME = "history-master-sample-v1";
+const DB_VERSION = 1;
+let db;
+let profile = "test"; // 安全のため、起動時は毎回テスト用。
+let currentEra = null;
+let currentQuestion = null;
 let selected = [];
-let answered = false;
+let phase = "question";
+let saving = false;
+const $ = id => document.getElementById(id);
 
-function start() {
-  index = 0;
-  showQuestion();
-}
-
-function showQuestion() {
-  const q = questions[index];
-  selected = [];
-  answered = false;
-
-  document.getElementById("era").textContent = q.era;
-  document.getElementById("question").textContent = q.text;
-  document.getElementById("result").textContent = "";
-
-  const area = document.getElementById("options");
-  area.replaceChildren();
-
-  q.options.forEach((option, i) => {
-    const button = document.createElement("button");
-    button.textContent = option;
-    button.onclick = () => {
-      if (answered) return;
-      if (q.answers.length === 1) {
-        selected = [i];
-      } else {
-        selected = selected.includes(i)
-          ? selected.filter(x => x !== i)
-          : [...selected, i];
-      }
-      updateOptions();
+function openDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = () => {
+      const database = request.result;
+      if (!database.objectStoreNames.contains("progress")) database.createObjectStore("progress", {keyPath:"key"});
+      if (!database.objectStoreNames.contains("sessions")) database.createObjectStore("sessions", {keyPath:"key"});
+      if (!database.objectStoreNames.contains("answers")) database.createObjectStore("answers", {keyPath:"id", autoIncrement:true});
     };
-    area.appendChild(button);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
   });
-
-  const action = document.getElementById("action");
-  action.textContent = "答え合わせ";
-  action.onclick = checkAnswer;
-  action.disabled = true;
 }
-
-function updateOptions() {
-  document.querySelectorAll("#options button")
-    .forEach((button, i) => {
-      button.classList.toggle(
-        "selected", selected.includes(i)
-      );
-    });
-  document.getElementById("action").disabled =
-    selected.length === 0;
+function readOne(storeName, key) {
+  return new Promise((resolve, reject) => {
+    const request = db.transaction(storeName, "readonly").objectStore(storeName).get(key);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
 }
-
-function checkAnswer() {
-  const q = questions[index];
-  answered = true;
-
-  const correct =
-    selected.length === q.answers.length &&
-    selected.every(i => q.answers.includes(i));
-
-  document.getElementById("result").textContent =
-    (correct ? "🎉 正解！ " : "もう一度覚えよう！ ") +
-    "正解：" +
-    q.answers.map(i => q.options[i]).join("、") +
-    "。 " + q.explanation;
-
-  const action = document.getElementById("action");
-  action.textContent = "次へ";
-  action.onclick = () => {
-    index++;
-    if (index < questions.length) {
-      showQuestion();
-    } else {
-      document.getElementById("era").textContent =
-        "学習終了！";
-      document.getElementById("question").textContent =
-        "2問の体験が終わりました。";
-      document.getElementById("options").replaceChildren();
-      document.getElementById("result").textContent = "";
-      action.textContent = "もう一度遊ぶ";
-      action.onclick = start;
+function readAll(storeName) {
+  return new Promise((resolve, reject) => {
+    const request = db.transaction(storeName, "readonly").objectStore(storeName).getAll();
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+function writeSession(session) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("sessions", "readwrite");
+    tx.objectStore("sessions").put(session);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+function saveAnswer(progress, session, answerEvent) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(["progress", "sessions", "answers"], "readwrite");
+    tx.objectStore("progress").put(progress);
+    tx.objectStore("sessions").put(session);
+    tx.objectStore("answers").add(answerEvent);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+function show(sectionId) {
+  for (const id of ["home", "quiz", "finished"]) $(id).classList.toggle("hidden", id !== sectionId);
+}
+function notice(text = "") { $("notice").textContent = text; }
+function err(error) {
+  console.error(error);
+  notice("保存・読み込みに失敗しました。Safariのプライベートブラウズ設定や空き容量も確認してください。");
+}
+function updateModeButtons() {
+  for (const name of ["test", "student"]) {
+    $("mode-" + name).classList.toggle("active", profile === name);
+    $("mode-" + name).setAttribute("aria-pressed", String(profile === name));
+  }
+}
+async function switchMode(mode) {
+  if (saving || mode === profile) return;
+  if (!confirm((mode === "student" ? "娘さん用の学習モード" : "保護者用のテストモード") + "に切り替えますか？\n※ 学習履歴は混ざりません。")) return;
+  profile = mode;
+  currentEra = null;
+  currentQuestion = null;
+  notice("");
+  updateModeButtons();
+  await renderHome();
+}
+async function renderHome() {
+  const allProgress = await readAll("progress");
+  const records = new Map(allProgress.filter(x => x.profile === profile).map(x => [x.questionId, x]));
+  $("home-subtitle").textContent = profile === "test" ? "🔧 保護者の動作確認用（娘さんの成績には影響しません）" : "👧 学習用の成績を記録しています";
+  const area = $("era-list");
+  area.replaceChildren();
+  for (const [id, label] of ERAS) {
+    const qs = QUESTIONS.filter(q => q.era === id);
+    const mastered = qs.filter(q => records.get(q.id)?.mastered).length;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "era";
+    btn.disabled = qs.length === 0;
+    const row = document.createElement("div");
+    row.className = "era-row";
+    const title = document.createElement("strong");
+    title.textContent = label;
+    const stats = document.createElement("span");
+    stats.textContent = qs.length ? `${mastered} / ${qs.length}問 習得` : "問題未登録";
+    row.append(title, stats);
+    const track = document.createElement("div");
+    track.className = "track";
+    const fill = document.createElement("div");
+    fill.className = "fill";
+    fill.style.width = qs.length ? `${mastered / qs.length * 100}%` : "0%";
+    track.append(fill);
+    btn.append(row, track);
+    btn.addEventListener("click", () => startEra(id).catch(err));
+    area.append(btn);
+  }
+  show("home");
+}
+function pickQuestion(era, records, previousId) {
+  let remaining = QUESTIONS.filter(q => q.era === era && !records.get(q.id)?.mastered);
+  if (!remaining.length) return null;
+  if (remaining.length > 1) remaining = remaining.filter(q => q.id !== previousId);
+  const groups = [
+    {weight:40, items:remaining.filter(q => !records.has(q.id))},
+    {weight:40, items:remaining.filter(q => records.get(q.id)?.everWrong)},
+    {weight:20, items:remaining.filter(q => records.has(q.id) && !records.get(q.id)?.everWrong)}
+  ].filter(group => group.items.length > 0);
+  const total = groups.reduce((sum, group) => sum + group.weight, 0);
+  let roll = Math.random() * total;
+  for (const group of groups) {
+    roll -= group.weight;
+    if (roll < 0) return group.items[Math.floor(Math.random() * group.items.length)];
+  }
+  const group = groups[groups.length - 1];
+  return group.items[0];
+}
+async function startEra(era) {
+  currentEra = era;
+  notice("");
+  const session = await readOne("sessions", `${profile}:${era}`);
+  const question = session && QUESTIONS.find(q => q.id === session.questionId && q.era === era);
+  if (question) {
+    const progress = await readOne("progress", `${profile}:${question.id}`);
+    if (!progress?.mastered || session.phase === "result") {
+      currentQuestion = question;
+      selected = session.selected || [];
+      phase = session.phase;
+      renderQuestion();
+      return;
     }
-  };
+  }
+  await advance(era, session?.questionId || null);
 }
+async function advance(era, previousId) {
+  const all = await readAll("progress");
+  const records = new Map(all.filter(x => x.profile === profile).map(x => [x.questionId, x]));
+  const question = pickQuestion(era, records, previousId);
+  if (!question) {
+    show("finished");
+    return;
+  }
+  const session = { key:`${profile}:${era}`, profile, era, questionId:question.id, phase:"question", selected:[] };
+  await writeSession(session);
+  currentEra = era;
+  currentQuestion = question;
+  selected = [];
+  phase = "question";
+  renderQuestion();
+}
+function renderQuestion() {
+  const q = currentQuestion;
+  $("quiz-era").textContent = ERAS.find(e => e[0] === currentEra)[1];
+  $("quiz-status").textContent = profile === "test" ? "🔧 テスト用" : "👧 学習用";
+  $("quiz-status").classList.toggle("testtag", profile === "test");
+  $("question-kind").textContent = q.answers.length > 1 ? "当てはまるものをすべて選んでください" : "正解を1つ選んでください";
+  $("question-text").textContent = q.q;
+  $("result").classList.add("hidden");
+  $("next").classList.add("hidden");
+  const choices = $("choices");
+  choices.replaceChildren();
+  q.options.forEach((option, i) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "choice" + (q.answers.length === 1 ? " single" : "");
+    btn.setAttribute("aria-pressed", String(selected.includes(i)));
+    const marker = document.createElement("span");
+    marker.className = "marker";
+    marker.textContent = selected.includes(i) ? "✓" : "";
+    const txt = document.createElement("span");
+    txt.textContent = option;
+    btn.append(marker, txt);
+    btn.addEventListener("click", () => {
+      if (phase !== "question" || saving) return;
+      selected = q.answers.length === 1 ? [i] : selected.includes(i) ? selected.filter(x => x !== i) : [...selected, i];
+      updateChoices();
+    });
+    choices.append(btn);
+  });
+  $("check").classList.toggle("hidden", phase === "result");
+  updateChoices();
+  if (phase === "result") showResult();
+  show("quiz");
+}
+function updateChoices() {
+  $("choices").querySelectorAll("button").forEach((btn, i) => {
+    btn.classList.toggle("selected", selected.includes(i));
+    btn.setAttribute("aria-pressed", String(selected.includes(i)));
+    btn.querySelector(".marker").textContent = selected.includes(i) ? "✓" : "";
+    btn.disabled = phase === "result" || saving;
+  });
+  $("check").disabled = !selected.length || saving || phase === "result";
+}
+function isCorrect(q, answer) {
+  return answer.length === q.answers.length && answer.every(i => q.answers.includes(i));
+}
+async function grade() {
+  if (saving || phase !== "question" || !selected.length) return;
+  saving = true;
+  updateChoices();
+  const q = currentQuestion;
+  const profileAtSubmit = profile;
+  const eraAtSubmit = currentEra;
+  const answerAtSubmit = [...selected];
+  const correct = isCorrect(q, answerAtSubmit);
+  try {
+    const key = `${profileAtSubmit}:${q.id}`;
+    const before = await readOne("progress", key);
+    const streak = correct ? (before?.streak || 0) + 1 : 0;
+    const now = new Date().toISOString();
+    const progress = {
+      key, profile:profileAtSubmit, questionId:q.id,
+      attempts:(before?.attempts || 0) + 1,
+      streak, everWrong:!!before?.everWrong || !correct,
+      mastered:streak >= 2, lastAnsweredAt:now
+    };
+    const session = { key:`${profileAtSubmit}:${eraAtSubmit}`, profile:profileAtSubmit, era:eraAtSubmit, questionId:q.id, phase:"result", selected:answerAtSubmit };
+    const event = { profile:profileAtSubmit, questionId:q.id, correct, selected:answerAtSubmit, at:now };
+    await saveAnswer(progress, session, event);
+    phase = "result";
+    showResult();
+    notice("回答を保存しました。");
+  } catch (error) {
+    err(error);
+  } finally {
+    saving = false;
+    updateChoices();
+  }
+}
+function showResult() {
+  const q = currentQuestion;
+  const correct = isCorrect(q, selected);
+  const result = $("result");
+  result.replaceChildren();
+  result.classList.toggle("wrong", !correct);
+  const heading = document.createElement("strong");
+  heading.textContent = correct ? "🎉 正解！" : "もう一度覚えよう！";
+  const answerText = document.createElement("p");
+  answerText.textContent = "正解：" + q.answers.map(i => q.options[i]).join("、");
+  const explanation = document.createElement("p");
+  explanation.textContent = q.why;
+  result.append(heading, answerText, explanation);
+  result.classList.remove("hidden");
+  $("check").classList.add("hidden");
+  $("next").classList.remove("hidden");
+}
+
+$("mode-test").addEventListener("click", () => switchMode("test").catch(err));
+$("mode-student").addEventListener("click", () => switchMode("student").catch(err));
+$("back-home").addEventListener("click", () => { if (!saving) renderHome().catch(err); });
+$("finish-home").addEventListener("click", () => renderHome().catch(err));
+$("check").addEventListener("click", grade);
+$("next").addEventListener("click", () => advance(currentEra, currentQuestion.id).catch(err));
+(async () => {
+  try {
+    db = await openDatabase();
+    updateModeButtons();
+    await renderHome();
+  } catch (error) {
+    err(error);
+    $("home-subtitle").textContent = "保存機能を利用できません。通常のSafariでページを開き直してください。";
+  }
+})();
 </script>
 </body>
 </html>
