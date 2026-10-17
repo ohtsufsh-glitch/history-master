@@ -25,6 +25,12 @@
     .test-banner p { margin:4px 0 10px; }
     .test-banner .small-action { background:#fff; }
     .mode-indicator { color:#527086; font-size:.85rem; font-weight:650; }
+    .coin-pill { display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:7px 10px;border:1px solid #e6c87b;background:#fff7d9;border-radius:99px;color:#755000;font-size:.91rem;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums; }
+    .coin-home-line { display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fff9e8;border:1px solid #f0dfa9;padding:10px 13px;border-radius:12px;margin:4px 0 16px; }
+    .coin-home-line strong { color:#79570c;white-space:nowrap; }
+    .coin-reward { display:flex;align-items:center;gap:9px;flex-wrap:wrap;border-radius:11px;background:#fff4c9;border:1px solid #ead18b;color:#795300;padding:11px 12px;margin:12px 0 7px;font-weight:800; }
+    .coin-reward small {display:block;font-weight:500;color:#765f33;font-size:.77rem;}
+    @media(max-width:430px) { .header-actions { gap:5px; } .coin-pill { min-height:37px;padding:6px 8px;font-size:.83rem; } }
     .muted { color: #607086; font-size: .91rem; }
     .small { font-size: .82rem; }
     button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -176,9 +182,9 @@
     @media(min-width:640px) { .trophy-grid {grid-template-columns:repeat(3,minmax(0,1fr));} }
     @media (max-width: 430px) {
       header { flex-wrap:nowrap; gap:8px; }
-      h1 { font-size:1.28rem; white-space:nowrap; }
+      h1 { font-size:1.14rem; white-space:nowrap; }
       .header-actions { flex-shrink:0; gap:6px; margin-left:auto; }
-      .mode-indicator { font-size:.76rem; }
+      .mode-indicator { display:none; }
       .icon-button { padding:9px 10px; }
       .card { padding: 16px; }
     }
@@ -189,6 +195,7 @@
   <header>
     <h1>📚 歴史マスター</h1>
     <div class="header-actions">
+      <span id="header-coins" class="coin-pill" aria-live="polite" aria-label="学習用コイン 0枚">🪙 0</span>
       <span id="header-mode" class="mode-indicator" aria-live="polite">👧 学習用</span>
       <button id="open-admin" class="icon-button" type="button" aria-label="保護者用の管理画面を開く">⚙️ 管理</button>
     </div>
@@ -198,10 +205,11 @@
   <section id="home" class="card">
     <div id="test-home-panel" class="test-banner hidden">
       <strong>🔧 テストモード</strong>
-      <p class="small">ここでの回答・理解度・カードはテスト用に保存され、娘さんの学習成績とは分離されます。</p>
+      <p class="small">ここでの回答・理解度・カード・コインはテスト用に保存され、娘さんの学習成績とは分離されます。</p>
       <button id="test-return-admin" type="button" class="small-action">← 保護者用管理画面に戻る</button>
     </div>
     <p id="home-subtitle" class="muted hidden"></p>
+    <div class="coin-home-line"><strong id="home-coins">🪙 0 コイン</strong><span class="muted small">初正解・初習得でコインを集めよう！</span></div>
     <div id="dashboard" aria-label="理解度と称号" class="hidden">
       <div class="dashboard-title"><h3>📊 10時代の理解度</h3></div>
       <div id="radar-chart" class="radar-wrap" role="img" aria-label="時代別の理解度レーダーチャート"></div>
@@ -227,7 +235,7 @@
     <p class="muted admin-lead">教材の問題追加・修正・削除、バックアップ・復元を行います。問題データは端末内に保存されます。</p>
     <div class="admin-test-area">
       <h3>🔧 動作確認</h3>
-      <p class="muted small">テストモードで解いた結果は娘さんの学習履歴には反映されません。問題データ自体は共通です。</p>
+      <p class="muted small">テストモードで解いた結果・コインは娘さんの学習履歴には反映されません。問題データ自体は共通です。</p>
       <button id="admin-start-test" class="primary" type="button">テストモードで問題を解く</button>
     </div>
     <button id="toggle-import" class="import-toggle" type="button" aria-expanded="false">＋ 問題ファイルを取り込む</button>
@@ -291,11 +299,11 @@
     <button id="toggle-backup" class="import-toggle" type="button" aria-expanded="false">＋ バックアップ・復元</button>
     <div id="backup-panel" class="import-panel hidden">
       <h3>学習データのバックアップ</h3>
-      <p class="muted small">取り込んだ問題（削除・非表示分を含む）・両モードの学習履歴・回答記録・中断状態・獲得カード・サンプルの非表示設定をまとめてJSONに書き出します。ファイルは外部サーバーに送信しません。</p>
+      <p class="muted small">取り込んだ問題（削除・非表示分を含む）・両モードの学習履歴・回答記録・中断状態・獲得カード・コイン残高／受取済み記録・サンプルの非表示設定をまとめてJSONに書き出します。ファイルは外部サーバーに送信しません。</p>
       <button id="backup-export" class="primary" type="button">バックアップJSONを書き出す</button>
       <p class="muted small">Safariのダウンロード先を確認し、必要に応じて「ファイル」アプリからiCloud Driveへ保存してください。書き出したJSONをGitHubにアップロードしないでください。</p>
       <h3 style="margin-top:24px">バックアップから復元</h3>
-      <div class="backup-warn">注意：復元すると、現在の取り込み問題・両モードの学習履歴・途中状態・獲得カードを、バックアップの内容で<strong>すべて置き換えます</strong>。復元する前に、現在のデータもバックアップしてください。</div>
+      <div class="backup-warn">注意：復元すると、現在の取り込み問題・両モードの学習履歴・途中状態・獲得カード・コインを、バックアップの内容で<strong>すべて置き換えます</strong>。復元する前に、現在のデータもバックアップしてください。</div>
       <label for="backup-file" style="display:block;margin-top:14px"><strong>復元するJSONファイルを選択</strong></label>
       <input id="backup-file" type="file" accept=".json,application/json">
       <div id="backup-preview" class="backup-status small" role="status" aria-live="polite">ファイルを選択すると、復元前に内容を検査します。</div>
@@ -305,17 +313,17 @@
     <div id="reset-panel" class="import-panel hidden">
       <h3>🧹 サンプル・学習データの整理</h3>
       <p class="muted small">初期化する対象を選んでください。<strong>チェックしなかった項目は変更しません。</strong> 実行前に、必要なバックアップJSONを保存してください。</p>
-      <div class="backup-warn">問題の一括削除は「復元可能な非表示」です。一方、学習履歴の初期化・完全初期化は取り消せません。バックアップがあれば元に戻せます。</div>
+      <div class="backup-warn">問題の一括削除は「復元可能な非表示」です。一方、学習履歴・コインの初期化および完全初期化は取り消せません。バックアップがあれば元に戻せます。</div>
       <label class="reset-option"><input id="reset-hide-samples" type="checkbox"><span><strong>内蔵サンプルをすべて非表示にする</strong><span>内蔵の9問を出題対象から外します。いつでも個別に再表示できます。</span></span></label>
       <label class="reset-option"><input id="reset-hide-imported" type="checkbox"><span><strong>取り込み問題をすべて出題対象から外す</strong><span>削除済みを除く取り込み問題を一括で論理削除します。問題と履歴は保持され、個別に復元可能です。</span></span></label>
-      <label class="reset-option"><input id="reset-student" type="checkbox"><span><strong>娘さん用の学習データを初期化する</strong><span>娘さん用の回答履歴・習得状況・途中状態・獲得カードを削除します。テスト用は保持します。</span></span></label>
-      <label class="reset-option"><input id="reset-test" type="checkbox"><span><strong>テスト用の学習データを初期化する</strong><span>テスト用の回答履歴・習得状況・途中状態・獲得カードを削除します。娘さん用は保持します。</span></span></label>
+      <label class="reset-option"><input id="reset-student" type="checkbox"><span><strong>娘さん用の学習データを初期化する</strong><span>娘さん用の回答履歴・習得状況・途中状態・獲得カード・コインを削除します。テスト用は保持します。</span></span></label>
+      <label class="reset-option"><input id="reset-test" type="checkbox"><span><strong>テスト用の学習データを初期化する</strong><span>テスト用の回答履歴・習得状況・途中状態・獲得カード・コインを削除します。娘さん用は保持します。</span></span></label>
       <div id="reset-preview" class="reset-status small" role="status" aria-live="polite">初期化する項目を選択すると、対象件数が表示されます。</div>
       <label class="reset-ack"><input id="reset-ack" type="checkbox"><span>必要なバックアップを保存したか確認し、選択したデータが変更・削除されることを理解しました。</span></label>
       <button id="reset-apply" class="primary" type="button" disabled>選択した項目を初期化する</button>
       <div class="reset-danger">
         <h3>⚠️ 完全初期化（すべての端末内データを消去）</h3>
-        <p class="muted small">取り込み問題（削除済みも含む）・両モードの学習履歴・途中状態・獲得カード・サンプル非表示設定を<strong>すべて完全削除</strong>します。内蔵サンプル9問は再表示されます。取り消し不可です。</p>
+        <p class="muted small">取り込み問題（削除済みも含む）・両モードの学習履歴・途中状態・獲得カード・コイン・サンプル非表示設定を<strong>すべて完全削除</strong>します。内蔵サンプル9問は再表示されます。取り消し不可です。</p>
         <button id="reset-all" class="reset-danger-button" type="button">すべてのデータを完全初期化する</button>
       </div>
     </div>
@@ -356,7 +364,7 @@
 
 <script>
 "use strict";
-// 歴史マスター v1.3.2：時代制覇カード画像の導入。v1.3.1の一括更新機能・DB・JSON形式は維持。
+// 歴史マスター v1.4.0：2段階コイン報酬。v1.3.2のカード表示と問題一括更新を維持。
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -384,7 +392,7 @@ const SAMPLE_QUESTIONS = [
 
 // データベース名は以前と同じ（回答履歴を引き継ぐため変更しない）。
 const DB_NAME = "history-master-sample-v1";
-const DB_VERSION = 4; // sampleSettingsを追加。以前のストアは保持する。
+const DB_VERSION = 5; // コイン取引・受取済み記録を追加。旧データは保持する。
 let QUESTIONS = [...SAMPLE_QUESTIONS]; // 出題対象（削除・非表示を除く）
 let importedQuestions = []; // 削除済みも含めて保管
 let hiddenSampleIds = new Set();
@@ -407,6 +415,7 @@ let managing = false;
 let editingId = null;
 let answerEvents = []; // 現行の回答記録。旧版の回答記録もバックアップには残す。
 let optionOrder = []; // 表示上の選択肢位置 -> JSON内の選択肢インデックス
+let lastCoinAward = null; // 回答済み画面を再表示するときの獲得表示
 // JSONのdifficultyは問題そのものの属性。既存問題は未設定として扱う。
 const DIFFICULTIES = {basic:"基礎", standard:"標準", advanced:"応用"};
 function difficultyLabel(q) { return DIFFICULTIES[q.difficulty] || "未設定"; }
@@ -414,6 +423,73 @@ function difficultyLabel(q) { return DIFFICULTIES[q.difficulty] || "未設定"; 
 const GENRE_TAGS = Object.freeze({person:"人物",politics:"政治・制度",culture:"文化・宗教",society:"社会・経済",war_diplomacy:"戦争・外交"});
 function validGenreTag(tag) { return typeof tag === "string" && Object.hasOwn(GENRE_TAGS,tag); }
 function genreTagLabel(q) { return GENRE_TAGS[q.tag] || "未設定"; }
+// 初正解+初習得の2段階のみ。報酬の重複を問題ID×プロフィール×段階で防止する。
+const COIN_REWARDS = Object.freeze({basic:{first:2,master:3},standard:{first:4,master:6},advanced:{first:6,master:9}});
+const COIN_MIGRATION_KEY = "legacy-rewards-seeded-v1";
+const COIN_STAGES = ["first","master"];
+function coinReward(q,stage) { return (COIN_REWARDS[q.difficulty]||COIN_REWARDS.basic)[stage]; }
+function coinClaimKey(who,id,stage) { return `${who}:${id}:${stage}`; }
+function coinBalance(events,who) { return events.filter(ev=>ev.profile===who).reduce((sum,ev)=>sum+ev.amount,0); }
+async function refreshCoinDisplay() {
+  const balance=coinBalance(await readAll("coinEvents"),profile);
+  $("header-coins").textContent=`🪙 ${balance.toLocaleString("ja-JP")}`;
+  $("header-coins").setAttribute("aria-label",`${profile==="test"?"テスト用":"学習用"}コイン ${balance}枚`);
+  const home=$("home-coins");
+  home.textContent=`🪙 ${balance.toLocaleString("ja-JP")} コイン`;
+  return balance;
+}
+// 旧履歴から『報酬済み扱い』を再構成。付与取引は作らないので残高は増えない。
+// 履歴のrevisionごとに連続正解を数え、旧版をまたいだ2連続は認めない。
+function historicalCoinClaims(answers,progress) {
+  const flags=new Map();
+  const streaks=new Map();
+  const ordered=[...answers].sort((a,b)=>a.id-b.id);
+  for(const ev of ordered) {
+    const key=`${ev.profile}:${ev.questionId}`;
+    if(!flags.has(key)) flags.set(key,{profile:ev.profile,questionId:ev.questionId,first:false,master:false});
+    const state=flags.get(key);
+    const previous=streaks.get(key);
+    const revision=ev.revision||1;
+    const streak=ev.correct ? ((previous?.revision===revision?previous.streak:0)+1) : 0;
+    streaks.set(key,{revision,streak});
+    if(ev.correct) state.first=true;
+    if(streak>=2) state.master=true;
+  }
+  for(const p of progress) {
+    const key=`${p.profile}:${p.questionId}`;
+    if(!flags.has(key)) flags.set(key,{profile:p.profile,questionId:p.questionId,first:false,master:false});
+    const state=flags.get(key);
+    if(p.streak>=1) state.first=true;
+    if(p.mastered) { state.first=true; state.master=true; }
+  }
+  const now=new Date().toISOString();
+  const claims=[];
+  for(const state of flags.values()) for(const stage of COIN_STAGES) if(state[stage]) {
+    claims.push({key:coinClaimKey(state.profile,state.questionId,stage),profile:state.profile,questionId:state.questionId,stage,source:"legacy",claimedAt:now});
+  }
+  return claims;
+}
+// アプリの初回起動時のみ実行。処理が中断されてもトランザクション単位で戻る。
+async function ensureCoinMigration() {
+  // 通常起動時は既存の完了マーカーだけを読み、回答履歴の全件走査を避ける。
+  if(await readOne("coinMeta",COIN_MIGRATION_KEY)) return;
+  const [answers,progress]=await Promise.all([readAll("answers"),readAll("progress")]);
+  const claims=historicalCoinClaims(answers,progress);
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(["coinMeta","coinClaims"],"readwrite");
+    const meta=tx.objectStore("coinMeta");
+    const request=meta.get(COIN_MIGRATION_KEY);
+    request.onsuccess=()=>{
+      if(request.result) return;
+      const store=tx.objectStore("coinClaims");
+      for(const claim of claims) store.put(claim);
+      meta.put({id:COIN_MIGRATION_KEY,migratedAt:new Date().toISOString(),legacyClaims:claims.length});
+    };
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error||new Error("コインデータ移行に失敗しました"));
+    tx.onabort=()=>reject(tx.error||new Error("コインデータ移行を中断しました"));
+  });
+}
 const CARD_MIN_QUESTIONS = 50;
 const RANKS = [
   {min:0, title:"🥚 れきしのたまご"},
@@ -708,6 +784,9 @@ function openDatabase() {
       if (!database.objectStoreNames.contains("questions")) database.createObjectStore("questions", {keyPath:"id"});
       if (!database.objectStoreNames.contains("awards")) database.createObjectStore("awards", {keyPath:"key"});
       if (!database.objectStoreNames.contains("sampleSettings")) database.createObjectStore("sampleSettings", {keyPath:"id"});
+      if (!database.objectStoreNames.contains("coinClaims")) database.createObjectStore("coinClaims", {keyPath:"key"});
+      if (!database.objectStoreNames.contains("coinEvents")) database.createObjectStore("coinEvents", {keyPath:"key"});
+      if (!database.objectStoreNames.contains("coinMeta")) database.createObjectStore("coinMeta", {keyPath:"id"});
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -736,16 +815,46 @@ function writeSession(session) {
     tx.onabort = () => reject(tx.error);
   });
 }
-function saveAnswer(progress, session, answerEvent, award=null) {
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(["progress", "sessions", "answers", "awards"], "readwrite");
-    tx.objectStore("progress").put(progress);
-    tx.objectStore("sessions").put(session);
-    tx.objectStore("answers").add(answerEvent);
-    if (award) tx.objectStore("awards").put(award);
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
+// 回答・セッション・獲得カード・コインを同一トランザクションで確定。
+// claimの存在確認から書き込みまで単一のreadwriteトランザクション内で行う。
+function saveAnswer(progress, session, answerEvent, award=null, question=null) {
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(["progress","sessions","answers","awards","coinClaims","coinEvents"],"readwrite");
+    const claimStore=tx.objectStore("coinClaims");
+    const eventStore=tx.objectStore("coinEvents");
+    const granted={amount:0,stages:[]};
+    const eligible=answerEvent.correct && question ? ["first",...(progress.mastered?["master"]:[])] : [];
+    const keys=eligible.map(stage=>[stage,coinClaimKey(progress.profile,progress.questionId,stage)]);
+    let remaining=keys.length;
+    const existing=new Map();
+    function commitAnswer() {
+      for(const [stage,key] of keys) if(!existing.get(key)) {
+        const amount=coinReward(question,stage);
+        const when=answerEvent.at;
+        claimStore.add({key,profile:progress.profile,questionId:progress.questionId,stage,source:"reward",claimedAt:when});
+        eventStore.add({key,profile:progress.profile,questionId:progress.questionId,stage,amount,at:when,difficulty:question.difficulty||"basic"});
+        granted.amount+=amount;
+        granted.stages.push(stage);
+      }
+      session.coinAward=granted.amount;
+      session.coinStages=[...granted.stages];
+      tx.objectStore("progress").put(progress);
+      tx.objectStore("sessions").put(session);
+      tx.objectStore("answers").add(answerEvent);
+      if(award) tx.objectStore("awards").put(award);
+    }
+    if(!remaining) commitAnswer();
+    else for(const [stage,key] of keys) {
+      const req=claimStore.get(key);
+      req.onsuccess=()=>{
+        existing.set(key,!!req.result);
+        remaining--;
+        if(remaining===0) commitAnswer();
+      };
+    }
+    tx.oncomplete=()=>resolve(granted);
+    tx.onerror=()=>reject(tx.error||new Error("回答・コインの保存に失敗しました"));
+    tx.onabort=()=>reject(tx.error||new Error("回答・コインの保存が中止されました"));
   });
 }
 // 公開プログラムには問題データを含めない。選択したJSONだけを端末内で取り込む。
@@ -1223,8 +1332,8 @@ async function applyQuestionUpdate() {
 
 // バックアップは端末内でJSONファイルを生成するのみ。ネットワーク通信は行わない。
 const BACKUP_FORMAT = "history-master-backup";
-const BACKUP_VERSION = 3;
-const BACKUP_STORES = ["questions", "progress", "sessions", "answers", "awards", "sampleSettings"];
+const BACKUP_VERSION = 4;
+const BACKUP_STORES = ["questions", "progress", "sessions", "answers", "awards", "sampleSettings", "coinClaims", "coinEvents", "coinMeta"];
 function snapshotAllStores() {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(BACKUP_STORES, "readonly");
@@ -1273,13 +1382,19 @@ function validIndexList(values, max) {
   return Array.isArray(values) && new Set(values).size === values.length && values.every(i => Number.isInteger(i) && i >= 0 && i < max);
 }
 function validateBackup(obj) {
-  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.backupFormat !== BACKUP_FORMAT || ![1, 2, BACKUP_VERSION].includes(obj.backupVersion) || !obj.data || typeof obj.data !== "object") {
-    throw new Error("このアプリのバックアップ形式ではありません（バージョン1〜3が必要です）。");
+  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.backupFormat !== BACKUP_FORMAT || ![1, 2, 3, BACKUP_VERSION].includes(obj.backupVersion) || !obj.data || typeof obj.data !== "object") {
+    throw new Error("このアプリのバックアップ形式ではありません（バージョン1〜4が必要です）。");
   }
-  // 旧形式(v1/v2)も復元可能。サンプルの表示状態はv3で追加。
+  // v1〜v3からの復元では旧履歴の報酬済み情報のみ作成し、コイン残高は0枚。
+  const legacy=obj.backupVersion<4;
   const data = {...obj.data, awards: obj.backupVersion===1 ? [] : obj.data.awards,
     sampleSettings:obj.backupVersion<3 ? [] : obj.data.sampleSettings};
-  const maxSizes = {questions:20000, progress:100000, sessions:100, answers:300000, awards:20, sampleSettings:9};
+  if(legacy) {
+    data.coinClaims=historicalCoinClaims(data.answers||[],data.progress||[]);
+    data.coinEvents=[];
+    data.coinMeta=[{id:COIN_MIGRATION_KEY,migratedAt:new Date().toISOString(),legacyClaims:data.coinClaims.length}];
+  }
+  const maxSizes = {questions:20000, progress:100000, sessions:100, answers:300000, awards:20, sampleSettings:9, coinClaims:100000, coinEvents:100000, coinMeta:2};
   for (const name of BACKUP_STORES) {
     if (!Array.isArray(data[name]) || data[name].length > maxSizes[name]) throw new Error(`${name} のデータ件数が不正です。`);
   }
@@ -1329,6 +1444,18 @@ function validateBackup(obj) {
     }
     seenAwards.add(a.key);
   }
+  const claimKeys=new Set();
+  for(const c of data.coinClaims) {
+    if(!c || !isProfile(c.profile) || !allQuestions.has(c.questionId) || !COIN_STAGES.includes(c.stage) || c.key!==coinClaimKey(c.profile,c.questionId,c.stage) || claimKeys.has(c.key) || !["legacy","reward"].includes(c.source) || !isNonemptyString(c.claimedAt,64)) throw new Error("コイン受取済み記録が不正です。");
+    claimKeys.add(c.key);
+  }
+  const eventKeys=new Set();
+  for(const ev of data.coinEvents) {
+    if(!ev || !isProfile(ev.profile) || !allQuestions.has(ev.questionId) || !COIN_STAGES.includes(ev.stage) || ev.key!==coinClaimKey(ev.profile,ev.questionId,ev.stage) || eventKeys.has(ev.key) || !claimKeys.has(ev.key) || !Number.isSafeInteger(ev.amount) || ev.amount<1 || ev.amount>15 || !Object.hasOwn(COIN_REWARDS,ev.difficulty) || ev.amount!==COIN_REWARDS[ev.difficulty][ev.stage] || !isNonemptyString(ev.at,64)) throw new Error("コイン獲得履歴が不正です。");
+    eventKeys.add(ev.key);
+  }
+  if(data.coinMeta.length!==1 || data.coinMeta[0]?.id!==COIN_MIGRATION_KEY || !isNonemptyString(data.coinMeta[0].migratedAt,64)) throw new Error("コインの移行情報が不正です。");
+  for(const who of ["student","test"]) if(coinBalance(data.coinEvents,who)<0) throw new Error("コイン残高が不正です。");
   return data;
 }
 function setBackupPreview(message, cssClass="") {
@@ -1348,7 +1475,7 @@ async function previewRestore() {
   try {
     const data = validateBackup(JSON.parse(await file.text()));
     pendingRestore = data;
-    setBackupPreview(`検査OK（${file.name}）\n取り込み問題：${data.questions.length}問\n学習履歴：${data.progress.length}件\n中断情報：${data.sessions.length}件\n回答記録：${data.answers.length}件\n獲得カード：${data.awards.length}枚\n非表示サンプル：${data.sampleSettings.length}問\n\n「復元する」を押すと、現在の問題と本番・テスト両方の学習履歴がすべて置き換わります。`);
+    setBackupPreview(`検査OK（${file.name}）\n取り込み問題：${data.questions.length}問\n学習履歴：${data.progress.length}件\n中断情報：${data.sessions.length}件\n回答記録：${data.answers.length}件\n獲得カード：${data.awards.length}枚\n学習用コイン：${coinBalance(data.coinEvents,"student")}枚\nテスト用コイン：${coinBalance(data.coinEvents,"test")}枚\n非表示サンプル：${data.sampleSettings.length}問\n\n「復元する」を押すと、現在の問題と本番・テスト両方の学習履歴がすべて置き換わります。`);
     $("backup-restore").classList.remove("hidden");
   } catch (error) {
     setBackupPreview("復元できません：" + error.message + "\n現在のデータは変更されていません。", "import-error");
@@ -1370,8 +1497,8 @@ function activeResetLabels(choice, counts) {
   return [
     choice.hideSamples && `内蔵サンプルを非表示：${counts.visibleSamples}問`,
     choice.hideImported && `取り込み問題を非表示：${counts.activeImported}問`,
-    choice.student && `娘さん用の履歴消去：回答${counts.student.answers}件／習得${counts.student.progress}件／途中${counts.student.sessions}件／カード${counts.student.awards}枚`,
-    choice.test && `テスト用の履歴消去：回答${counts.test.answers}件／習得${counts.test.progress}件／途中${counts.test.sessions}件／カード${counts.test.awards}枚`
+    choice.student && `娘さん用の履歴消去：回答${counts.student.answers}件／習得${counts.student.progress}件／途中${counts.student.sessions}件／カード${counts.student.awards}枚／コイン${counts.student.coins}枚`,
+    choice.test && `テスト用の履歴消去：回答${counts.test.answers}件／習得${counts.test.progress}件／途中${counts.test.sessions}件／カード${counts.test.awards}枚／コイン${counts.test.coins}枚`
   ].filter(Boolean);
 }
 async function updateResetPreview() {
@@ -1381,7 +1508,8 @@ async function updateResetPreview() {
     progress: snapshot.progress.filter(x => x.profile === who).length,
     sessions: snapshot.sessions.filter(x => x.profile === who).length,
     answers: snapshot.answers.filter(x => x.profile === who).length,
-    awards: snapshot.awards.filter(x => x.profile === who).length
+    awards: snapshot.awards.filter(x => x.profile === who).length,
+    coins:coinBalance(snapshot.coinEvents,who)
   });
   resetCounts = {
     visibleSamples: SAMPLE_QUESTIONS.length - snapshot.sampleSettings.filter(x => x.hidden).length,
@@ -1416,7 +1544,7 @@ function performReset(choice, complete=false) {
         };
       }
       if (choice.student || choice.test) {
-        for (const name of ["progress", "sessions", "answers", "awards"]) {
+        for (const name of ["progress", "sessions", "answers", "awards", "coinClaims", "coinEvents"]) {
           const store = tx.objectStore(name);
           if (choice.student && choice.test) {
             store.clear();
@@ -1461,6 +1589,7 @@ async function resetFinished(complete) {
   selected = [];
   optionOrder = [];
   phase = "question";
+  lastCoinAward=null;
   await refreshDashboardStay();
   if (!$("manage-panel").classList.contains("hidden")) renderManager();
 }
@@ -1496,7 +1625,7 @@ async function applyFullReset() {
   if (saving || importing || backingUp || managing || resetting || updatingQuestions) return;
   const snapshot = await snapshotAllStores();
   const count = snapshot.questions.length;
-  if (!confirm(`【完全初期化】\n取り込み問題 ${count}問（削除済みを含む）と、娘さん用・テスト用のすべての学習データ・獲得カード・サンプル非表示設定を永久に消去します。\n内蔵サンプル9問が再表示されます。\n\n必要なバックアップは保存しましたか？`)) return;
+  if (!confirm(`【完全初期化】\n取り込み問題 ${count}問（削除済みを含む）と、娘さん用・テスト用のすべての学習データ・獲得カード・コイン・サンプル非表示設定を永久に消去します。\n内蔵サンプル9問が再表示されます。\n\n必要なバックアップは保存しましたか？`)) return;
   const typed = prompt("完全初期化するには『初期化』と入力してください。キャンセルや他の文字では実行しません。");
   if (typed !== "初期化") return;
   resetting = true;
@@ -1505,6 +1634,7 @@ async function applyFullReset() {
   $("reset-apply").disabled = true;
   try {
     await performReset({}, true);
+    await ensureCoinMigration();
     await resetFinished(true);
     $("reset-preview").textContent = "完全初期化しました。内蔵サンプル9問は再び出題されます。";
     notice("端末内のデータを完全初期化しました。内蔵サンプルが再表示されています。");
@@ -1534,7 +1664,7 @@ function replaceAllStores(data) {
 }
 async function applyRestore() {
   if (saving || importing || backingUp || updatingQuestions || !pendingRestore) return;
-  if (!confirm("現在の取り込み問題・娘さんの学習履歴・テスト履歴・中断情報・獲得カードを、バックアップの内容ですべて置き換えます。\n現在のデータのバックアップは作成しましたか？\n\n復元を実行しますか？")) return;
+  if (!confirm("現在の取り込み問題・娘さんの学習履歴・テスト履歴・中断情報・獲得カード・コインを、バックアップの内容ですべて置き換えます。\n現在のデータのバックアップは作成しましたか？\n\n復元を実行しますか？")) return;
   backingUp = true;
   $("backup-restore").disabled = true;
   const data = pendingRestore;
@@ -1542,7 +1672,9 @@ async function applyRestore() {
     validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:BACKUP_VERSION,data});
     await replaceAllStores(data); // 1つのトランザクションで一括変更。途中失敗なら全変更がロールバックされる。
     await loadImportedQuestions();
+    await ensureCoinMigration();
     answerEvents=await readAll("answers");
+    lastCoinAward=null;
     invalidateTagMapPreview();
     // 初回起動時はHTMLの案内文をそのまま表示する。
     await ensureEarnedCards();
@@ -1576,6 +1708,7 @@ function show(sectionId) {
   const inAdmin = sectionId === "admin";
   $("header-mode").textContent = inAdmin ? "🔧 保護者用" : profile === "test" ? "🔧 テスト中" : "👧 学習用";
   $("header-mode").classList.toggle("testtag", inAdmin || profile === "test");
+  if(db) refreshCoinDisplay().catch(err);
   $("open-admin").classList.toggle("hidden", inAdmin);
   $("test-home-panel").classList.toggle("hidden", sectionId !== "home" || profile !== "test");
 }
@@ -1619,6 +1752,7 @@ async function returnToStudentHome() {
   await renderHome();
 }
 async function renderHome() {
+  await refreshCoinDisplay();
   const allProgress=await readAll("progress");
   const records=new Map(allProgress.filter(x=>x.profile===profile).map(x=>[x.questionId,x]));
   const awards=await readAll("awards");
@@ -1691,6 +1825,7 @@ async function startEra(era) {
       currentQuestion = question;
       selected = session.selected || [];
       phase = session.phase;
+      lastCoinAward=session.phase==="result"?{amount:session.coinAward||0,stages:session.coinStages||[]}:null;
       optionOrder=validOrder(session.optionOrder,question.options.length) ? [...session.optionOrder] : shuffledOrder(question);
       // 古い保存形式の中断情報にもランダムな並び順を付与して保存。
       if (!validOrder(session.optionOrder,question.options.length)) await writeSession({...session,optionOrder});
@@ -1718,6 +1853,7 @@ async function advance(era, previousId) {
   currentQuestion = question;
   selected = [];
   phase = "question";
+  lastCoinAward=null;
   renderQuestion();
 }
 function renderQuestion() {
@@ -1811,10 +1947,12 @@ async function grade() {
         }
       }
     }
-    await saveAnswer(progress, session, event, award);
+    const granted=await saveAnswer(progress, session, event, award, q);
     answerEvents.push(event);
+    lastCoinAward=granted;
     phase = "result";
-    showResult(award);
+    await refreshCoinDisplay();
+    showResult(award,granted);
     notice("回答を保存しました。");
   } catch (error) {
     err(error);
@@ -1823,7 +1961,7 @@ async function grade() {
     updateChoices();
   }
 }
-function showResult(newAward=null) {
+function showResult(newAward=null,coinAward=lastCoinAward) {
   const q = currentQuestion;
   const correct = isCorrect(q, selected);
   const result = $("result");
@@ -1836,6 +1974,18 @@ function showResult(newAward=null) {
   const explanation = document.createElement("p");
   explanation.textContent = q.why;
   result.append(heading, answerText, explanation);
+  if(correct) {
+    const coin=document.createElement("div");coin.className="coin-reward";
+    if(coinAward?.amount>0) {
+      const detail=coinAward.stages.includes("master") && coinAward.stages.includes("first") ? "初正解＆初習得ボーナス" : coinAward.stages.includes("master") ? "初習得ボーナス" : "初正解ボーナス";
+      const head=document.createElement("span");head.textContent=`🪙 +${coinAward.amount} コイン獲得！`;
+      const note=document.createElement("small");note.textContent=`${difficultyLabel(q)}問題・${detail}`;
+      coin.append(head,note);
+    } else {
+      coin.textContent="🪙 今回の追加コインは0枚（復習も大切！）";
+    }
+    result.appendChild(coin);
+  }
   if (newAward) {
     const item=CARDS[newAward.era];
     const banner=document.createElement("div"); banner.className="award-banner";
@@ -2155,7 +2305,9 @@ $("card-detail-dialog").addEventListener("click", event => {
       $("question-export-era").appendChild(option);
     }
     await loadImportedQuestions();
+    await ensureCoinMigration();
     answerEvents=await readAll("answers");
+    lastCoinAward=null;
     invalidateTagMapPreview();
     // 初回起動時はHTMLの案内文をそのまま表示する。
     await ensureEarnedCards();
