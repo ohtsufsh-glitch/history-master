@@ -76,12 +76,23 @@
     .reset-ack input { width:20px; height:20px; flex:0 0 20px; margin-top:2px; accent-color:#286f9a; }
     #notice { color: #98571d; min-height: 1.5em; }
     .dashboard-lead { margin-top: 2px; }
+    .era-select-heading { margin: 22px 0 10px; }
     .dashboard-title { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; }
     .profile-hint { font-size:.83rem; color:#607086; }
     .radar-wrap { max-width: 570px; margin: 4px auto 0; }
     .radar-wrap svg { width:100%; height:auto; display:block; overflow:visible; }
     .radar-caption { text-align:center; margin:2px 0 10px; font-size:.83rem; color:#607086; }
     .rank-note { margin: 4px 0 12px; color:#607086; font-size:.87rem; }
+    .genre-panel { border:1px solid #d6e5ef; border-radius:14px; padding:14px; margin-top:18px; background:#f8fbfd; }
+    .genre-panel summary { font-weight:700; color:#245e80; cursor:pointer; padding:4px 0; min-height:35px; }
+    .genre-row { padding:12px 0; border-bottom:1px solid #e0e9f0; }
+    .genre-row:last-child { border-bottom:0; }
+    .genre-row-head { display:flex; justify-content:space-between; align-items:center; gap:12px; font-weight:650; }
+    .genre-row .track { margin-top:7px; height:9px; }
+    .genre-row .muted { display:block; font-size:.81rem; line-height:1.6; margin-top:5px; }
+    .tag-map-status { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.7; margin-top:12px; }
+    .tag-map-file { width:100%; margin-top:8px; }
+    .genre-no-data { color:#607086; }
     .rank-pill { display:inline-flex; border-radius:99px; background:#eaf5f1; color:#206b59; padding:4px 9px; font-size:.78rem; font-weight:700; white-space:nowrap; }
     .rank-pill.empty { background:#eff2f6; color:#66778a; }
     .era-details { margin-top:10px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
@@ -148,15 +159,19 @@
       <p class="small">ここでの回答・理解度・カードはテスト用に保存され、娘さんの学習成績とは分離されます。</p>
       <button id="test-return-admin" type="button" class="small-action">← 保護者用管理画面に戻る</button>
     </div>
-    <h2>学習する時代を選ぼう</h2>
-    <p id="home-subtitle" class="muted">まずはサンプル問題で練習できます。</p>
+    <p id="home-subtitle" class="muted hidden"></p>
     <div id="dashboard" aria-label="理解度と称号" class="hidden">
-      <div class="dashboard-title"><h3>📊 10時代の理解度</h3><span id="dashboard-mode" class="profile-hint"></span></div>
+      <div class="dashboard-title"><h3>📊 10時代の理解度</h3></div>
       <div id="radar-chart" class="radar-wrap" role="img" aria-label="時代別の理解度レーダーチャート"></div>
-      <p class="radar-caption">現在の理解度：2回連続正解で習得。習得後も再出題され、間違えると理解度が下がります。</p>
-      <p id="radar-status" class="rank-note"></p>
+      <p class="radar-caption">1回連続正解で半分、2回連続正解で習得。間違えるとその問題の理解度は0に戻ります。</p>
     </div>
+    <h2 class="era-select-heading">学習する時代を選ぼう</h2>
     <div id="era-list"></div>
+    <details id="genre-dashboard" class="genre-panel">
+      <summary>📚 ジャンル別の理解度をみる（5ジャンル）</summary>
+      <p class="muted small">時代をまたいで、得意・苦手なジャンルを確認できます。1回連続正解で半分、2回連続正解で習得。タグ未設定の問題は含みません。</p>
+      <div id="genre-list" role="group" aria-label="ジャンル別の理解度比較"></div>
+    </details>
     <div id="collection" class="import-panel" style="margin-top:22px">
       <div class="dashboard-title"><h3>🏆 時代制覇カード</h3><span id="card-total" class="rank-pill"></span></div>
       <p class="achievement-note">各時代で50問以上が登録され、理解度100%になると1枚獲得。獲得済みカードは取り消されません。</p>
@@ -192,12 +207,23 @@
         <label>並び順<select id="manage-sort"><option value="era">時代・問題ID順</option><option value="accuracy-asc">正答率が低い順</option><option value="accuracy-desc">正答率が高い順</option><option value="attempts-desc">回答回数が多い順</option></select></label>
         <label>時代<select id="manage-era"><option value="all">すべての時代</option></select></label>
         <label>難易度<select id="manage-difficulty"><option value="all">すべて</option><option value="basic">基礎</option><option value="standard">標準</option><option value="advanced">応用</option><option value="unset">未設定</option></select></label>
+        <label>ジャンル<select id="manage-tag"><option value="all">すべて</option><option value="person">人物</option><option value="politics">政治・制度</option><option value="culture">文化・宗教</option><option value="society">社会・経済</option><option value="war_diplomacy">戦争・外交</option><option value="unset">未設定</option></select></label>
         <label>状態<select id="manage-state"><option value="active">出題中</option><option value="deleted">削除・非表示</option><option value="all">すべて</option></select></label>
         <label style="grid-column:1/-1">問題文・IDで検索<input id="manage-search" type="search" maxlength="200" placeholder="検索する言葉を入力"></label>
       </div>
       <div id="manage-summary" class="muted small" role="status" aria-live="polite"></div>
       <div id="manage-list"></div>
       <div id="manage-edit" class="hidden"></div>
+    </div>
+    <button id="toggle-tag-map" class="import-toggle" type="button" aria-expanded="false">＋ ジャンルタグをまとめて設定</button>
+    <div id="tag-map-panel" class="import-panel hidden">
+      <h3>既存問題のジャンルタグを一括更新</h3>
+      <p class="muted small">問題IDとタグの対応表JSONを取り込み、既に登録されている問題の<strong>タグだけ</strong>を更新します。回答履歴・連続正解・習得状況は変更しません。内蔵サンプルは対象外です。</p>
+      <label for="tag-map-file"><strong>タグ対応表（JSONファイル）</strong></label>
+      <input id="tag-map-file" class="tag-map-file" type="file" accept=".json,application/json">
+      <div id="tag-map-preview" class="tag-map-status small" role="status" aria-live="polite">ファイル選択後、IDとタグの対応を検査します。検査しただけでは更新されません。</div>
+      <button id="tag-map-apply" class="primary hidden" type="button">検査したタグの変更を保存する</button>
+      <p class="muted small">JSONの形式：<code>{"tagMapVersion":1,"assignments":[{"id":"HIST-E01-0001","tag":"society"}]}</code><br>タグを解除するときは <code>"tag":null</code> を指定してください。通常の問題JSON取り込みとは別の機能です。</p>
     </div>
     <button id="toggle-backup" class="import-toggle" type="button" aria-expanded="false">＋ バックアップ・復元</button>
     <div id="backup-panel" class="import-panel hidden">
@@ -255,6 +281,7 @@
 
 <script>
 "use strict";
+// 歴史マスター v1.3.0：ジャンル別メインタグ（schemaVersion:1、DB_VERSION変更なし）
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -290,6 +317,8 @@ let pendingImport = null;
 let importing = false;
 let backingUp = false;
 let pendingRestore = null;
+let pendingTagMap = null;
+let updatingTags = false;
 let db;
 let profile = "student"; // 娘さんが普段使う画面を起動する。テストは管理画面から開始。
 let currentEra = null;
@@ -304,6 +333,10 @@ let optionOrder = []; // 表示上の選択肢位置 -> JSON内の選択肢イ�
 // JSONのdifficultyは問題そのものの属性。既存問題は未設定として扱う。
 const DIFFICULTIES = {basic:"基礎", standard:"標準", advanced:"応用"};
 function difficultyLabel(q) { return DIFFICULTIES[q.difficulty] || "未設定"; }
+// 1問につきメインジャンルは最大1個。旧問題には未設定のまま対応する。
+const GENRE_TAGS = Object.freeze({person:"人物",politics:"政治・制度",culture:"文化・宗教",society:"社会・経済",war_diplomacy:"戦争・外交"});
+function validGenreTag(tag) { return typeof tag === "string" && Object.hasOwn(GENRE_TAGS,tag); }
+function genreTagLabel(q) { return GENRE_TAGS[q.tag] || "未設定"; }
 const CARD_MIN_QUESTIONS = 50;
 const RANKS = [
   {min:0, title:"🥚 れきしのたまご"},
@@ -378,9 +411,50 @@ function invalidateImportPreview() {
 }
 function masteryStats(era, progressByQuestion) {
   const qs = QUESTIONS.filter(q => q.era === era);
-  const mastered = qs.filter(q => activeProgress(q,progressByQuestion.get(q.id))?.mastered).length;
-  const percentage = qs.length ? mastered / qs.length * 100 : null;
-  return {count:qs.length, mastered, percentage, display:percentage === null ? "—" : String(Math.floor(percentage))};
+  let mastered = 0;
+  let learning = 0;
+  for (const q of qs) {
+    const progress = activeProgress(q,progressByQuestion.get(q.id));
+    if (progress?.mastered) mastered++;
+    else if (progress?.streak >= 1) learning++;
+  }
+  // 1回連続正解で0.5問分、2回連続正解で1問分。習得判定は従来どおり2回連続正解。
+  const percentage = qs.length ? (mastered + learning * 0.5) / qs.length * 100 : null;
+  return {count:qs.length, mastered, learning, percentage, display:percentage === null ? "—" : String(Math.floor(percentage))};
+}
+function genreMasteryStats(tag, progressByQuestion) {
+  const qs=QUESTIONS.filter(q=>q.tag===tag); // 削除・非表示・未タグ付けは数えない
+  let mastered=0,partial=0,started=0;
+  for (const q of qs) {
+    const p=activeProgress(q,progressByQuestion.get(q.id));
+    if (!p?.attempts) continue;
+    started++;
+    if (p.mastered) mastered++;
+    else if (p.streak>=1) partial++;
+  }
+  const percentage=qs.length ? (mastered+partial*.5)/qs.length*100 : null;
+  return {count:qs.length,mastered,learning:started-mastered,unseen:qs.length-started,partial,percentage};
+}
+function renderGenreDashboard(progressByQuestion) {
+  const host=$("genre-list");
+  host.replaceChildren();
+  for (const [tag,label] of Object.entries(GENRE_TAGS)) {
+    const stats=genreMasteryStats(tag,progressByQuestion);
+    const row=document.createElement("div");row.className="genre-row";
+    const head=document.createElement("div");head.className="genre-row-head";
+    const name=document.createElement("span");name.textContent=label;
+    const pct=document.createElement("span");pct.textContent=stats.count?`${Math.floor(stats.percentage)}%`:"—";
+    head.append(name,pct);
+    const track=document.createElement("div");track.className="track";
+    track.setAttribute("role","progressbar");track.setAttribute("aria-label",`${label}の理解度`);
+    track.setAttribute("aria-valuemin","0");track.setAttribute("aria-valuemax","100");
+    if (stats.count) track.setAttribute("aria-valuenow",String(Math.floor(stats.percentage)));
+    const fill=document.createElement("div");fill.className="fill";
+    fill.style.width=stats.count?`${stats.percentage}%`:"0%";track.appendChild(fill);
+    const detail=document.createElement("span");detail.className="muted";
+    detail.textContent=stats.count ? `習得済み ${stats.mastered} / ${stats.count}問｜未挑戦 ${stats.unseen}問・学習中 ${stats.learning}問・習得済み ${stats.mastered}問` : "問題未登録（タグ付きの出題中問題がありません）";
+    row.append(head,track,detail);host.appendChild(row);
+  }
 }
 function titleForMastery(stats) {
   if (!stats.count) return "未登録";
@@ -430,8 +504,6 @@ function renderRadar(statsByEra) {
     svg.appendChild(createSVGElement("circle",{cx:x,cy:y,r:"3.3",fill:"#228a78"}));
   });
   host.appendChild(svg);
-  const registered=Object.values(statsByEra).filter(x=>x.count).length;
-  $("radar-status").textContent=registered===0 ? "問題を取り込むと、ここに理解度が表示されます。" : `問題登録済み ${registered} / 10時代。未登録の時代は図上では0%の位置に表示します。`;
   host.setAttribute("aria-label",ERAS.map(([id,name])=>`${name}: ${statsByEra[id].count ? statsByEra[id].display+"%" : "未登録"}`).join("、"));
 }
 function renderCollection(statsByEra, awards) {
@@ -559,9 +631,11 @@ function validateImportObject(obj) {
   return obj.questions.map((entry, index) => {
     const prefix = `${index + 1}問目：`;
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new Error(prefix + "問題データの形式が不正です。");
-    const {id, eraId, question, type, options, correctAnswers, explanation, shuffleOptions, difficulty} = entry;
+    const {id, eraId, question, type, options, correctAnswers, explanation, shuffleOptions, difficulty, tag} = entry;
     // 過去のschemaVersion:1のJSONも受け入れる。値があれば3区分だけ許容する。
     if (difficulty !== undefined && !Object.hasOwn(DIFFICULTIES,difficulty)) throw new Error(prefix + "difficultyはbasic、standard、advancedのいずれかにしてください。");
+    if (tag !== undefined && !validGenreTag(tag)) throw new Error(prefix + "tagはperson、politics、culture、society、war_diplomacyのいずれかにしてください。");
+    if (Object.hasOwn(entry,"tags")) throw new Error(prefix + "複数ジャンルのtags配列は未対応です。単一のtagを指定してください。");
     if (shuffleOptions !== undefined && typeof shuffleOptions !== "boolean") throw new Error(prefix + "shuffleOptionsはtrueかfalseにしてください。");
     if (typeof id !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$/.test(id)) throw new Error(prefix + "IDは3〜64文字の英数字、-、_を使ってください。");
     if (ids.has(id)) throw new Error(prefix + `ファイル内で問題ID「${id}」が重複しています。`);
@@ -588,7 +662,8 @@ function validateImportObject(obj) {
       options:options.map(opt => opt.text.trim()),
       answers:correctAnswers.map(answerId => options.findIndex(opt => opt.id === answerId)),
       why:explanation.trim(), shuffleOptions:shuffleOptions !== false,
-      ...(difficulty === undefined ? {} : {difficulty})
+      ...(difficulty === undefined ? {} : {difficulty}),
+      ...(tag === undefined ? {} : {tag})
     };
   });
 }
@@ -647,6 +722,100 @@ function saveNewQuestions(newQuestions) {
     tx.onabort = () => reject(tx.error);
   });
 }
+// 一括タグ更新：通常の問題取り込みとは別フォーマット。既存の回答履歴を触らない。
+function invalidateTagMapPreview() {
+  pendingTagMap=null;
+  $("tag-map-apply").classList.add("hidden");
+  $("tag-map-file").value="";
+  $("tag-map-preview").textContent="タグ対応表を選択すると、検査結果が表示されます。";
+}
+function validateTagMapObject(obj) {
+  if (!obj || typeof obj!=="object" || Array.isArray(obj) || obj.tagMapVersion!==1 || !Array.isArray(obj.assignments) || !obj.assignments.length || obj.assignments.length>20000) {
+    throw new Error('形式は {"tagMapVersion":1,"assignments":[...]}、件数は1〜20000件にしてください。');
+  }
+  const seen=new Set();
+  return obj.assignments.map((item,i)=>{
+    const prefix=`${i+1}件目：`;
+    if (!item || typeof item!=="object" || Array.isArray(item) || typeof item.id!=="string" || !/^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$/.test(item.id)) throw new Error(prefix+"問題IDが不正です。");
+    if (seen.has(item.id)) throw new Error(prefix+`問題ID「${item.id}」が重複しています。`);
+    seen.add(item.id);
+    if (item.tag!==null && !validGenreTag(item.tag)) throw new Error(prefix+"タグIDが不正です。tagには固定5種類のID、または解除用のnullを指定してください。");
+    return {id:item.id,tag:item.tag};
+  });
+}
+function planTagMap(assignments) {
+  const known=new Map(importedQuestions.map(q=>[q.id,q]));
+  const changes=[];
+  for (const item of assignments) {
+    // 内蔵サンプル・未登録の問題IDはエラー。部分的な変更は行わない。
+    const current=known.get(item.id);
+    if (!current) throw new Error(`問題ID「${item.id}」は取り込み済み問題にありません。未登録IDと内蔵サンプルは更新できません。`);
+    const newTag=item.tag===null ? undefined : item.tag;
+    if (current.tag!==newTag) changes.push({id:item.id,tag:newTag});
+  }
+  return {total:assignments.length,unchanged:assignments.length-changes.length,changes};
+}
+async function previewTagMap() {
+  if (saving||importing||backingUp||managing||updatingTags) return;
+  pendingTagMap=null;
+  $("tag-map-apply").classList.add("hidden");
+  const file=$("tag-map-file").files?.[0];if (!file) return;
+  if (file.size>2*1024*1024) {$("tag-map-preview").textContent="ファイルは2MB以下にしてください。";return;}
+  try {
+    const items=validateTagMapObject(JSON.parse(await file.text()));
+    const plan=planTagMap(items);
+    pendingTagMap=items;
+    const examples=plan.changes.slice(0,8).map(x=>`${x.id} → ${x.tag ? GENRE_TAGS[x.tag] : "未設定"}`);
+    $("tag-map-preview").textContent=`検査OK（${file.name}）\n指定${plan.total}問／変更${plan.changes.length}問／変更不要${plan.unchanged}問\n${examples.length?"変更例：\n"+examples.join("\n")+"\n":""}${plan.changes.length?"保存ボタンを押すと、タグだけを更新します。学習履歴は保持されます。":"すべて現在の設定と同じです。"}`;
+    if (plan.changes.length) $("tag-map-apply").classList.remove("hidden");
+  } catch (error) {
+    $("tag-map-preview").textContent="検査エラー："+error.message+"\n問題・学習履歴は変更されていません。";
+  }
+}
+function writeTagMapChanges(changes) {
+  return new Promise((resolve,reject)=>{
+    const old=new Map(importedQuestions.map(q=>[q.id,q]));
+    const tx=db.transaction("questions","readwrite");
+    const store=tx.objectStore("questions");
+    for (const change of changes) {
+      const existing=old.get(change.id);
+      const updated={...existing};
+      if (change.tag===undefined) delete updated.tag;
+      else updated.tag=change.tag;
+      // ID・問題文・revision・deleted・回答履歴・セッションは変更しない。
+      store.put(updated);
+    }
+    tx.oncomplete=resolve;
+    tx.onerror=()=>reject(tx.error||new Error("タグ更新エラー"));
+    tx.onabort=()=>reject(tx.error||new Error("タグ更新中止"));
+  });
+}
+async function applyTagMap() {
+  if (saving||importing||backingUp||managing||updatingTags||!pendingTagMap) return;
+  // プレビュー後の内容変更・ID消失にも対応するため再検査する。
+  let plan;
+  try {plan=planTagMap(pendingTagMap);}
+  catch(error) {invalidateTagMapPreview();$("tag-map-preview").textContent="再検査エラー："+error.message;return;}
+  if (!plan.changes.length) {invalidateTagMapPreview();return;}
+  if (!confirm(`取り込み済み問題${plan.changes.length}問のジャンルタグを変更します。\n問題文・正解・習得状況・回答履歴はそのままです。\n\n実行しますか？`)) return;
+  updatingTags=true;managing=true;
+  $("tag-map-apply").disabled=true;
+  try {
+    await writeTagMapChanges(plan.changes);
+    await loadImportedQuestions();
+    const updatedCount=plan.changes.length;
+    invalidateTagMapPreview();
+    invalidateImportPreview();
+    $("tag-map-preview").textContent=`${updatedCount}問のジャンルタグを更新しました。回答履歴・習得状況は保持しています。`;
+    closeQuestionEditor();
+    await refreshDashboardStay();
+    if (!$("manage-panel").classList.contains("hidden")) renderManager();
+    notice(`${updatedCount}問のジャンルタグを保存しました。`);
+  } catch (error) {
+    console.error(error);
+    $("tag-map-preview").textContent="タグ更新に失敗しました。データを確認し、必要に応じてバックアップから復元してください。";
+  } finally {updatingTags=false;managing=false;$("tag-map-apply").disabled=false;}
+}
 async function applyImport() {
   if (importing || saving || backingUp || !pendingImport?.length) return;
   importing = true;
@@ -656,6 +825,7 @@ async function applyImport() {
     await saveNewQuestions(toAdd);
     await loadImportedQuestions();
     await ensureEarnedCards();
+    invalidateTagMapPreview();
     pendingImport = null;
     $("import-apply").classList.add("hidden");
     $("import-file").value = "";
@@ -739,7 +909,7 @@ function validateBackup(obj) {
   const builtinIDs = new Set(SAMPLE_QUESTIONS.map(q => q.id));
   const allQuestions = new Map(SAMPLE_QUESTIONS.map(q => [q.id, q]));
   for (const q of data.questions) {
-    if (!q || !isNonemptyString(q.id,64) || !/^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$/.test(q.id) || builtinIDs.has(q.id) || allQuestions.has(q.id) || !eras.has(q.era) || !isNonemptyString(q.q,2000) || !Array.isArray(q.options) || q.options.length < 2 || q.options.length > 6 || !q.options.every(opt => isNonemptyString(opt,500)) || !validIndexList(q.answers,q.options.length) || q.answers.length === 0 || !isNonemptyString(q.why,4000) || (q.revision !== undefined && (!Number.isSafeInteger(q.revision) || q.revision < 1)) || (q.deleted !== undefined && typeof q.deleted !== "boolean") || (q.shuffleOptions !== undefined && typeof q.shuffleOptions !== "boolean") || (q.difficulty !== undefined && !Object.hasOwn(DIFFICULTIES,q.difficulty))) {
+    if (!q || !isNonemptyString(q.id,64) || !/^[A-Za-z0-9][A-Za-z0-9_-]{2,63}$/.test(q.id) || builtinIDs.has(q.id) || allQuestions.has(q.id) || !eras.has(q.era) || !isNonemptyString(q.q,2000) || !Array.isArray(q.options) || q.options.length < 2 || q.options.length > 6 || !q.options.every(opt => isNonemptyString(opt,500)) || !validIndexList(q.answers,q.options.length) || q.answers.length === 0 || !isNonemptyString(q.why,4000) || (q.revision !== undefined && (!Number.isSafeInteger(q.revision) || q.revision < 1)) || (q.deleted !== undefined && typeof q.deleted !== "boolean") || (q.shuffleOptions !== undefined && typeof q.shuffleOptions !== "boolean") || (q.difficulty !== undefined && !Object.hasOwn(DIFFICULTIES,q.difficulty)) || (q.tag !== undefined && !validGenreTag(q.tag))) {
       throw new Error("問題データが不正、または問題IDが重複しています。");
     }
     allQuestions.set(q.id,q);
@@ -894,6 +1064,7 @@ async function resetFinished(complete) {
   await loadImportedQuestions();
   answerEvents = await readAll("answers");
   if (!complete) await ensureEarnedCards();
+  invalidateTagMapPreview();
   pendingImport = null;
   pendingRestore = null;
   $("import-file").value = "";
@@ -993,6 +1164,7 @@ async function applyRestore() {
     await replaceAllStores(data); // 1つのトランザクションで一括変更。途中失敗なら全変更がロールバックされる。
     await loadImportedQuestions();
     answerEvents=await readAll("answers");
+    invalidateTagMapPreview();
     await ensureEarnedCards();
     profile = "student";
     currentEra = null;
@@ -1070,8 +1242,7 @@ async function renderHome() {
   const allProgress=await readAll("progress");
   const records=new Map(allProgress.filter(x=>x.profile===profile).map(x=>[x.questionId,x]));
   const awards=await readAll("awards");
-  $("home-subtitle").textContent=profile==="test" ? "🔧 保護者の動作確認用（娘さんの成績には影響しません）" : "👧 学習用の成績を記録しています";
-  $("dashboard-mode").textContent=profile==="test" ? "🔧 テスト用の理解度" : "👧 学習用の理解度";
+  $("home-subtitle").classList.add("hidden");
   const area=$("era-list");
   area.replaceChildren();
   const allStats={};
@@ -1102,6 +1273,7 @@ async function renderHome() {
     area.appendChild(btn);
   }
   renderRadar(allStats);
+  renderGenreDashboard(records);
   renderCollection(allStats,awards);
   $("dashboard").classList.remove("hidden");
   show("home");
@@ -1319,11 +1491,13 @@ function renderManager() {
   const rate=q=>{const s=stats.get(q.id);return s?.attempts?s.correct/s.attempts:null;};
   const state=$("manage-state").value;
   const selectedDifficulty=$("manage-difficulty").value;
+  const selectedTag=$("manage-tag").value;
   const search=normalized($("manage-search").value);
   const filtered=allQuestionRecords().filter(q=>{
     const hidden=isInactive(q);
     if (era!=="all"&&q.era!==era) return false;
     if (selectedDifficulty!=="all" && (q.difficulty||"unset")!==selectedDifficulty) return false;
+    if (selectedTag!=="all" && (q.tag||"unset")!==selectedTag) return false;
     if (state==="active"&&hidden || state==="deleted"&&!hidden) return false;
     return !search || normalized(q.id+" "+q.q+" "+q.options.join(" ")).includes(search);
   }).sort((a,b)=>{
@@ -1342,7 +1516,8 @@ function renderManager() {
   const count=Math.min(filtered.length,100);
   const activeCount=QUESTIONS.length;
   const difficultyCounts=Object.fromEntries(["basic","standard","advanced","unset"].map(d=>[d,QUESTIONS.filter(q=>(q.difficulty||"unset")===d).length]));
-  $("manage-summary").textContent=`出題中 ${activeCount}問（基礎${difficultyCounts.basic}・標準${difficultyCounts.standard}・応用${difficultyCounts.advanced}・未設定${difficultyCounts.unset}）／削除・非表示 ${allQuestionRecords().length-activeCount}問。検索結果 ${filtered.length}問${filtered.length>count?"（先頭100問を表示。検索で絞り込めます）":""}`;
+  const unsetTagCount=QUESTIONS.filter(q=>!q.tag).length;
+  $("manage-summary").textContent=`出題中 ${activeCount}問（基礎${difficultyCounts.basic}・標準${difficultyCounts.standard}・応用${difficultyCounts.advanced}・未設定${difficultyCounts.unset}）／ジャンル未設定 ${unsetTagCount}問／削除・非表示 ${allQuestionRecords().length-activeCount}問。検索結果 ${filtered.length}問${filtered.length>count?"（先頭100問を表示。検索で絞り込めます）":""}`;
   if (!filtered.length) {
     const p=document.createElement("p");p.className="muted";p.textContent="該当する問題はありません。";list.appendChild(p);
   }
@@ -1351,7 +1526,7 @@ function renderManager() {
     const row=document.createElement("div");row.className="manager-item";
     const meta=document.createElement("div");meta.className="manager-meta";
     const eraName=ERAS.find(e=>e[0]===q.era)?.[1]||q.era;
-    meta.textContent=`${eraName} · 難易度：${difficultyLabel(q)} · ${q.id} · ${sample?"内蔵サンプル":"取り込み問題"}${hidden?" · 削除・非表示":""}${!sample&&questionRevision(q)>1?` · 改訂${questionRevision(q)}版`:""}`;
+    meta.textContent=`${eraName} · 難易度：${difficultyLabel(q)} · ジャンル：${genreTagLabel(q)} · ${q.id} · ${sample?"内蔵サンプル":"取り込み問題"}${hidden?" · 削除・非表示":""}${!sample&&questionRevision(q)>1?` · 改訂${questionRevision(q)}版`:""}`;
     const title=document.createElement("p");title.style.fontWeight="700";title.textContent=q.q;
     const preview=document.createElement("p");preview.className="manager-meta";
     preview.textContent=`正解：${q.answers.map(i=>q.options[i]).join("、")}（${q.answers.length>1?"複数選択":"単一選択"}）`;
@@ -1402,6 +1577,12 @@ function openQuestionEditor(id) {
     const option=document.createElement("option");option.value=value;option.textContent=name;difficultyInput.appendChild(option);
   }
   difficultyInput.value=q.difficulty||"";difficultyLabelEl.appendChild(difficultyInput);form.appendChild(difficultyLabelEl);
+  const tagLabel=document.createElement("label");tagLabel.textContent="ジャンル（主タグ）";
+  const tagInput=document.createElement("select");
+  for (const [value,name] of [["","未設定（旧問題など）"],...Object.entries(GENRE_TAGS)]) {
+    const option=document.createElement("option");option.value=value;option.textContent=name;tagInput.appendChild(option);
+  }
+  tagInput.value=q.tag||"";tagLabel.appendChild(tagInput);form.appendChild(tagLabel);
   const questionInput=field("問題文","textarea",q.q,4);
   const choicesInput=field("選択肢（1行に1つ、2〜6行）","textarea",q.options.join("\n"),6);
   const correctInput=field("正解の選択肢番号（例：1 または 1,3）","input",q.answers.map(i=>i+1).join(","));
@@ -1412,7 +1593,7 @@ function openQuestionEditor(id) {
   shuffleLabel.append(shuffleInput,document.createTextNode(" 選択肢を毎回シャッフルする（『上記のすべて』などはOFF）"));
   form.appendChild(shuffleLabel);
   const caution=document.createElement("p");caution.className="warning-text";
-  caution.textContent="※ 難易度・解説だけの修正では習得状況を引き継ぎます。問題文・選択肢・正解・時代を変更すると、この問題の習得判定を最初からやり直します。古い回答記録は保管し、ほかの問題の履歴は変えません。";
+  caution.textContent="※ 難易度・ジャンルタグ・解説だけの修正では習得状況を引き継ぎます。問題文・選択肢・正解・時代を変更すると、この問題の習得判定を最初からやり直します。古い回答記録は保管し、ほかの問題の履歴は変えません。";
   const error=document.createElement("div");error.className="import-error small";error.setAttribute("role","alert");
   const buttons=document.createElement("div");buttons.className="manager-actions";
   const apply=makeAction("修正内容を保存","",()=>{});apply.type="submit";
@@ -1431,7 +1612,8 @@ function openQuestionEditor(id) {
       const obj={schemaVersion:1,questions:[{id,eraId:eraInput.value,question:questionInput.value,
         type:answers.length===1?"single":"multiple",options:optionTexts.map((text,i)=>({id:String(i+1),text})),
         correctAnswers:answers.map(String),explanation:explanationInput.value,shuffleOptions:shuffleInput.checked,
-        ...(difficultyInput.value ? {difficulty:difficultyInput.value} : {})}]};
+        ...(difficultyInput.value ? {difficulty:difficultyInput.value} : {}),
+        ...(tagInput.value ? {tag:tagInput.value} : {})}]};
       const updated=validateImportObject(obj)[0];
       const conflict=allQuestionRecords().find(other=>other.id!==id&&!isInactive(other)&&contentKey(other)===contentKey(updated));
       if (conflict) throw new Error(`別の問題（${conflict.id}）と内容が完全一致しています。`);
@@ -1453,6 +1635,7 @@ async function saveQuestionRevision(oldQ,changed) {
   // 未設定へ戻した場合は、古いdifficultyプロパティを残さない。
   const target={...oldQ,...changed,revision:questionRevision(oldQ)+(semanticChange?1:0),deleted:false};
   if (changed.difficulty===undefined) delete target.difficulty;
+  if (changed.tag===undefined) delete target.tag;
   if (semanticChange && !confirm("問題の内容または正解・時代が変わります。この問題の習得状況だけをリセットして保存しますか？\n※ 過去の回答記録と、ほかの問題の履歴は保持します。")) return false;
   managing=true;
   try {
@@ -1466,6 +1649,7 @@ async function saveQuestionRevision(oldQ,changed) {
     });
     await loadImportedQuestions();
     invalidateImportPreview();
+    invalidateTagMapPreview();
     return true;
   } finally {managing=false;}
 }
@@ -1492,6 +1676,7 @@ async function changeQuestionVisibility(id,hide) {
     await loadImportedQuestions();
     await ensureEarnedCards();
     invalidateImportPreview();
+    invalidateTagMapPreview();
     closeQuestionEditor();
     await refreshDashboardStay();
     renderManager();
@@ -1516,7 +1701,17 @@ $("toggle-manage").addEventListener("click",()=>{
   $("toggle-manage").textContent=opening?"－ 問題一覧・修正・削除を閉じる":"＋ 問題一覧・修正・削除";
   if (opening) renderManager(); else closeQuestionEditor();
 });
-for (const id of ["manage-profile","manage-sort","manage-era","manage-difficulty","manage-state","manage-search"]) $(id).addEventListener(id==="manage-search"?"input":"change",()=>{closeQuestionEditor();renderManager();});
+for (const id of ["manage-profile","manage-sort","manage-era","manage-difficulty","manage-tag","manage-state","manage-search"]) $(id).addEventListener(id==="manage-search"?"input":"change",()=>{closeQuestionEditor();renderManager();});
+$("toggle-tag-map").addEventListener("click", () => {
+  if (saving||importing||backingUp||managing||updatingTags) return;
+  const panel=$("tag-map-panel");
+  const opening=panel.classList.contains("hidden");
+  panel.classList.toggle("hidden",!opening);
+  $("toggle-tag-map").setAttribute("aria-expanded",String(opening));
+  $("toggle-tag-map").textContent=opening?"－ ジャンルタグ一括設定を閉じる":"＋ ジャンルタグをまとめて設定";
+});
+$("tag-map-file").addEventListener("change",()=>previewTagMap().catch(err));
+$("tag-map-apply").addEventListener("click",()=>applyTagMap().catch(err));
 $("toggle-backup").addEventListener("click", () => {
   if (saving || importing || backingUp) return;
   const panel = $("backup-panel");
@@ -1556,6 +1751,7 @@ $("next").addEventListener("click", () => advance(currentEra, currentQuestion.id
     populateManagementEras();
     await loadImportedQuestions();
     answerEvents=await readAll("answers");
+    invalidateTagMapPreview();
     await ensureEarnedCards();
     await renderHome();
   } catch (error) {
