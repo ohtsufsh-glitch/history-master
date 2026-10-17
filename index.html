@@ -109,7 +109,37 @@
     .rank-pill.empty { background:#eff2f6; color:#66778a; }
     .era-details { margin-top:10px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
     .era-details .muted { font-size:.8rem; }
-    .trophy-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:14px; }
+    .trophy-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:14px; }
+    /* カード画像はGitHub Pagesの同一オリジン内で読み込む。学習データには画像を保存しない。 */
+    .trophy-open { width:100%; color:inherit; font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .trophy-open:focus-visible { outline:3px solid #286f9a; outline-offset:3px; }
+    .trophy-open:active { transform:scale(.99); }
+    .card-art { position:relative; aspect-ratio:3/4; width:100%; overflow:hidden; border-radius:9px; background:#f4ebd9; isolation:isolate; }
+    .card-art img { width:100%; height:100%; display:block; object-fit:cover; }
+    .card-art-top, .card-art-bottom { position:absolute; left:7%; width:86%; display:flex; align-items:center; justify-content:center; text-align:center; color:#5b3b22; font-weight:800; line-height:1.16; overflow-wrap:anywhere; text-shadow:0 1px 1px #fff8e4; pointer-events:none; }
+    .card-art-top { top:4.5%; height:9%; font-size:clamp(9px,2.8vw,13px); }
+    .card-art-bottom { bottom:5%; height:9%; font-size:clamp(10px,3.4vw,16px); }
+    .card-art.is-locked img { filter:grayscale(1) brightness(.38) blur(4px); transform:scale(1.04); opacity:.57; }
+    .card-art.is-locked::after { content:'🔒'; position:absolute; z-index:2; inset:0; display:grid; place-items:center; font-size:clamp(28px,7vw,52px); pointer-events:none; text-shadow:0 2px 8px #fff; }
+    .card-art.is-locked .card-art-top, .card-art.is-locked .card-art-bottom { color:#657080; text-shadow:0 1px 1px #fff; }
+    .card-art-fallback { display:none; position:absolute; inset:15%; align-items:center; justify-content:center; text-align:center; font-size:1.1rem; font-weight:700; color:#5b3b22; line-height:1.5; }
+    .card-art.art-load-failed img { display:none; }
+    .card-art.art-load-failed .card-art-fallback { display:flex; }
+    .trophy .card-art { margin-bottom:8px; }
+    .trophy-zoom { font-size:.76rem; color:#2a6d8a; margin-top:5px; }
+    .award-banner .card-art { width:min(56%,185px); margin:6px auto 12px; }
+    .award-banner .card-art-top { font-size:clamp(11px,3vw,14px); }
+    .award-banner .card-art-bottom { font-size:clamp(13px,4vw,18px); }
+    .award-see { border:1px solid #a77724; border-radius:12px; background:#fffdf4; color:#6d4a0f; font-weight:700; padding:10px 16px; margin-top:12px; min-height:44px; }
+    .card-detail-dialog { width:min(94vw,480px); max-height:min(92dvh,900px); overflow-y:auto; border:1px solid #d8bd7a; border-radius:18px; padding:15px 16px 22px; background:#fffdf8; box-shadow:0 16px 50px #1d2d4099; color:#253244; text-align:center; }
+    .card-detail-dialog::backdrop { background:rgba(10,19,34,.77); }
+    .card-detail-close { display:block; margin:0 0 8px auto; border:1px solid #aab6c5; color:#253244; background:#fff; border-radius:10px; padding:8px 13px; min-height:44px; font-weight:700; }
+    .card-detail-dialog .card-art { width:min(100%,355px); margin:0 auto; }
+    .card-detail-dialog .card-art-top { font-size:clamp(14px,4vw,20px); }
+    .card-detail-dialog .card-art-bottom { font-size:clamp(16px,5vw,25px); }
+    .card-detail-dialog h2 { margin:14px 0 5px; }
+    .card-detail-dialog p { margin:5px 0; }
+
     .trophy { padding:15px 9px; border-radius:15px; min-width:0; border:1px solid #e5d7b6; background:linear-gradient(140deg,#fff9e8,#fff,#f8f4eb); text-align:center; }
     .trophy.locked { background:#f4f6f8; border-color:#e5eaf0; color:#67778b; }
     .trophy-icon { font-size:2.1rem; line-height:1.5; }
@@ -143,7 +173,7 @@
     .edit-form .manager-actions { margin-top:16px; }
     .warning-text { color:#99502d; font-size:.85rem; line-height:1.65; }
     @media (max-width: 430px) { .manager-controls {grid-template-columns:1fr;} }
-    @media(min-width:640px) { .trophy-grid {grid-template-columns:repeat(5,minmax(0,1fr));} }
+    @media(min-width:640px) { .trophy-grid {grid-template-columns:repeat(3,minmax(0,1fr));} }
     @media (max-width: 430px) {
       header { flex-wrap:nowrap; gap:8px; }
       h1 { font-size:1.28rem; white-space:nowrap; }
@@ -289,6 +319,11 @@
         <button id="reset-all" class="reset-danger-button" type="button">すべてのデータを完全初期化する</button>
       </div>
     </div>
+    <details id="card-preview-panel" class="genre-panel">
+      <summary>🖼️ 時代制覇カードの画像を確認する（保護者用）</summary>
+      <p class="muted small">10枚すべてをプレビューできます。ここで表示してもカードは獲得済みにならず、理解度・学習履歴も変わりません。</p>
+      <div id="admin-card-preview" class="trophy-grid"></div>
+    </details>
     <p class="muted small" style="margin-top:18px">※ 内蔵問題は公開可能な自作サンプルです。外部から読み込んだ問題はこの端末のSafariにのみ保存されます。</p>
   </section>
 
@@ -311,10 +346,17 @@
     <button id="finish-home" class="primary" type="button">ホームへ戻る</button>
   </section>
 </main>
+<dialog id="card-detail-dialog" class="card-detail-dialog" aria-labelledby="card-detail-title">
+  <button id="card-detail-close" class="card-detail-close" type="button">✕ 閉じる</button>
+  <div id="card-detail-art-host"></div>
+  <h2 id="card-detail-title"></h2>
+  <p id="card-detail-era" class="muted"></p>
+  <p id="card-detail-status" class="rank-pill">🏆 獲得済み</p>
+</dialog>
 
 <script>
 "use strict";
-// 歴史マスター v1.3.1：問題マスターの書き出し・差分確認・競合検出付き一括更新（schemaVersion:1、DB_VERSION変更なし）
+// 歴史マスター v1.3.2：時代制覇カード画像の導入。v1.3.1の一括更新機能・DB・JSON形式は維持。
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -394,6 +436,59 @@ const CARDS = {
   E09:{icon:"🌅", name:"明治の夜明け"},
   E10:{icon:"✨", name:"未来への光"}
 };
+// カードの絵柄に対応するモチーフ。獲得フラグは従来どおり awards の era で識別する。
+const CARD_SUBJECTS = Object.freeze({
+  E01:"土偶", E02:"聖徳太子", E03:"奈良の大仏", E04:"紫式部", E05:"源頼朝",
+  E06:"足利義満", E07:"豊臣秀吉", E08:"徳川家康", E09:"津田梅子", E10:"吉田茂"
+});
+const CARD_IMAGES_DIR = "assets/cards/";
+function cardArt(era,locked=false) {
+  const frame=document.createElement("div");
+  frame.className="card-art"+(locked?" is-locked":"");
+  const img=document.createElement("img");
+  img.src=`${CARD_IMAGES_DIR}${era}.webp`;
+  img.width=720; img.height=960;
+  img.loading="lazy";
+  img.decoding="async";
+  img.alt=locked?"":`${ERAS.find(([id])=>id===era)?.[1]||era}の時代制覇カード。${CARD_SUBJECTS[era]}を描いたイラスト`;
+  img.addEventListener("error",()=>frame.classList.add("art-load-failed"));
+  const fallback=document.createElement("div");
+  fallback.className="card-art-fallback";
+  fallback.textContent=locked?"🔒":CARDS[era].icon;
+  const top=document.createElement("div");
+  top.className="card-art-top";
+  top.textContent=ERAS.find(([id])=>id===era)?.[1]||era;
+  const bottom=document.createElement("div");
+  bottom.className="card-art-bottom";
+  bottom.textContent=locked?"？？？":CARD_SUBJECTS[era];
+  frame.append(img,fallback,top,bottom);
+  return frame;
+}
+function openCardDetail(era,preview=false) {
+  const dialog=$("card-detail-dialog");
+  $("card-detail-art-host").replaceChildren(cardArt(era));
+  $("card-detail-title").textContent=CARDS[era].name;
+  $("card-detail-era").textContent=`${ERAS.find(([id])=>id===era)?.[1]||era}・${CARD_SUBJECTS[era]}`;
+  $("card-detail-status").textContent=preview?"保護者用プレビュー（獲得状況は変更されません）":"🏆 獲得済み";
+  if(!dialog.open) dialog.showModal();
+}
+function renderAdminCardPreview() {
+  const gallery=$("admin-card-preview");
+  if(gallery.children.length) return;
+  for(const [id,label] of ERAS) {
+    const button=document.createElement("button");
+    button.type="button";
+    button.className="trophy trophy-open";
+    button.setAttribute("aria-label",`${label}のカード画像を拡大して確認する`);
+    const name=document.createElement("div");
+    name.className="trophy-name";
+    name.textContent=CARDS[id].name;
+    button.append(cardArt(id),name);
+    button.addEventListener("click",()=>openCardDetail(id,true));
+    gallery.appendChild(button);
+  }
+}
+
 function questionRevision(q) { return q.revision || 1; }
 function activeProgress(q, record) { return record && (record.revision || 1) === questionRevision(q) ? record : null; }
 function normalized(value) { return String(value).normalize("NFKC").toLowerCase().replace(/\s+/g," ").trim(); }
@@ -550,16 +645,24 @@ function renderCollection(statsByEra, awards) {
     const reward=CARDS[id];
     const stat=statsByEra[id];
     const earned=owned.get(id);
-    const card=document.createElement("div");
-    card.className="trophy"+(earned?"":" locked");
-    const icon=document.createElement("div"); icon.className="trophy-icon"; icon.textContent=earned?reward.icon:"🔒";
+    const card=document.createElement(earned?"button":"div");
+    card.className="trophy"+(earned?" trophy-open":" locked");
+    if(earned) {
+      card.type="button";
+      card.setAttribute("aria-label",`獲得した${label}のカード「${reward.name}」を拡大する`);
+      card.addEventListener("click",()=>openCardDetail(id));
+    }
     const era=document.createElement("div"); era.className="trophy-era"; era.textContent=label;
     const name=document.createElement("div"); name.className="trophy-name"; name.textContent=earned?reward.name:"まだ秘密のカード";
     const status=document.createElement("div"); status.className="trophy-status";
-    if (earned) status.textContent="獲得済み";
+    if (earned) status.textContent="🏆 獲得済み";
     else if (stat.count < CARD_MIN_QUESTIONS) status.textContent=`登録あと${CARD_MIN_QUESTIONS-stat.count}問`;
     else status.textContent=`習得あと${stat.count-stat.mastered}問`;
-    card.append(icon,era,name,status);
+    card.append(cardArt(id,!earned),era,name,status);
+    if(earned) {
+      const zoom=document.createElement("div"); zoom.className="trophy-zoom"; zoom.textContent="タップして拡大 🔍";
+      card.appendChild(zoom);
+    }
     gallery.appendChild(card);
   }
 }
@@ -1736,10 +1839,12 @@ function showResult(newAward=null) {
   if (newAward) {
     const item=CARDS[newAward.era];
     const banner=document.createElement("div"); banner.className="award-banner";
-    const icon=document.createElement("div"); icon.className="trophy-icon"; icon.textContent=item.icon;
     const title=document.createElement("strong"); title.textContent="🎉 時代完全制覇！カードを獲得！";
     const subtitle=document.createElement("div"); subtitle.textContent=`${item.name}（${profile === "test" ? "テスト用" : "学習用"}）`;
-    banner.append(icon,title,subtitle);
+    const see=document.createElement("button");
+    see.type="button";see.className="award-see";see.textContent="カードを大きく見る 🔍";
+    see.addEventListener("click",()=>openCardDetail(newAward.era));
+    banner.append(title,cardArt(newAward.era),subtitle,see);
     result.appendChild(banner);
   }
   result.classList.remove("hidden");
@@ -2034,6 +2139,13 @@ $("back-home").addEventListener("click", () => { if (!saving && !importing && !b
 $("finish-home").addEventListener("click", () => renderHome().catch(err));
 $("check").addEventListener("click", grade);
 $("next").addEventListener("click", () => advance(currentEra, currentQuestion.id).catch(err));
+$("card-preview-panel").addEventListener("toggle",event=>{
+  if(event.target.open) renderAdminCardPreview();
+});
+$("card-detail-close").addEventListener("click", () => $("card-detail-dialog").close());
+$("card-detail-dialog").addEventListener("click", event => {
+  if(event.target === $("card-detail-dialog")) $("card-detail-dialog").close();
+});
 (async () => {
   try {
     db = await openDatabase();
