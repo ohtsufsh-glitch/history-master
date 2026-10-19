@@ -279,63 +279,6 @@
       opacity:.55;
     }
     .home-screen > * { position: relative; z-index: 1; }
-    .home-hero {
-      display:grid;
-      grid-template-columns: minmax(0,1.2fr) minmax(290px,.9fr);
-      gap: 18px;
-      align-items: stretch;
-      margin-bottom: 18px;
-    }
-    .hero-copy, .hero-side {
-      border-radius: 20px;
-      padding: 22px;
-      background: linear-gradient(145deg, rgba(255,252,245,.92), rgba(245,237,219,.92));
-      border:1px solid rgba(216,196,154,.85);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
-    }
-    .hero-copy {
-      background:
-        radial-gradient(circle at top right, rgba(255,255,255,.92), transparent 30%),
-        linear-gradient(145deg, rgba(255,250,240,.98), rgba(243,232,208,.98));
-    }
-    .hero-chip {
-      display:inline-flex;
-      align-items:center;
-      padding:6px 10px;
-      border-radius:999px;
-      background:#f2e1b8;
-      color:#7a5922;
-      font-size:.72rem;
-      font-weight:800;
-      letter-spacing:.08em;
-      margin-bottom:10px;
-    }
-    .hero-title {
-      font-size: clamp(1.55rem, 3.4vw, 2rem);
-      margin:0 0 10px;
-      color:#27475c;
-      line-height:1.28;
-    }
-    .hero-text { margin:0; color:#4f6170; font-size:.98rem; }
-    .hero-side { display:flex; flex-direction:column; gap:14px; justify-content:space-between; }
-    .hero-coin-panel {
-      margin: 0;
-      border-radius: 16px;
-      background: linear-gradient(135deg,#fff6dd,#f8edd0 55%,#fffdf6);
-      border:1px solid #ecd698;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.75);
-    }
-    .hero-mini-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
-    .hero-mini-card {
-      padding:14px;
-      border-radius:15px;
-      background:rgba(255,255,255,.72);
-      border:1px solid rgba(217,199,162,.9);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.75);
-    }
-    .hero-mini-label { display:block; color:#7d6739; font-size:.73rem; font-weight:800; letter-spacing:.06em; margin-bottom:4px; }
-    .hero-mini-card strong { display:block; color:#24475d; margin-bottom:3px; font-size:.98rem; }
-    .hero-mini-card small { color:#667887; line-height:1.55; }
     .home-panel {
       background: linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(251,247,238,.96) 100%);
       border:1px solid rgba(214,198,165,.85);
@@ -395,11 +338,27 @@
     }
     .overview-note-card strong { display:block; color:#7c612d; margin-bottom:5px; }
     .overview-note-card p { margin:0; font-size:.87rem; line-height:1.7; }
-    .home-main-grid { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(280px,.95fr); gap:18px; align-items:start; }
-    .eras-panel #era-list { margin-top:6px; }
+    .eras-panel #era-list {
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      column-gap:14px;
+      row-gap:12px;
+      margin-top:6px;
+      align-items:stretch;
+    }
+    .progress-head-right { display:flex; align-items:center; justify-content:flex-end; }
+    .progress-coin {
+      margin:0;
+      padding:6px 11px;
+      border-radius:999px;
+      background:linear-gradient(180deg,#fff7e5,#f9ecc8);
+      border:1px solid #ebd599;
+      white-space:nowrap;
+    }
+    .progress-coin strong { color:#75551e; }
     .era-select-heading { margin:0; }
     .era {
-      margin-top:12px;
+      margin-top:0;
       padding:16px 16px 14px;
       border:1px solid #d5e1eb;
       border-radius:16px;
@@ -411,7 +370,7 @@
     .track { background:#e3ebee; height:8px; }
     .fill { background: linear-gradient(90deg,#85c1b2,#4f947f 70%,#326f61 100%); }
     .genre-panel {
-      margin-top:0;
+      margin-top:18px;
       background: linear-gradient(180deg, rgba(249,252,253,.96), rgba(243,248,250,.96));
       border-color:#d7e4ea;
       padding:18px 18px 16px;
@@ -442,7 +401,7 @@
     .achievement-note { margin-top:0; }
     .trophy { box-shadow:0 8px 18px rgba(76,62,32,.05); }
     @media (max-width: 900px) {
-      .home-hero, .dashboard-grid, .home-main-grid { grid-template-columns:1fr; }
+      .dashboard-grid { grid-template-columns:1fr; }
       .panel-note { max-width:none; }
     }
     @media (max-width: 640px) {
@@ -453,19 +412,22 @@
         border-radius: 18px;
       }
       .home-screen { padding:16px; }
-      .hero-copy, .hero-side, .home-panel { padding:16px; border-radius:16px; }
-      .hero-mini-grid { grid-template-columns:1fr; }
+      .home-panel { padding:16px; border-radius:16px; }
     }
     @media (max-width: 430px) {
       header { gap:8px; }
       h1 { font-size:1.08rem; }
-      .hero-title { font-size:1.45rem; }
-      .hero-text { font-size:.93rem; }
       .panel-head { align-items:flex-start; }
       .overall-mastery-value { font-size:1.68rem; }
-      .coin-home-line { padding:10px 11px; }
+      .progress-coin { padding:6px 10px; }
     }
 
+    @media (max-width: 699px) {
+      .eras-panel #era-list { grid-template-columns:minmax(0,1fr); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .era { transition:none; }
+    }
   </style>
 </head>
 <body>
@@ -488,32 +450,15 @@
       <button id="test-return-admin" type="button" class="small-action">← 保護者用管理画面に戻る</button>
     </div>
 
-    <div class="home-hero">
-      <div class="hero-copy">
-        <span class="hero-chip">HISTORY MASTER</span>
-        <h2 class="hero-title">れきしの旅を進めよう</h2>
-        <p class="hero-text">きょうはどの時代を学ぶ？ 苦手な問題をくり返し解いて、理解度とコインを少しずつ集めよう。</p>
-        <p id="home-subtitle" class="muted hidden"></p>
-      </div>
-      <div class="hero-side">
-        <div class="coin-home-line hero-coin-panel"><strong id="home-coins"><img class="gold-coin" src="assets/coins/crown-gold.webp" alt="" aria-hidden="true" width="27" height="27" decoding="async"><span id="home-coin-amount">0</span> コイン</strong><span class="muted small">初正解・初習得で金貨を集めよう！</span></div>
-        <div class="hero-mini-grid">
-          <div class="hero-mini-card">
-            <span class="hero-mini-label">目標</span>
-            <strong>理解度100%</strong>
-            <small>時代制覇カードをゲット！</small>
-          </div>
-          <div class="hero-mini-card">
-            <span class="hero-mini-label">出題</span>
-            <strong>苦手を優先</strong>
-            <small>習得済みも時々出題</small>
-          </div>
-        </div>
-      </div>
-    </div>
+    <p id="home-subtitle" class="muted hidden"></p>
 
     <div id="dashboard" aria-label="理解度と称号" class="hidden home-panel dashboard-panel">
-      <div class="panel-head"><div><span class="section-kicker">PROGRESS</span><h3>10時代の理解度</h3></div><p class="panel-note">時代別の理解度と、全体の進みぐあいを確認できます。</p></div>
+      <div class="panel-head">
+        <div><span class="section-kicker">PROGRESS</span><h3>10時代の理解度</h3></div>
+        <div class="progress-head-right">
+          <div class="coin-home-line progress-coin"><strong id="home-coins"><img class="gold-coin" src="assets/coins/crown-gold.webp" alt="" aria-hidden="true" width="27" height="27" decoding="async"><span id="home-coin-amount">0</span> コイン</strong></div>
+        </div>
+      </div>
       <div class="dashboard-grid">
         <div class="radar-shell">
           <div id="radar-chart" class="radar-wrap" role="img" aria-label="時代別の理解度レーダーチャート"></div>
@@ -533,17 +478,15 @@
       </div>
     </div>
 
-    <div class="home-main-grid">
-      <div class="home-panel eras-panel">
-        <div class="panel-head"><div><span class="section-kicker">STUDY</span><h2 class="era-select-heading">学習する時代を選ぼう</h2></div><p class="panel-note">好きな時代から学べます。理解度と正答率を見ながら進めましょう。</p></div>
-        <div id="era-list"></div>
-      </div>
+    <details id="genre-dashboard" class="genre-panel home-panel">
+      <summary>📚 ジャンル別の理解度をみる（5ジャンル）</summary>
+      <p class="muted small">時代をまたいで、得意・苦手なジャンルを確認できます。1回連続正解で半分、2回連続正解で習得。タグ未設定の問題は含みません。</p>
+      <div id="genre-list" role="group" aria-label="ジャンル別の理解度比較"></div>
+    </details>
 
-      <details id="genre-dashboard" class="genre-panel home-panel">
-        <summary>📚 ジャンル別の理解度をみる（5ジャンル）</summary>
-        <p class="muted small">時代をまたいで、得意・苦手なジャンルを確認できます。1回連続正解で半分、2回連続正解で習得。タグ未設定の問題は含みません。</p>
-        <div id="genre-list" role="group" aria-label="ジャンル別の理解度比較"></div>
-      </details>
+    <div class="home-panel eras-panel">
+      <div class="panel-head"><div><span class="section-kicker">STUDY</span><h2 class="era-select-heading">学習する時代を選ぼう</h2></div><p class="panel-note">好きな時代から学べます。理解度と正答率を見ながら進めましょう。</p></div>
+      <div id="era-list"></div>
     </div>
 
     <div id="collection" class="home-panel collection-panel">
