@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#376d8a">
+  <meta name="theme-color" content="#2d4f69">
   <title>歴史マスター｜学習ゲーム</title>
   <style>
     :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; }
@@ -222,7 +222,7 @@
       .card { padding: 16px; }
     }
   
-    /* v1.5.0: ホーム画面の全面リデザイン */
+    /* v1.5.2: ホーム画面のレーダーとジャンル別理解度を並列表示 */
     body {
       background:
         radial-gradient(circle at top left, rgba(244,227,185,.55), transparent 28%),
@@ -308,19 +308,24 @@
     .panel-note { margin:0; color:#637786; font-size:.84rem; line-height:1.65; max-width: 370px; }
     .dashboard-grid {
       display:grid;
-      grid-template-columns:minmax(0,1.2fr) minmax(260px,.8fr);
-      gap:18px;
-      align-items:start;
+      grid-template-columns:minmax(0,1.55fr) minmax(240px,.95fr);
+      gap:14px;
+      align-items:stretch;
     }
     .radar-shell {
       border-radius:18px;
       background: linear-gradient(180deg,#eef6f4 0%,#f8fbfb 100%);
       border:1px solid #d5e7e2;
-      padding:16px 16px 12px;
+      padding:12px 12px 14px;
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
     }
     .radar-wrap { max-width:none; margin:0; }
+    .radar-wrap svg text { paint-order:stroke fill; stroke:rgba(246,251,250,.82); stroke-width:2.1px; stroke-linejoin:round; }
     .radar-caption { margin: 10px 0 0; color:#5c737c; }
-    .overall-shell { display:flex; flex-direction:column; gap:14px; }
+    .overall-shell { min-width:0; display:flex; flex-direction:column; gap:12px; }
     .overall-mastery {
       max-width:none;
       margin:0;
@@ -329,15 +334,31 @@
       background: linear-gradient(180deg,#f4fbf9 0%,#ebf7f3 100%);
       box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
     }
-    .overview-note-card {
-      padding:15px 16px;
+    /* レーダーと右側の「総合理解度＋ジャンル別理解度」はグリッドで同じ高さに。 */
+    .overall-shell .home-genre {
+      min-width:0;
+      flex:1 1 auto;
+      margin:0;
+      padding:13px 14px 12px;
+      border:1px solid #d7e4ea;
       border-radius:16px;
-      background: linear-gradient(180deg,#fff7eb 0%,#fffdf8 100%);
-      border:1px solid #ecdcb8;
-      color:#5e5243;
+      background:linear-gradient(180deg,#f8fcfd 0%,#f0f7f9 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.72);
     }
-    .overview-note-card strong { display:block; color:#7c612d; margin-bottom:5px; }
-    .overview-note-card p { margin:0; font-size:.87rem; line-height:1.7; }
+    .home-genre-heading {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .home-genre-heading h3 { color:#254e65; font-size:.95rem; margin:0; }
+    .genre-count { font-size:.69rem; font-weight:750; color:#547185; white-space:nowrap; }
+    .home-genre-intro { font-size:.73rem; color:#687c89; line-height:1.45; margin:6px 0 2px; }
+    .home-genre .genre-row { padding:8px 0 7px; }
+    .home-genre .genre-row-head { gap:8px; font-size:.87rem; }
+    .home-genre .genre-row .track { height:7px; margin-top:6px; }
+    .home-genre .genre-row .muted { display:block; font-size:.7rem; line-height:1.38; margin-top:4px; overflow-wrap:anywhere; }
     .eras-panel #era-list {
       display:grid;
       grid-template-columns:repeat(2,minmax(0,1fr));
@@ -375,34 +396,19 @@
       border-color:#d7e4ea;
       padding:18px 18px 16px;
     }
-    .genre-panel[open] { box-shadow:0 12px 28px rgba(40,57,70,.07), inset 0 1px 0 rgba(255,255,255,.72); }
-    .genre-panel summary {
-      list-style:none;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:8px;
-      font-size:1rem;
-      color:#254e65;
-    }
-    .genre-panel summary::-webkit-details-marker { display:none; }
-    .genre-panel summary::after {
-      content:'＋';
-      color:#6a8594;
-      font-size:1.2rem;
-      line-height:1;
-      transition:transform .15s ease;
-    }
-    .genre-panel[open] summary::after { content:'－'; }
     .collection-panel {
       background: linear-gradient(180deg, rgba(255,251,243,.98), rgba(251,246,234,.98));
       border-color:#ddcfae;
     }
     .achievement-note { margin-top:0; }
     .trophy { box-shadow:0 8px 18px rgba(76,62,32,.05); }
-    @media (max-width: 900px) {
-      .dashboard-grid { grid-template-columns:1fr; }
+    @media (max-width: 740px) {
+      .dashboard-grid { grid-template-columns:minmax(0,1fr); }
       .panel-note { max-width:none; }
+      .radar-shell { padding:12px 14px 14px; }
+      .home-genre .genre-row { padding:10px 0; }
+      .home-genre .genre-row-head { font-size:.94rem; }
+      .home-genre .genre-row .muted { font-size:.76rem; }
     }
     @media (max-width: 640px) {
       main { padding: 16px 12px 46px; }
@@ -470,19 +476,14 @@
             <div id="overall-mastery-track" class="overall-mastery-track" role="progressbar" aria-label="総合理解度" aria-valuemin="0" aria-valuemax="100"><div id="overall-mastery-fill" class="overall-mastery-fill" style="width:0%"></div></div>
             <p id="overall-mastery-detail" class="overall-mastery-detail">問題未登録</p>
           </div>
-          <div class="overview-note-card">
-            <strong>学習のコツ</strong>
-            <p>レーダーチャートは、苦手な時代がひと目でわかります。まずは一番小さいところから進めるのがおすすめです。</p>
-          </div>
+          <section id="genre-dashboard" class="genre-panel home-genre" aria-labelledby="genre-heading">
+            <div class="home-genre-heading"><h3 id="genre-heading">📚 ジャンル別理解度</h3><span class="genre-count">5ジャンル</span></div>
+            <p class="home-genre-intro">人物・政治・文化などの理解度。タグ未設定の問題は集計しません。</p>
+            <div id="genre-list" role="group" aria-label="ジャンル別の理解度比較"></div>
+          </section>
         </div>
       </div>
     </div>
-
-    <details id="genre-dashboard" class="genre-panel home-panel">
-      <summary>📚 ジャンル別の理解度をみる（5ジャンル）</summary>
-      <p class="muted small">時代をまたいで、得意・苦手なジャンルを確認できます。1回連続正解で半分、2回連続正解で習得。タグ未設定の問題は含みません。</p>
-      <div id="genre-list" role="group" aria-label="ジャンル別の理解度比較"></div>
-    </details>
 
     <div class="home-panel eras-panel">
       <div class="panel-head"><div><span class="section-kicker">STUDY</span><h2 class="era-select-heading">学習する時代を選ぼう</h2></div><p class="panel-note">好きな時代から学べます。理解度と正答率を見ながら進めましょう。</p></div>
@@ -962,7 +963,7 @@ function createSVGElement(tag, attrs={}) {
 function renderRadar(statsByEra) {
   const host = $("radar-chart");
   host.replaceChildren();
-  const svg = createSVGElement("svg", {viewBox:"0 0 560 520", "aria-hidden":"true", focusable:"false"});
+  const svg = createSVGElement("svg", {viewBox:"20 20 520 480", "aria-hidden":"true", focusable:"false"});
   const cx=280,cy=260,rad=150, n=ERAS.length;
   const angle = i => -Math.PI/2 + 2*Math.PI*i/n;
   const pos = (i,r) => [cx+r*Math.cos(angle(i)),cy+r*Math.sin(angle(i))];
@@ -976,9 +977,9 @@ function renderRadar(statsByEra) {
     const [x,y]=pos(i,rad);
     svg.appendChild(createSVGElement("line",{x1:cx,y1:cy,x2:x,y2:y,stroke:"#dce6ed","stroke-width":"1"}));
     const [lx,ly]=pos(i,205);
-    const text=createSVGElement("text",{x:lx,y:ly-((labels[id].length-1)*8),"text-anchor":"middle","dominant-baseline":"middle",fill:"#43566d","font-size":"12.5","font-weight":"600"});
+    const text=createSVGElement("text",{x:lx,y:ly-((labels[id].length-1)*10),"text-anchor":"middle","dominant-baseline":"middle",fill:"#43566d","font-size":"19","font-weight":"700"});
     labels[id].forEach((line,lineIndex)=>{
-      const span=createSVGElement("tspan",{x:lx,dy:lineIndex?"15":"0"});
+      const span=createSVGElement("tspan",{x:lx,dy:lineIndex?"19":"0"});
       span.textContent=line;
       text.appendChild(span);
     });
