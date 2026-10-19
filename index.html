@@ -25,12 +25,37 @@
     .test-banner p { margin:4px 0 10px; }
     .test-banner .small-action { background:#fff; }
     .mode-indicator { color:#527086; font-size:.85rem; font-weight:650; }
-    .coin-pill { display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:7px 10px;border:1px solid #e6c87b;background:#fff7d9;border-radius:99px;color:#755000;font-size:.91rem;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums; }
+    /* 王冠の金貨WebPをヘッダー・ホーム・正解結果で共用。 */
+    .gold-coin { display:block; width:27px; height:27px; object-fit:contain; flex:0 0 auto; filter:drop-shadow(0 2px 1px #9866173d); }
+    .coin-pill { display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:40px;padding:6px 10px;border:1px solid #e6c87b;background:#fff7d9;border-radius:99px;color:#755000;font-size:.91rem;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums; }
+    .coin-pill .gold-coin { width:25px; height:25px; }
     .coin-home-line { display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fff9e8;border:1px solid #f0dfa9;padding:10px 13px;border-radius:12px;margin:4px 0 16px; }
-    .coin-home-line strong { color:#79570c;white-space:nowrap; }
-    .coin-reward { display:flex;align-items:center;gap:9px;flex-wrap:wrap;border-radius:11px;background:#fff4c9;border:1px solid #ead18b;color:#795300;padding:11px 12px;margin:12px 0 7px;font-weight:800; }
+    .coin-home-line strong { display:inline-flex;align-items:center;gap:6px;color:#79570c;white-space:nowrap; }
+    .coin-reward { display:flex;flex-direction:column;align-items:flex-start;gap:4px;border-radius:11px;background:#fff4c9;border:1px solid #ead18b;color:#795300;padding:11px 12px;margin:12px 0 7px;font-weight:800; }
+    .coin-reward-title { display:inline-flex;align-items:center;gap:7px;line-height:1.5; }
+    .coin-reward .gold-coin { width:31px; height:31px; }
     .coin-reward small {display:block;font-weight:500;color:#765f33;font-size:.77rem;}
-    @media(max-width:430px) { .header-actions { gap:5px; } .coin-pill { min-height:37px;padding:6px 8px;font-size:.83rem; } }
+
+    /* 獲得時にだけ金貨を短く輝かせる（常時点滅はさせない）。 */
+    .coin-reward.earned .gold-coin {
+      animation: coin-gain-pop .72s cubic-bezier(.18,.75,.22,1) both;
+      transform-origin:50% 55%;
+    }
+    .coin-reward.earned .coin-reward-title { animation: coin-reward-arrive .45s ease-out both; }
+    @keyframes coin-gain-pop {
+      0% { transform:scale(.70) rotate(-11deg); filter:brightness(.95) drop-shadow(0 1px 0 #86631d3d); }
+      38% { transform:scale(1.23) rotate(4deg); filter:brightness(1.36) drop-shadow(0 0 9px #ffd25cbd); }
+      65% { transform:scale(.97) rotate(-2deg); filter:brightness(1.14) drop-shadow(0 0 5px #ffcf4488); }
+      100% { transform:scale(1) rotate(0); filter:brightness(1) drop-shadow(0 2px 1px #9866173d); }
+    }
+    @keyframes coin-reward-arrive {
+      from { opacity:.4; transform:translateY(5px); }
+      to { opacity:1; transform:translateY(0); }
+    }
+    @media(prefers-reduced-motion:reduce) {
+      .coin-reward.earned .gold-coin, .coin-reward.earned .coin-reward-title { animation:none; }
+    }
+    @media(max-width:430px) { .header-actions { gap:5px; } .coin-pill { min-height:37px;padding:5px 7px;font-size:.83rem; } .coin-pill .gold-coin { width:23px;height:23px; } }
     .muted { color: #607086; font-size: .91rem; }
     .small { font-size: .82rem; }
     button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -87,7 +112,15 @@
     .profile-hint { font-size:.83rem; color:#607086; }
     .radar-wrap { max-width: 570px; margin: 4px auto 0; }
     .radar-wrap svg { width:100%; height:auto; display:block; overflow:visible; }
-    .radar-caption { text-align:center; margin:2px 0 10px; font-size:.83rem; color:#607086; }
+    .radar-caption { text-align:center; margin:9px 0 10px; font-size:.83rem; color:#607086; }
+    .overall-mastery { max-width:570px; margin:0 auto; padding:14px 16px; border:1px solid #cbdfe3; border-radius:15px; background:#f2faf8; }
+    .overall-mastery-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .overall-mastery-label { color:#285f57; font-weight:800; font-size:.97rem; }
+    .overall-mastery-value { color:#176e61; font-size:1.85rem; font-weight:850; font-variant-numeric:tabular-nums; line-height:1.2; }
+    .overall-mastery-track { background:#dbece8; height:11px; border-radius:99px; margin:9px 0 8px; overflow:hidden; }
+    .overall-mastery-fill { height:100%; background:linear-gradient(90deg,#44a991,#23866e); border-radius:99px; transition:width .22s ease; }
+    .overall-mastery-detail { color:#4d6a64; margin:0; font-size:.8rem; line-height:1.65; }
+    @media(prefers-reduced-motion:reduce) { .overall-mastery-fill { transition:none; } }
     .rank-note { margin: 4px 0 12px; color:#607086; font-size:.87rem; }
     .genre-panel { border:1px solid #d6e5ef; border-radius:14px; padding:14px; margin-top:18px; background:#f8fbfd; }
     .genre-panel summary { font-weight:700; color:#245e80; cursor:pointer; padding:4px 0; min-height:35px; }
@@ -191,11 +224,12 @@
   </style>
 </head>
 <body>
+<!-- 立体的な金貨イラスト：ホーム・ヘッダー・正解時に共用 -->
 <main>
   <header>
     <h1>📚 歴史マスター</h1>
     <div class="header-actions">
-      <span id="header-coins" class="coin-pill" aria-live="polite" aria-label="学習用コイン 0枚">🪙 0</span>
+      <span id="header-coins" class="coin-pill" aria-live="polite" aria-label="学習用コイン 0枚"><img class="gold-coin" src="assets/coins/crown-gold.webp" alt="" aria-hidden="true" width="27" height="27" decoding="async"><span id="header-coin-amount">0</span></span>
       <span id="header-mode" class="mode-indicator" aria-live="polite">👧 学習用</span>
       <button id="open-admin" class="icon-button" type="button" aria-label="保護者用の管理画面を開く">⚙️ 管理</button>
     </div>
@@ -209,10 +243,15 @@
       <button id="test-return-admin" type="button" class="small-action">← 保護者用管理画面に戻る</button>
     </div>
     <p id="home-subtitle" class="muted hidden"></p>
-    <div class="coin-home-line"><strong id="home-coins">🪙 0 コイン</strong><span class="muted small">初正解・初習得でコインを集めよう！</span></div>
+    <div class="coin-home-line"><strong id="home-coins"><img class="gold-coin" src="assets/coins/crown-gold.webp" alt="" aria-hidden="true" width="27" height="27" decoding="async"><span id="home-coin-amount">0</span> コイン</strong><span class="muted small">初正解・初習得でコインを集めよう！</span></div>
     <div id="dashboard" aria-label="理解度と称号" class="hidden">
       <div class="dashboard-title"><h3>📊 10時代の理解度</h3></div>
       <div id="radar-chart" class="radar-wrap" role="img" aria-label="時代別の理解度レーダーチャート"></div>
+      <div class="overall-mastery" id="overall-mastery" aria-label="全時代の総合理解度">
+        <div class="overall-mastery-head"><span class="overall-mastery-label">🌟 総合理解度</span><strong id="overall-mastery-percent" class="overall-mastery-value">—</strong></div>
+        <div id="overall-mastery-track" class="overall-mastery-track" role="progressbar" aria-label="総合理解度" aria-valuemin="0" aria-valuemax="100"><div id="overall-mastery-fill" class="overall-mastery-fill" style="width:0%"></div></div>
+        <p id="overall-mastery-detail" class="overall-mastery-detail">問題未登録</p>
+      </div>
       <p class="radar-caption">1回連続正解で半分、2回連続正解で習得。間違えるとその問題の理解度は0に戻ります。</p>
     </div>
     <h2 class="era-select-heading">学習する時代を選ぼう</h2>
@@ -364,7 +403,7 @@
 
 <script>
 "use strict";
-// 歴史マスター v1.4.0：2段階コイン報酬。v1.3.2のカード表示と問題一括更新を維持。
+// 歴史マスター v1.4.2：星付きSVGを王冠金貨WebPに差し替え、獲得時の光沢演出を追加。データ構造はv1.4.1と同じ。
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -432,10 +471,10 @@ function coinClaimKey(who,id,stage) { return `${who}:${id}:${stage}`; }
 function coinBalance(events,who) { return events.filter(ev=>ev.profile===who).reduce((sum,ev)=>sum+ev.amount,0); }
 async function refreshCoinDisplay() {
   const balance=coinBalance(await readAll("coinEvents"),profile);
-  $("header-coins").textContent=`🪙 ${balance.toLocaleString("ja-JP")}`;
+  // SVGをtextContentで消さず、数値のテキストノードだけを更新する。
+  $("header-coin-amount").textContent=balance.toLocaleString("ja-JP");
   $("header-coins").setAttribute("aria-label",`${profile==="test"?"テスト用":"学習用"}コイン ${balance}枚`);
-  const home=$("home-coins");
-  home.textContent=`🪙 ${balance.toLocaleString("ja-JP")} コイン`;
+  $("home-coin-amount").textContent=balance.toLocaleString("ja-JP");
   return balance;
 }
 // 旧履歴から『報酬済み扱い』を再構成。付与取引は作らないので残高は増えない。
@@ -627,6 +666,27 @@ function masteryStats(era, progressByQuestion) {
   // 1回連続正解で0.5問分、2回連続正解で1問分。習得判定は従来どおり2回連続正解。
   const percentage = qs.length ? (mastered + learning * 0.5) / qs.length * 100 : null;
   return {count:qs.length, mastered, learning, percentage, display:percentage === null ? "—" : String(Math.floor(percentage))};
+}
+// 各時代の平均ではなく、全出題対象問題の問題数で重み付けした理解度。
+// 未登録時代は母数0。非表示・削除済み問題はQUESTIONSから除外済み。
+function overallMasteryStats(statsByEra) {
+  const values=Object.values(statsByEra);
+  const count=values.reduce((sum,s)=>sum+s.count,0);
+  const mastered=values.reduce((sum,s)=>sum+s.mastered,0);
+  const learning=values.reduce((sum,s)=>sum+s.learning,0);
+  const percentage=count?(mastered+0.5*learning)/count*100:null;
+  return {count,mastered,learning,percentage,display:percentage===null?"—":`${Math.floor(percentage)}%`};
+}
+function renderOverallMastery(statsByEra) {
+  const stats=overallMasteryStats(statsByEra);
+  $("overall-mastery-percent").textContent=stats.display;
+  $("overall-mastery-detail").textContent=stats.count
+    ? `習得済み ${stats.mastered}問 ／ 1回連続正解 ${stats.learning}問 ／ 全${stats.count}問`
+    : "問題未登録（問題を取り込むと理解度が表示されます）";
+  $("overall-mastery-fill").style.width=stats.count?`${stats.percentage}%`:"0%";
+  const track=$("overall-mastery-track");
+  if(stats.count) track.setAttribute("aria-valuenow",String(Math.floor(stats.percentage)));
+  else track.removeAttribute("aria-valuenow");
 }
 function genreMasteryStats(tag, progressByQuestion) {
   const qs=QUESTIONS.filter(q=>q.tag===tag); // 削除・非表示・未タグ付けは数えない
@@ -1787,6 +1847,7 @@ async function renderHome() {
     area.appendChild(btn);
   }
   renderRadar(allStats);
+  renderOverallMastery(allStats);
   renderGenreDashboard(records);
   renderCollection(allStats,awards);
   $("dashboard").classList.remove("hidden");
@@ -1961,6 +2022,17 @@ async function grade() {
     updateChoices();
   }
 }
+function createCoinIcon() {
+  const icon=document.createElement("img");
+  icon.className="gold-coin";
+  icon.src="assets/coins/crown-gold.webp";
+  icon.alt=""; // 獲得枚数は隣のテキストで読み上げる
+  icon.setAttribute("aria-hidden","true");
+  icon.width=31;
+  icon.height=31;
+  icon.decoding="async";
+  return icon;
+}
 function showResult(newAward=null,coinAward=lastCoinAward) {
   const q = currentQuestion;
   const correct = isCorrect(q, selected);
@@ -1977,12 +2049,18 @@ function showResult(newAward=null,coinAward=lastCoinAward) {
   if(correct) {
     const coin=document.createElement("div");coin.className="coin-reward";
     if(coinAward?.amount>0) {
+      coin.classList.add("earned");
       const detail=coinAward.stages.includes("master") && coinAward.stages.includes("first") ? "初正解＆初習得ボーナス" : coinAward.stages.includes("master") ? "初習得ボーナス" : "初正解ボーナス";
-      const head=document.createElement("span");head.textContent=`🪙 +${coinAward.amount} コイン獲得！`;
+      const head=document.createElement("span");head.className="coin-reward-title";
+      const amount=document.createElement("span");amount.textContent=`+${coinAward.amount} コイン獲得！`;
+      head.append(createCoinIcon(),amount);
       const note=document.createElement("small");note.textContent=`${difficultyLabel(q)}問題・${detail}`;
       coin.append(head,note);
     } else {
-      coin.textContent="🪙 今回の追加コインは0枚（復習も大切！）";
+      const head=document.createElement("span");head.className="coin-reward-title";
+      const caption=document.createElement("span");caption.textContent="今回の追加コインは0枚（復習も大切！）";
+      head.append(createCoinIcon(),caption);
+      coin.append(head);
     }
     result.appendChild(coin);
   }
