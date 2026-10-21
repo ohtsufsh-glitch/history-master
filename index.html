@@ -494,6 +494,59 @@
     .plush-item .owned{color:#8b5425;font-weight:900;font-size:.88rem;}
     @media(max-width:640px){.arcade-home-body{gap:10px;}.arcade-home-preview{flex-basis:75px;height:78px;font-size:1.65rem;}.plush-grid{grid-template-columns:repeat(3,minmax(0,1fr));}.crane-stage{height:310px;}.crane-controls{gap:10px;grid-template-columns:65px minmax(110px,1fr) 65px;}.crane-dir,.crane-catch{min-height:58px;}.machine-wrap{border-width:5px;}}
     @media(prefers-reduced-motion:reduce){.crane-arm,.crane-cable,.crane-head,.claw,.crane-toy{transition:none!important;}}
+
+    /* v1.6.3: iPad向け 7体・自動往復・出口まで運搬 */
+    .arcade-screen { padding:22px 20px 26px; }
+    .arcade-screen .machine-wrap { max-width:900px; margin:18px auto; }
+    .crane-stage { height:398px; background:radial-gradient(ellipse at 48% 22%,#fff 0,#e9f8fa 50%,#c9e7ea 100%); }
+    .crane-rail { left:10%; width:80%; }
+    .crane-arm { transition:left .075s linear; }
+    .crane-stage.sweeping .crane-arm { transition:none; }
+    .crane-stage.transporting .crane-arm { transition:left 1.35s linear; }
+    /* 前版の固定px下降位置をステージの縦幅に追従させる */
+    .crane-stage.dropping .crane-cable { height:calc(398px - 172px); }
+    .crane-stage.dropping .crane-head { top:calc(398px - 170px); }
+    .crane-stage.dropping .claw { top:calc(398px - 153px); }
+    .crane-prizes { z-index:3; }
+    .crane-toy {
+      width:11.8%; max-width:102px; min-width:0; bottom:34px;
+      transition: left 1.35s linear, bottom .63s ease, opacity .35s ease, transform .4s ease;
+      will-change:transform;
+    }
+    .crane-toy.grabbed { bottom:calc(100% - 210px); transform:translateX(-50%) scale(.86); z-index:6; }
+    .crane-toy.fallen { bottom:34px; transform:translateX(-50%) rotate(20deg) scale(.92); }
+    .crane-toy.delivered { bottom:0; opacity:0; transform:translateX(-50%) scale(.60); }
+    .crane-toy.collected { display:none; }
+    .crane-chute {
+      right:1.4%; bottom:0; width:12%; min-width:76px; height:58px;
+      background:linear-gradient(#866a83,#594559); border:4px solid #ead6dc;
+      border-bottom:0; border-radius:12px 12px 0 0; font-weight:800;
+      font-size:.78rem; padding-top:11px; box-shadow:inset 0 8px 12px #39263a66;
+    }
+    .crane-controls { display:flex; justify-content:center; max-width:440px; }
+    .crane-controls.hidden { display:none!important; }
+    .crane-catch { width:100%; min-height:74px; font-size:1.5rem; touch-action:manipulation; }
+    .machine-lower { padding:18px 20px 22px; }
+    .arcade-hint { margin:11px 0 0; }
+    @media(min-width:760px) {
+      main:has(#arcade:not(.hidden)) { max-width:1030px; }
+      .arcade-screen .machine-wrap { border-width:9px; }
+      .arcade-screen .crane-stage { height:398px; }
+      .arcade-screen .crane-toy { max-width:102px; }
+    }
+    @media(max-width:640px) {
+      .arcade-screen { padding:14px; }
+      .crane-stage { height:310px; }
+      .crane-stage.dropping .crane-cable { height:calc(310px - 172px); }
+      .crane-stage.dropping .crane-head { top:calc(310px - 170px); }
+      .crane-stage.dropping .claw { top:calc(310px - 153px); }
+      .crane-toy { width:12.4%; }
+      .crane-toy.grabbed { bottom:calc(100% - 176px); }
+      .crane-chute { font-size:.60rem; padding-top:12px; }
+    }
+    @media(prefers-reduced-motion:reduce) {
+      .crane-stage.transporting .crane-arm, .crane-toy { transition:none!important; }
+    }
   </style>
 </head>
 <body>
@@ -570,22 +623,20 @@
     <button id="arcade-back" type="button" class="nav">← 学習ホームに戻る</button>
     <div class="arcade-title-row"><div><span class="section-kicker">PLUSH CATCHER</span><h2>🧸 ぬいぐるみキャッチャー</h2></div><div class="arcade-balance"><img src="assets/coins/crown-gold.webp" alt="" width="33" height="33"><strong id="arcade-balance">0</strong></div></div>
     <p id="arcade-profile-note" class="arcade-profile-note"></p>
-    <p class="arcade-intro">左右ボタンでアームを動かして、ぬいぐるみをキャッチ！ 上手に狙っても途中で落とすことがあります。</p>
+    <p class="arcade-intro">アームが自動で左右に動きます。「キャッチ！」でタイミングよく止めよう！ つかんだ景品を出口まで運べたらゲットです。</p>
     <div class="machine-wrap">
-      <div class="arcade-sign">PLUSH CATCHER <span>★</span> ぬいぐるみキャッチャー</div>
+      <div class="arcade-sign">PLUSH CATCHER <span>★</span> ARCADE</div>
       <div id="crane-stage" class="crane-stage" aria-label="クレーンゲームのプレイ画面">
         <div class="crane-glass-shine" aria-hidden="true"></div>
         <div class="crane-rail" aria-hidden="true"></div>
         <div id="crane-arm" class="crane-arm" aria-hidden="true"><div class="crane-cable"></div><div class="crane-head"><span></span></div><div class="claw claw-left"></div><div class="claw claw-right"></div></div>
         <div id="crane-prizes" class="crane-prizes" aria-hidden="true"></div>
-        <div class="crane-floor" aria-hidden="true"></div><div class="crane-chute" aria-hidden="true">景品出口</div>
+        <div class="crane-floor" aria-hidden="true"></div><div class="crane-chute" aria-hidden="true">⬇ 景品出口</div>
       </div>
       <div class="machine-lower">
         <p id="arcade-message" class="arcade-message" role="status" aria-live="polite">100金貨で1回遊べます。</p>
         <div id="crane-controls" class="crane-controls hidden">
-          <button id="crane-left" type="button" class="crane-dir" aria-label="クレーンを左へ動かす">◀</button>
-          <button id="crane-catch" type="button" class="crane-catch">キャッチ！</button>
-          <button id="crane-right" type="button" class="crane-dir" aria-label="クレーンを右へ動かす">▶</button>
+          <button id="crane-catch" type="button" class="crane-catch" aria-label="自動で動くアームを止めてキャッチする">🎯 キャッチ！</button>
         </div>
         <button id="crane-start" type="button" class="primary crane-start">100金貨でプレイ</button>
         <p id="arcade-hint" class="arcade-hint">1回の操作で30〜60秒ほど。途中で閉じても続きから再開できます。</p>
@@ -867,92 +918,123 @@ async function ensureCoinMigration() {
   });
 }
 
-// --- ぬいぐるみキャッチャー v1.2 ---
+// --- ぬいぐるみキャッチャー v1.6.3 ---
 const CRANE_COST=100;
 const PLUSH_TYPES=Object.freeze({
   shiba:"しば犬", sloth:"なまけもの", goldfish:"金魚", salamander:"オオサンショウウオ", bear:"くま"
 });
 const PLUSH_IDS=Object.keys(PLUSH_TYPES);
-const PRIZE_POSITIONS=[20,50,80];
+const CRANE_CONFIG=Object.freeze({
+  left:12,right:88,oneWaySeconds:2.5,exitX:92,
+  dropMs:760,liftMs:750,transportMs:1350,releaseMs:480,
+  // とても正確で約75%、ほぼ正確で約50%、端で約20%の最終獲得率
+  bands:[{max:2,alignment:"perfect",grab:.90,carry:.84},
+         {max:3.8,alignment:"good",grab:.75,carry:.67},
+         {max:5.6,alignment:"edge",grab:.38,carry:.53}]
+});
+const LEGACY_PRIZE_POSITIONS=[20,50,80];
+const NEW_PRIZE_POSITIONS=[14,26,38,50,62,74,86];
+const positionsForPlay=play=>play?.prizes.length===3?LEGACY_PRIZE_POSITIONS:NEW_PRIZE_POSITIONS;
 let arcadePlay=null;
 let arcadeBusy=false;
-let arcadeMoveTimer=null;
+let arcadeSweepFrame=null;
+let arcadeSweepAt=null;
+let arcadeDirection=1;
+let arcadeAnimationPromise=null;
 const plushPath=id=>`assets/plush/${id}.webp`;
 const craneSleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 function randomArcadePrizes() {
-  const items=[...PLUSH_IDS];
-  for(let i=items.length-1;i>0;i--) {const j=Math.floor(Math.random()*(i+1));[items[i],items[j]]=[items[j],items[i]];}
-  return items.slice(0,3);
+  // 7体すべて無作為に配置。5種類すべてが出るとは限らず、重複もあり。
+  return Array.from({length:7},()=>PLUSH_IDS[Math.floor(Math.random()*PLUSH_IDS.length)]);
 }
 function newArcadePlay(who) {
-  return {id:crypto.randomUUID(),profile:who,game:"crane",status:"aiming",startedAt:new Date().toISOString(),armX:50,prizes:randomArcadePrizes()};
+  return {id:crypto.randomUUID(),profile:who,game:"crane",status:"aiming",startedAt:new Date().toISOString(),armX:50,direction:1,prizes:randomArcadePrizes()};
 }
-// 100金貨の消費とプレイ開始を同一トランザクションで保存。
-// coinEventsを同時にロックし、回答による入金と並行しても残高を正しく検査する。
+// 残高確認・消費・プレイ登録を単一トランザクションで確定。
 function purchaseCranePlay(play) {
   return new Promise((resolve,reject)=>{
-    const stores=["coinEvents","reviewEvents","coinSpends","arcadePlays"];
-    const tx=db.transaction(stores,"readwrite");
-    let remaining=4;
+    const names=["coinEvents","reviewEvents","coinSpends","arcadePlays"];
+    const tx=db.transaction(names,"readwrite");
+    let remaining=names.length;
     const results={};
-    for(const name of ["coinEvents","reviewEvents","coinSpends","arcadePlays"]) {
+    for(const name of names) {
       const req=tx.objectStore(name).getAll();
       req.onsuccess=()=>{
         results[name]=req.result;
         if(--remaining!==0)return;
         const balance=availableCoins(results.coinEvents,results.reviewEvents,results.coinSpends,play.profile);
         const isTest=play.profile==="test";
-        if(results.arcadePlays.some(p=>p.profile===play.profile && p.status==="aiming") || (!isTest && balance<CRANE_COST)) {tx.abort();return;}
-        // テスト用プレイは金貨消費0。履歴は残すことでバックアップ・リセットも一貫させる。
+        if(results.arcadePlays.some(p=>p.profile===play.profile && (p.status==="aiming"||p.status==="resolving")) || (!isTest && balance<CRANE_COST)) {tx.abort();return;}
         tx.objectStore("coinSpends").add({id:play.id,profile:play.profile,game:"crane",amount:isTest?0:CRANE_COST,at:play.startedAt});
         tx.objectStore("arcadePlays").add(play);
       };
     }
     tx.oncomplete=()=>resolve(play);
     tx.onerror=()=>reject(tx.error||new Error("金貨の消費処理に失敗しました"));
-    tx.onabort=()=>reject(new Error("金貨が足りないか、プレイの保存に失敗しました"));
+    tx.onabort=()=>reject(new Error("金貨が足りないか、進行中のプレイがあります"));
   });
 }
-function persistArcadeArm(playId,position) {
+function persistArcadeArm(playId,position,direction) {
   return new Promise((resolve,reject)=>{
     const tx=db.transaction("arcadePlays","readwrite");
     const store=tx.objectStore("arcadePlays");
     const req=store.get(playId);
     req.onsuccess=()=>{
-      if(req.result?.status==="aiming") store.put({...req.result,armX:position});
+      if(req.result?.status==="aiming")store.put({...req.result,armX:position,direction});
     };
-    tx.oncomplete=resolve;
+    tx.oncomplete=()=>resolve();
     tx.onerror=()=>reject(tx.error);
     tx.onabort=()=>reject(tx.error);
   });
 }
-function decideCraneOutcome(play) {
+function chooseCraneOutcome(play,random=Math.random) {
+  const positions=positionsForPlay(play);
   let targetIndex=0;
-  for(let i=1;i<3;i++) if(Math.abs(play.armX-PRIZE_POSITIONS[i])<Math.abs(play.armX-PRIZE_POSITIONS[targetIndex]))targetIndex=i;
-  const distance=Math.abs(play.armX-PRIZE_POSITIONS[targetIndex]);
-  const alignment=distance<=3.2?"perfect":distance<=7?"good":distance<=13?"edge":"miss";
-  const chance=alignment==="perfect"?.95:alignment==="good"?.80:alignment==="edge"?.40:0;
-  const carry=alignment==="perfect"?.90:alignment==="good"?.80:alignment==="edge"?.70:0;
-  const grabbed=Math.random()<chance;
-  const won=grabbed&&Math.random()<carry;
-  return {targetIndex,alignment,grabbed,won,at:new Date().toISOString()};
+  for(let i=1;i<positions.length;i++)if(Math.abs(play.armX-positions[i])<Math.abs(play.armX-positions[targetIndex]))targetIndex=i;
+  const distance=Math.abs(play.armX-positions[targetIndex]);
+  const band=CRANE_CONFIG.bands.find(b=>distance<=b.max);
+  const grabbed=!!band && random()<band.grab;
+  const won=grabbed && random()<band.carry;
+  // 落下する場合の位置も1回だけ抽選し、リロード後も同じ結果を演出する。
+  const fallAt=grabbed&&!won?(0.22+random()*.64):null;
+  return {targetIndex,alignment:band?.alignment||"miss",grabbed,won,fallAt,at:new Date().toISOString()};
 }
-// 判定はアニメーションより先に保存。ページを再読み込みしても引き直せない。
+// キャッチ結果を先に保存するが、景品の付与は「出口に運び終えてから」。
 function commitCraneOutcome(play,result) {
   return new Promise((resolve,reject)=>{
-    const tx=db.transaction(["arcadePlays","arcadePrizes"],"readwrite");
+    const tx=db.transaction("arcadePlays","readwrite");
     const store=tx.objectStore("arcadePlays");
     let updated=null;
     const req=store.get(play.id);
     req.onsuccess=()=>{
       if(!req.result || req.result.status!=="aiming") {tx.abort();return;}
-      updated={...req.result,status:"finished",result};
+      updated={...req.result,armX:play.armX,direction:arcadeDirection,status:"resolving",result};
       store.put(updated);
-      if(result.won) tx.objectStore("arcadePrizes").add({id:play.id,profile:play.profile,prizeId:play.prizes[result.targetIndex],wonAt:result.at});
+    };
+    tx.oncomplete=()=>resolve(updated);
+    tx.onerror=()=>reject(tx.error||new Error("キャッチ結果の保存に失敗しました"));
+    tx.onabort=()=>reject(new Error("このプレイはすでに判定されています"));
+  });
+}
+// 景品獲得と完了状態は同じトランザクション。二重登録しない。
+function finishCranePlay(playId) {
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(["arcadePlays","arcadePrizes"],"readwrite");
+    const store=tx.objectStore("arcadePlays");
+    let updated=null;
+    const req=store.get(playId);
+    req.onsuccess=()=>{
+      const play=req.result;
+      if(!play){tx.abort();return;}
+      if(play.status==="finished"){updated=play;return;}
+      if(play.status!=="resolving"||!play.result){tx.abort();return;}
+      updated={...play,status:"finished"};
+      store.put(updated);
+      if(play.result.won)tx.objectStore("arcadePrizes").add({id:play.id,profile:play.profile,prizeId:play.prizes[play.result.targetIndex],wonAt:play.result.at});
     };
     tx.oncomplete=()=>resolve(updated);
     tx.onerror=()=>reject(tx.error||new Error("景品の保存に失敗しました"));
-    tx.onabort=()=>reject(new Error("このプレイはすでに終了しています"));
+    tx.onabort=()=>reject(new Error("プレイ完了処理を中断しました"));
   });
 }
 async function latestArcadePlay(who) {
@@ -961,21 +1043,23 @@ async function latestArcadePlay(who) {
 }
 async function refreshArcadeHome() {
   const [plays,prizes]=await Promise.all([readAll("arcadePlays"),readAll("arcadePrizes")]);
-  const pending=plays.some(p=>p.profile===profile&&p.status==="aiming");
+  const pending=plays.some(p=>p.profile===profile&&["aiming","resolving"].includes(p.status));
   const owned=prizes.filter(p=>p.profile===profile);
   const kinds=new Set(owned.map(p=>p.prizeId)).size;
-  $("arcade-home-status").textContent=`獲得：${owned.length}体（${kinds}/5種類）${pending?" ／ プレイ途中のクレーンがあります":""}`;
+  $("arcade-home-status").textContent=`獲得：${owned.length}体（${kinds}/5種類）${pending?" ／ 続きから遊べます":""}`;
   $("open-arcade").textContent=pending?"クレーンの続きを遊ぶ →":"キャッチャーで遊ぶ →";
   $("arcade-home-cost-text").textContent=profile==="test"?"テスト中：無料で何回でも":"100枚 / 1プレイ";
 }
 function paintArcadeArm() {
-  if(arcadePlay) $("crane-arm").style.left=`${arcadePlay.armX}%`;
+  if(arcadePlay)$("crane-arm").style.left=`${arcadePlay.armX}%`;
 }
 function paintArcadePrizes() {
   const host=$("crane-prizes");host.replaceChildren();
   if(!arcadePlay)return;
+  const positions=positionsForPlay(arcadePlay);
   arcadePlay.prizes.forEach((id,i)=>{
-    const toy=document.createElement("div");toy.className="crane-toy";toy.dataset.slot=i;toy.style.left=`${PRIZE_POSITIONS[i]}%`;
+    const toy=document.createElement("div");toy.className="crane-toy";toy.dataset.slot=i;toy.style.left=`${positions[i]}%`;
+    if(arcadePlay.status==="finished" && arcadePlay.result?.won && arcadePlay.result.targetIndex===i)toy.classList.add("collected");
     const img=document.createElement("img");img.src=plushPath(id);img.alt="";img.decoding="async";
     toy.append(img);host.append(toy);
   });
@@ -994,40 +1078,79 @@ async function renderArcadeCollection() {
     box.append(img,name,count);host.append(box);
   }
 }
+function stopCraneSweep(persist=false) {
+  if(arcadeSweepFrame!==null){cancelAnimationFrame(arcadeSweepFrame);arcadeSweepFrame=null;}
+  arcadeSweepAt=null;
+  $("crane-stage").classList.remove("sweeping");
+  if(persist && arcadePlay?.status==="aiming")persistArcadeArm(arcadePlay.id,arcadePlay.armX,arcadeDirection).catch(err);
+}
+function startCraneSweep() {
+  if(arcadeSweepFrame!==null||arcadeBusy||document.hidden||$("arcade").classList.contains("hidden")||arcadePlay?.status!=="aiming")return;
+  $("crane-stage").classList.add("sweeping");
+  const velocity=(CRANE_CONFIG.right-CRANE_CONFIG.left)/CRANE_CONFIG.oneWaySeconds;
+  function frame(now) {
+    if(arcadeBusy||document.hidden||$("arcade").classList.contains("hidden")||arcadePlay?.status!=="aiming") {stopCraneSweep();return;}
+    if(arcadeSweepAt!==null) {
+      let next=arcadePlay.armX+Math.min((now-arcadeSweepAt)/1000,.06)*velocity*arcadeDirection;
+      while(next>CRANE_CONFIG.right||next<CRANE_CONFIG.left){
+        if(next>CRANE_CONFIG.right){next=2*CRANE_CONFIG.right-next;arcadeDirection=-1;}
+        else {next=2*CRANE_CONFIG.left-next;arcadeDirection=1;}
+      }
+      arcadePlay.armX=next;
+      paintArcadeArm();
+    }
+    arcadeSweepAt=now;
+    arcadeSweepFrame=requestAnimationFrame(frame);
+  }
+  arcadeSweepFrame=requestAnimationFrame(frame);
+}
 async function renderArcade() {
   const balance=await getAvailableCoins();
   const testMode=profile==="test";
   $("arcade-balance").textContent=testMode?"∞（無料）":balance.toLocaleString("ja-JP");
   $("arcade-profile-note").textContent=testMode?"🔧 テストモード：金貨を消費せず何回でも遊べます。景品と履歴はテスト用に保存されます。":"👧 学習用のコイン・景品です。";
   arcadePlay=await latestArcadePlay(profile);
-  $("crane-stage").className="crane-stage";
+  arcadeDirection=arcadePlay?.direction===-1?-1:1;
+  const stage=$("crane-stage");stage.className="crane-stage";
   paintArcadeArm();paintArcadePrizes();
   const aiming=arcadePlay?.status==="aiming";
+  const resolving=arcadePlay?.status==="resolving";
   const start=$("crane-start");
   $("crane-controls").classList.toggle("hidden",!aiming);
-  start.classList.toggle("hidden",aiming);
+  $("crane-catch").disabled=!aiming||arcadeBusy;
+  start.classList.toggle("hidden",aiming||resolving);
   start.disabled=(!testMode && balance<CRANE_COST)||arcadeBusy;
   start.textContent=testMode?`無料で${arcadePlay?.status==="finished"?"もう一度":"プレイ"}（回数無制限）`:
     balance<CRANE_COST?`あと${CRANE_COST-balance}金貨でプレイ可能`:`100金貨で${arcadePlay?.status==="finished"?"もう一度":"プレイ"}`;
-  if(aiming) $("arcade-message").textContent="◀ ▶ で位置を合わせて、「キャッチ！」を押そう！";
+  if(aiming)$("arcade-message").textContent="動くアームを見て、ねらった場所で「キャッチ！」を押そう！";
+  else if(resolving)$("arcade-message").textContent="前回のキャッチ結果を再生します。金貨は追加で使いません。";
   else if(arcadePlay?.status==="finished") {
     const r=arcadePlay.result;
-    $("arcade-message").textContent=r.won?`🎉 ${PLUSH_TYPES[arcadePlay.prizes[r.targetIndex]]}をゲット！`:r.grabbed?"あと少し！ 途中で落ちちゃった…":"おしい！ 今度はもっと近くをねらおう！";
+    $("arcade-message").textContent=r.won?`🎉 ${PLUSH_TYPES[arcadePlay.prizes[r.targetIndex]]}をゲット！`:r.grabbed?"あと少し！ 運ぶ途中で落ちちゃった…":"おしい！ 今度はもっと近くをねらおう！";
   } else $("arcade-message").textContent=testMode?"テストモードでは金貨を使わず、何度でも遊べます。":"100金貨で1回遊べます。";
   await renderArcadeCollection();
   await refreshCoinDisplay();
+  if(aiming && !arcadeBusy)startCraneSweep();
 }
 async function openArcade() {
   if(saving||importing||backingUp||updatingQuestions||arcadeBusy)return;
   notice("");show("arcade");
-  try{await renderArcade();}catch(error){err(error);}
+  try {
+    await renderArcade();
+    if(arcadePlay?.status==="resolving")await animatePendingCrane();
+  }catch(error){err(error);}
 }
 async function startCrane() {
   if(arcadeBusy)return;
   arcadeBusy=true;$("crane-start").disabled=true;
   try {
     const previous=await latestArcadePlay(profile);
-    if(previous?.status==="aiming") {arcadePlay=previous;await renderArcade();return;}
+    if(previous?.status==="aiming"||previous?.status==="resolving") {
+      arcadePlay=previous;
+      await renderArcade();
+      if(previous.status==="resolving")await animatePendingCrane(true);
+      return;
+    }
     const balance=await getAvailableCoins();
     if(profile!=="test" && balance<CRANE_COST){await renderArcade();return;}
     if(profile!=="test" && !confirm(`100金貨を使ってUFOキャッチャーを1回遊びますか？\n現在の金貨：${balance}枚`))return;
@@ -1035,67 +1158,92 @@ async function startCrane() {
     await purchaseCranePlay(play);
     arcadePlay=play;
     await renderArcade();
-    $("arcade-message").textContent="スタート！ 好きなぬいぐるみをねらおう！";
-  } catch(error) {err(error);} finally {
+    $("arcade-message").textContent="スタート！ タイミングよく「キャッチ！」を押そう！";
+  } catch(error){err(error);} finally {
     arcadeBusy=false;
     $("crane-start").disabled=profile!=="test" && (await getAvailableCoins().catch(()=>0))<CRANE_COST;
+    startCraneSweep();
   }
 }
-function moveCrane(step) {
-  if(arcadeBusy || !arcadePlay || arcadePlay.status!=="aiming") return;
-  arcadePlay.armX=Math.max(12,Math.min(88,Math.round((arcadePlay.armX+step)*10)/10));
-  paintArcadeArm();
-}
-function stopCraneMotion() {
-  if(arcadeMoveTimer!==null){clearInterval(arcadeMoveTimer);arcadeMoveTimer=null;}
-  if(arcadePlay?.status==="aiming") persistArcadeArm(arcadePlay.id,arcadePlay.armX).catch(err);
-}
-function bindDirectionButton(id,step) {
-  const button=$(id);
-  button.addEventListener("pointerdown",event=>{
-    if(button.disabled || arcadeBusy || !arcadePlay || arcadePlay.status!=="aiming")return;
-    event.preventDefault();stopCraneMotion();moveCrane(step*2.5);
-    try{button.setPointerCapture(event.pointerId);}catch(_){}
-    arcadeMoveTimer=setInterval(()=>moveCrane(step*1.7),75);
-  });
-  button.addEventListener("pointerup",stopCraneMotion);
-  button.addEventListener("pointercancel",stopCraneMotion);
-  button.addEventListener("lostpointercapture",stopCraneMotion);
-  button.addEventListener("keydown",event=>{
-    if(event.key==="Enter"||event.key===" ") {event.preventDefault();if(!event.repeat)moveCrane(step*2.5);}
-  });
-  button.addEventListener("keyup",event=>{if(event.key==="Enter"||event.key===" ")stopCraneMotion();});
-}
+// 左右手動ボタンを廃止したため、アームは移動ボタンから書き換えない。
 async function catchCrane() {
-  if(arcadeBusy || !arcadePlay || arcadePlay.status!=="aiming")return;
-  stopCraneMotion();arcadeBusy=true;
-  $("crane-controls").querySelectorAll("button").forEach(b=>b.disabled=true);
-  const play=arcadePlay;
+  if(arcadeBusy||arcadePlay?.status!=="aiming")return;
+  stopCraneSweep();
+  arcadeBusy=true;
+  $("crane-catch").disabled=true;
   try {
-    // 永続化を先に確定した上で結果を演出する。
-    const outcome=decideCraneOutcome(play);
-    const completed=await commitCraneOutcome(play,outcome);
-    arcadePlay=completed;
-    $("arcade-message").textContent="アーム下降中…つかめるかな？";
-    const stage=$("crane-stage");stage.classList.add("dropping");
-    await craneSleep(720);
-    const toy=$("crane-prizes").querySelector(`[data-slot="${outcome.targetIndex}"]`);
-    if(outcome.grabbed && toy){toy.classList.add("grabbed");$("arcade-message").textContent="つかんだ！ 落ちないで…！";}
-    else $("arcade-message").textContent="あっ、つかめなかった！";
-    stage.classList.remove("dropping");
-    await craneSleep(780);
-    if(toy && outcome.grabbed)toy.classList.add(outcome.won?"won":"fallen");
-    await craneSleep(520);
+    const play=arcadePlay;
+    const outcome=chooseCraneOutcome(play);
+    arcadePlay=await commitCraneOutcome(play,outcome);
+    await animateCraneOutcome(arcadePlay);
+    arcadePlay=await finishCranePlay(play.id);
     await renderArcade();
-    if(outcome.won) $("arcade-message").textContent=`🎉 大成功！ ${PLUSH_TYPES[play.prizes[outcome.targetIndex]]}をゲット！`;
   }catch(error){err(error);await renderArcade().catch(err);}finally{
     arcadeBusy=false;
-    $("crane-controls").querySelectorAll("button").forEach(b=>b.disabled=false);
-    if(!$("crane-start").classList.contains("hidden")) {
-      $("crane-start").disabled=profile!=="test" && (await getAvailableCoins().catch(()=>0))<CRANE_COST;
-    }
+    if(arcadePlay?.status==="aiming"){$("crane-catch").disabled=false;startCraneSweep();}
+    if(arcadePlay?.status==="finished")$("crane-start").disabled=profile!=="test"&&(await getAvailableCoins().catch(()=>0))<CRANE_COST;
   }
 }
+async function animatePendingCrane(insideBusy=false) {
+  if(arcadeBusy&&!insideBusy)return;
+  if(arcadePlay?.status!=="resolving")return;
+  if(!insideBusy)arcadeBusy=true;
+  try {
+    const play=arcadePlay;
+    await animateCraneOutcome(play);
+    arcadePlay=await finishCranePlay(play.id);
+    await renderArcade();
+  }catch(error){err(error);}finally{
+    if(!insideBusy)arcadeBusy=false;
+    if(arcadePlay?.status==="finished")$("crane-start").disabled=profile!=="test"&&(await getAvailableCoins().catch(()=>0))<CRANE_COST;
+  }
+}
+// 判定そのものは保存済みの値だけを読み、演出中の乱数は使用しない。
+async function animateCraneOutcome(play) {
+  const stage=$("crane-stage"),arm=$("crane-arm"),result=play.result;
+  const toy=$("crane-prizes").querySelector(`[data-slot="${result.targetIndex}"]`);
+  $("arcade-message").textContent="アームが下降中…つかめるかな？";
+  stage.classList.add("dropping");
+  await craneSleep(CRANE_CONFIG.dropMs);
+  if(result.grabbed&&toy){toy.classList.add("grabbed");$("arcade-message").textContent="つかんだ！ 出口まで落とさず運ぼう！";}
+  else $("arcade-message").textContent="あっ、つかめなかった！";
+  stage.classList.remove("dropping");
+  await craneSleep(CRANE_CONFIG.liftMs);
+  if(result.grabbed&&toy) {
+    const fromX=play.armX;
+    const toX=CRANE_CONFIG.exitX;
+    const travelMs=CRANE_CONFIG.transportMs;
+    const dropAt=result.won?1:Math.min(.95,Math.max(.1,result.fallAt??.5));
+    const travelEnd=fromX+(toX-fromX)*dropAt;
+    stage.classList.add("transporting");
+    if(result.won)$("arcade-message").textContent="景品を出口へ運んでいます…！";
+    // 通過点の位置と所要時間を一致させる。
+    const armDuration=result.won?travelMs:Math.max(280,Math.round(travelMs*dropAt));
+    arm.style.transitionDuration=`${armDuration}ms`;
+    toy.style.transitionDuration=`${armDuration}ms, .63s, .35s, .4s`;
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    arm.style.left=`${result.won?toX:travelEnd}%`;
+    toy.style.left=`${result.won?toX:travelEnd}%`;
+    await craneSleep(armDuration+100);
+    if(result.won) {
+      $("arcade-message").textContent="取り出し口に到着！ 景品をおろすよ！";
+      toy.classList.add("delivered");
+      await craneSleep(CRANE_CONFIG.releaseMs);
+      $("arcade-message").textContent=`🎉 ${PLUSH_TYPES[play.prizes[result.targetIndex]]}をゲット！`;
+    } else {
+      $("arcade-message").textContent="あっ！ 運ぶ途中で落としてしまった…";
+      toy.classList.remove("grabbed");toy.classList.add("fallen");
+      await craneSleep(720);
+    }
+  } else await craneSleep(420);
+  arm.style.transitionDuration="";
+}
+// タブ非表示中に自動移動が進み過ぎないよう停止し、表示復帰で再開。
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden)stopCraneSweep(true);
+  else startCraneSweep();
+});
+window.addEventListener("pagehide",()=>stopCraneSweep(true));
 
 const CARD_MIN_QUESTIONS = 50;
 const RANKS = [
@@ -1980,7 +2128,7 @@ async function applyQuestionUpdate() {
 
 // バックアップは端末内でJSONファイルを生成するのみ。ネットワーク通信は行わない。
 const BACKUP_FORMAT = "history-master-backup";
-const BACKUP_VERSION = 5;
+const BACKUP_VERSION = 6;
 const BACKUP_STORES = ["questions", "progress", "sessions", "answers", "awards", "sampleSettings", "coinClaims", "coinEvents", "coinMeta", "reviewEvents", "coinSpends", "arcadePlays", "arcadePrizes"];
 function snapshotAllStores() {
   return new Promise((resolve, reject) => {
@@ -2030,8 +2178,8 @@ function validIndexList(values, max) {
   return Array.isArray(values) && new Set(values).size === values.length && values.every(i => Number.isInteger(i) && i >= 0 && i < max);
 }
 function validateBackup(obj) {
-  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.backupFormat !== BACKUP_FORMAT || ![1, 2, 3, 4, BACKUP_VERSION].includes(obj.backupVersion) || !obj.data || typeof obj.data !== "object") {
-    throw new Error("このアプリのバックアップ形式ではありません（バージョン1〜5が必要です）。");
+  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.backupFormat !== BACKUP_FORMAT || ![1, 2, 3, 4, 5, BACKUP_VERSION].includes(obj.backupVersion) || !obj.data || typeof obj.data !== "object") {
+    throw new Error("このアプリのバックアップ形式ではありません（バージョン1〜6が必要です）。");
   }
   // v1〜v3からの復元では旧履歴の報酬済み情報のみ作成し、コイン残高は0枚。
   const legacy=obj.backupVersion<4;
@@ -2117,8 +2265,8 @@ function validateBackup(obj) {
   }
   const plays=new Map();
   for(const p of data.arcadePlays) {
-    if(!p || !isNonemptyString(p.id,100) || plays.has(p.id) || !isProfile(p.profile) || p.game!=="crane" || !["aiming","finished"].includes(p.status) || !isNonemptyString(p.startedAt,64) || !Number.isFinite(p.armX) || p.armX<12 || p.armX>88 || !Array.isArray(p.prizes) || p.prizes.length!==3 || new Set(p.prizes).size!==3 || !p.prizes.every(id=>Object.hasOwn(PLUSH_TYPES,id))) throw new Error("クレーンのプレイ記録が不正です。");
-    if(p.status==="finished" && (!p.result || typeof p.result.grabbed!=="boolean" || typeof p.result.won!=="boolean" || !["perfect","good","edge","miss"].includes(p.result.alignment) || !Number.isInteger(p.result.targetIndex) || p.result.targetIndex<0 || p.result.targetIndex>2 || !isNonemptyString(p.result.at,64) || (p.result.won&&!p.result.grabbed))) throw new Error("クレーンの結果が不正です。");
+    if(!p || !isNonemptyString(p.id,100) || plays.has(p.id) || !isProfile(p.profile) || p.game!=="crane" || !["aiming","resolving","finished"].includes(p.status) || !isNonemptyString(p.startedAt,64) || !Number.isFinite(p.armX) || p.armX<12 || p.armX>88 || (p.direction!==undefined && ![-1,1].includes(p.direction)) || !Array.isArray(p.prizes) || ![3,7].includes(p.prizes.length) || (p.prizes.length===3 && new Set(p.prizes).size!==3) || !p.prizes.every(id=>Object.hasOwn(PLUSH_TYPES,id))) throw new Error("クレーンのプレイ記録が不正です。");
+    if(["resolving","finished"].includes(p.status) && (!p.result || typeof p.result.grabbed!=="boolean" || typeof p.result.won!=="boolean" || !["perfect","good","edge","miss"].includes(p.result.alignment) || !Number.isInteger(p.result.targetIndex) || p.result.targetIndex<0 || p.result.targetIndex>=p.prizes.length || !isNonemptyString(p.result.at,64) || (p.result.won&&!p.result.grabbed) || (p.result.fallAt!==undefined && p.result.fallAt!==null && (!Number.isFinite(p.result.fallAt)||p.result.fallAt<0||p.result.fallAt>1)))) throw new Error("クレーンの結果が不正です。");
     if(p.status==="aiming" && p.result!==undefined) throw new Error("クレーンの途中状態が不正です。");
     plays.set(p.id,p);
   }
@@ -2387,6 +2535,8 @@ async function applyRestore() {
 }
 
 function show(sectionId) {
+  // どの画面へ移っても、プレイ中のアーム位置を一度保存する。
+  if(sectionId!=="arcade" && !$("arcade").classList.contains("hidden")) stopCraneSweep(true);
   for (const id of ["home", "admin", "quiz", "finished", "arcade"]) $(id).classList.toggle("hidden", id !== sectionId);
   const inAdmin = sectionId === "admin";
   $("header-mode").textContent = inAdmin ? "🔧 保護者用" : profile === "test" ? "🔧 テスト中" : "👧 学習用";
@@ -2985,11 +3135,10 @@ $("import-file").addEventListener("change", () => previewImport().catch(err));
 $("import-apply").addEventListener("click", () => applyImport().catch(err));
 $("open-admin").addEventListener("click", openAdmin);
 $("open-arcade").addEventListener("click",()=>openArcade().catch(err));
-$("arcade-back").addEventListener("click",()=>{if(!arcadeBusy){stopCraneMotion();renderHome().catch(err);}});
+$("arcade-back").addEventListener("click",()=>{if(!arcadeBusy){stopCraneSweep(true);renderHome().catch(err);}});
 $("crane-start").addEventListener("click",()=>startCrane().catch(err));
 $("crane-catch").addEventListener("click",()=>catchCrane().catch(err));
-bindDirectionButton("crane-left",-1);
-bindDirectionButton("crane-right",1);
+// 自動往復方式のため左右ボタンのイベント登録は不要。
 $("admin-start-test").addEventListener("click", () => beginTestMode().catch(err));
 $("admin-back").addEventListener("click", () => returnToStudentHome().catch(err));
 $("test-return-admin").addEventListener("click", openAdmin);
