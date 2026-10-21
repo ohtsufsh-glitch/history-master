@@ -434,6 +434,66 @@
     @media (prefers-reduced-motion: reduce) {
       .era { transition:none; }
     }
+
+    /* v1.6.0 ごほうびゲームセンター（タッチ操作優先） */
+    .arcade-home-panel { background:linear-gradient(145deg,#fff7e5,#fffdf6);border-color:#ddc487; }
+    .arcade-home-cost,.arcade-balance{display:flex;align-items:center;gap:7px;font-weight:800;color:#805315;background:#fff3ce;border-radius:999px;padding:7px 12px;white-space:nowrap;}
+    .arcade-home-body{display:flex;align-items:center;gap:18px;margin:8px 0;}
+    .arcade-home-preview{flex:0 0 100px;height:92px;display:flex;align-items:center;justify-content:center;border-radius:17px;background:linear-gradient(135deg,#ffe6c2,#dfedf3);border:2px solid #f1d2a4;font-size:2.2rem;letter-spacing:-5px;}
+    .arcade-home-preview span{transform:translateY(-13px);font-size:1.3rem;}
+    .arcade-home-copy strong{color:#324d5b;font-size:1.05rem;}
+    .arcade-home-copy p{margin:5px 0;line-height:1.65;font-size:.9rem;}
+    .arcade-entry{max-width:340px;margin:16px 0 0;background:linear-gradient(120deg,#285a78,#3a7b81);}
+    .arcade-screen{background:linear-gradient(180deg,#fffcf5,#f3f7fb);}
+    .arcade-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    .arcade-title-row h2{margin:5px 0;}
+    .arcade-profile-note{font-size:.85rem;font-weight:700;color:#6d5f89;margin:4px 0;}
+    .arcade-intro{font-size:.92rem;color:#52667a;}
+    .machine-wrap{max-width:670px;margin:18px auto;border:7px solid #d68e80;border-radius:23px;overflow:hidden;background:#fff8eb;box-shadow:0 10px 30px #7a5a4450,inset 0 0 0 4px #ffe0c4;}
+    .arcade-sign{padding:13px 9px;background:linear-gradient(100deg,#ca6176,#ed9b86,#d37083);color:#fff;text-align:center;font-size:.93rem;font-weight:900;letter-spacing:.04em;text-shadow:0 1px 2px #9e4e64;}
+    .arcade-sign span{color:#fff2a0;padding:0 5px;}
+    .crane-stage{position:relative;height:342px;isolation:isolate;overflow:hidden;border:7px solid #f6d7c2;border-top:0;background:radial-gradient(ellipse at 48% 24%,#ffffff 0,#e9f8fa 48%,#c6e8ed 100%);}
+    .crane-stage::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(110deg,#ffffff55 0%,transparent 25%,transparent 65%,#ffffff40 78%,transparent 84%);}
+    .crane-glass-shine{position:absolute;inset:0;z-index:8;pointer-events:none;border-left:7px solid #ffffff66;border-right:7px solid #ffffff55;}
+    .crane-rail{position:absolute;top:4px;left:7%;width:86%;height:9px;border-radius:10px;background:linear-gradient(#8aa3b8,#41667c);box-shadow:0 3px 5px #37546a4a;}
+    .crane-arm{position:absolute;top:5px;left:50%;width:70px;height:105px;transform:translateX(-50%);z-index:5;transition:left .085s linear;pointer-events:none;}
+    .crane-cable{width:6px;height:66px;position:absolute;left:calc(50% - 3px);top:3px;border-radius:3px;background:repeating-linear-gradient(180deg,#5e6d76 0 4px,#c6d2d7 4px 7px);box-shadow:1px 1px 2px #344c6170;transform-origin:top center;transition:height .55s ease;}
+    .crane-head{position:absolute;top:59px;left:18px;width:34px;height:28px;background:linear-gradient(#f5f7fa,#8a9bad);border:3px solid #57758a;border-radius:11px;box-shadow:0 2px 3px #31507166;transition:top .55s ease;}
+    .crane-head span{display:block;width:10px;height:10px;border-radius:50%;background:#f0c46b;margin:6px auto;border:1px solid #9a754b;}
+    .claw{position:absolute;top:78px;width:24px;height:30px;border:6px solid #7c8d9c;border-top:0;border-radius:0 0 15px 15px;transition:top .55s ease,transform .24s ease;}
+    .claw-left{left:6px;transform:rotate(15deg);border-right:0;}
+    .claw-right{right:6px;transform:rotate(-15deg);border-left:0;}
+    .crane-stage.dropping .crane-cable{height:179px;}
+    .crane-stage.dropping .crane-head{top:172px;}
+    .crane-stage.dropping .claw{top:191px;}
+    .crane-stage.dropping .claw-left{transform:rotate(-7deg);}
+    .crane-stage.dropping .claw-right{transform:rotate(7deg);}
+    .crane-prizes{position:absolute;inset:0;z-index:3;}
+    .crane-toy{position:absolute;bottom:32px;width:24%;max-width:145px;transform:translateX(-50%);aspect-ratio:1;display:flex;align-items:center;justify-content:center;transition:transform .45s ease,opacity .4s ease,bottom .55s ease;}
+    .crane-toy img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 5px 3px #47697155);}
+    .crane-toy.grabbed{bottom:137px;transform:translateX(-50%) scale(.85);}
+    .crane-toy.fallen{bottom:32px;transform:translateX(-50%) rotate(22deg);}
+    .crane-toy.won{opacity:0;bottom:220px;transform:translateX(-50%) scale(.5);}
+    .crane-floor{position:absolute;bottom:19px;left:0;right:0;height:35px;background:linear-gradient(#fdf3de,#e2b78d);border-top:5px solid #bd846d;z-index:2;}
+    .crane-chute{position:absolute;right:8px;bottom:0;width:76px;height:29px;z-index:4;background:#7a586d;color:#fff;border:3px solid #d7c1bc;border-bottom:0;border-radius:10px 10px 0 0;font-size:.63rem;text-align:center;padding-top:4px;}
+    .machine-lower{background:#fff7ef;padding:16px 16px 18px;border-top:4px solid #e1b6a7;}
+    .arcade-message{text-align:center;font-weight:800;color:#594a66;min-height:2.4em;line-height:1.6;margin:0 0 9px;}
+    .crane-controls{display:grid;grid-template-columns:75px minmax(110px,1fr) 75px;align-items:center;gap:14px;max-width:400px;margin:0 auto;}
+    .crane-dir,.crane-catch{border:0;box-shadow:0 5px 0 #896c6a,0 9px 13px #654a5340;min-height:62px;border-radius:18px;font-weight:900;font-size:1.35rem;touch-action:none;user-select:none;-webkit-user-select:none;}
+    .crane-dir{background:linear-gradient(#f5d7a4,#dfaf71);color:#70472b;}
+    .crane-catch{background:linear-gradient(#e7a9ba,#c86c89);color:#fff;text-shadow:0 1px 2px #9e506a;}
+    .crane-dir:active,.crane-catch:active{transform:translateY(3px);box-shadow:0 2px 0 #896c6a;}
+    .crane-start{max-width:390px;margin:4px auto;background:linear-gradient(100deg,#33667f,#438f84);}
+    .arcade-hint{text-align:center;font-size:.8rem;color:#7e7080;line-height:1.6;margin:14px 0 0;}
+    .arcade-collection{padding:18px;border:1px solid #e3d7b8;background:#fffdf7;border-radius:19px;margin-top:22px;}
+    .plush-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;}
+    .plush-item{position:relative;min-width:0;text-align:center;padding:9px 4px 12px;border-radius:13px;border:1px solid #efdbc7;background:linear-gradient(#fffdf7,#fff4e8);}
+    .plush-item img{width:100%;max-width:105px;aspect-ratio:1;object-fit:contain;display:block;margin:0 auto 5px;}
+    .plush-item.not-owned img{filter:grayscale(1) brightness(.5);opacity:.45;}
+    .plush-item strong{font-size:.75rem;display:block;overflow-wrap:anywhere;line-height:1.5;}
+    .plush-item .owned{color:#8b5425;font-weight:900;font-size:.88rem;}
+    @media(max-width:640px){.arcade-home-body{gap:10px;}.arcade-home-preview{flex-basis:75px;height:78px;font-size:1.65rem;}.plush-grid{grid-template-columns:repeat(3,minmax(0,1fr));}.crane-stage{height:310px;}.crane-controls{gap:10px;grid-template-columns:65px minmax(110px,1fr) 65px;}.crane-dir,.crane-catch{min-height:58px;}.machine-wrap{border-width:5px;}}
+    @media(prefers-reduced-motion:reduce){.crane-arm,.crane-cable,.crane-head,.claw,.crane-toy{transition:none!important;}}
   </style>
 </head>
 <body>
@@ -490,10 +550,51 @@
       <div id="era-list"></div>
     </div>
 
+    <div id="game-center-home" class="home-panel arcade-home-panel">
+      <div class="panel-head"><div><span class="section-kicker">ARCADE</span><h3>🕹️ ごほうびゲームセンター</h3></div><div class="arcade-home-cost"><img src="assets/coins/crown-gold.webp" width="30" height="30" alt="">100枚 / 1プレイ</div></div>
+      <div class="arcade-home-body">
+        <div class="arcade-home-preview" aria-hidden="true">🧸 <span>🎁</span> 🕹️</div>
+        <div class="arcade-home-copy"><strong>ぬいぐるみキャッチャー</strong><p>金貨を使ってクレーンに挑戦！ しば犬・なまけもの・金魚・オオサンショウウオ・くまを集めよう。</p><p id="arcade-home-status" class="small muted">景品を集めよう</p></div>
+      </div>
+      <button id="open-arcade" class="primary arcade-entry" type="button">ゲームセンターへ →</button>
+    </div>
+
     <div id="collection" class="home-panel collection-panel">
       <div class="panel-head"><div><span class="section-kicker">COLLECTION</span><h3>🏆 時代制覇カード</h3></div><span id="card-total" class="rank-pill"></span></div>
       <p class="achievement-note">各時代で50問以上が登録され、理解度100%になると1枚獲得。獲得済みカードは取り消されません。</p>
       <div id="card-gallery" class="trophy-grid"></div>
+    </div>
+  </section>
+
+  <section id="arcade" class="card arcade-screen hidden" aria-label="ごほうびゲームセンター">
+    <button id="arcade-back" type="button" class="nav">← 学習ホームに戻る</button>
+    <div class="arcade-title-row"><div><span class="section-kicker">REWARD ARCADE</span><h2>🧸 ぬいぐるみキャッチャー</h2></div><div class="arcade-balance"><img src="assets/coins/crown-gold.webp" alt="" width="33" height="33"><strong id="arcade-balance">0</strong></div></div>
+    <p id="arcade-profile-note" class="arcade-profile-note"></p>
+    <p class="arcade-intro">左右ボタンでアームを動かして、ぬいぐるみをキャッチ！ 上手に狙っても途中で落とすことがあります。</p>
+    <div class="machine-wrap">
+      <div class="arcade-sign">PLUSH CATCHER <span>★</span> ぬいぐるみキャッチャー</div>
+      <div id="crane-stage" class="crane-stage" aria-label="クレーンゲームのプレイ画面">
+        <div class="crane-glass-shine" aria-hidden="true"></div>
+        <div class="crane-rail" aria-hidden="true"></div>
+        <div id="crane-arm" class="crane-arm" aria-hidden="true"><div class="crane-cable"></div><div class="crane-head"><span></span></div><div class="claw claw-left"></div><div class="claw claw-right"></div></div>
+        <div id="crane-prizes" class="crane-prizes" aria-hidden="true"></div>
+        <div class="crane-floor" aria-hidden="true"></div><div class="crane-chute" aria-hidden="true">景品出口</div>
+      </div>
+      <div class="machine-lower">
+        <p id="arcade-message" class="arcade-message" role="status" aria-live="polite">100金貨で1回遊べます。</p>
+        <div id="crane-controls" class="crane-controls hidden">
+          <button id="crane-left" type="button" class="crane-dir" aria-label="クレーンを左へ動かす">◀</button>
+          <button id="crane-catch" type="button" class="crane-catch">キャッチ！</button>
+          <button id="crane-right" type="button" class="crane-dir" aria-label="クレーンを右へ動かす">▶</button>
+        </div>
+        <button id="crane-start" type="button" class="primary crane-start">100金貨でプレイ</button>
+        <p id="arcade-hint" class="arcade-hint">1回の操作で30〜60秒ほど。途中で閉じても続きから再開できます。</p>
+      </div>
+    </div>
+    <div class="arcade-collection">
+      <div class="panel-head"><div><span class="section-kicker">PRIZE COLLECTION</span><h3>🎁 ぬいぐるみコレクション</h3></div><strong id="arcade-collection-count" class="rank-pill">0/5種類</strong></div>
+      <div id="arcade-collection-list" class="plush-grid" aria-label="獲得したぬいぐるみ"></div>
+      <p class="muted small">同じぬいぐるみを何体でも集められます。獲得した景品とコインの利用履歴は、完全バックアップに保存されます。</p>
     </div>
   </section>
 
@@ -632,7 +733,7 @@
 
 <script>
 "use strict";
-// 歴史マスター v1.4.2：星付きSVGを王冠金貨WebPに差し替え、獲得時の光沢演出を追加。データ構造はv1.4.1と同じ。
+// 歴史マスター v1.6.1：景品5体の画像を採用済みのぬいぐるみデザインへ差し替え。コイン・学習データ仕様はv1.6.0と同一。
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -660,7 +761,7 @@ const SAMPLE_QUESTIONS = [
 
 // データベース名は以前と同じ（回答履歴を引き継ぐため変更しない）。
 const DB_NAME = "history-master-sample-v1";
-const DB_VERSION = 5; // コイン取引・受取済み記録を追加。旧データは保持する。
+const DB_VERSION = 6; // UFOキャッチャー、復習報酬、コイン消費を追加。旧データは保持。
 let QUESTIONS = [...SAMPLE_QUESTIONS]; // 出題対象（削除・非表示を除く）
 let importedQuestions = []; // 削除済みも含めて保管
 let hiddenSampleIds = new Set();
@@ -698,8 +799,15 @@ const COIN_STAGES = ["first","master"];
 function coinReward(q,stage) { return (COIN_REWARDS[q.difficulty]||COIN_REWARDS.basic)[stage]; }
 function coinClaimKey(who,id,stage) { return `${who}:${id}:${stage}`; }
 function coinBalance(events,who) { return events.filter(ev=>ev.profile===who).reduce((sum,ev)=>sum+ev.amount,0); }
+function availableCoins(events, reviews, spends, who) {
+  return coinBalance(events,who) + coinBalance(reviews,who) - coinBalance(spends,who);
+}
+async function getAvailableCoins(who=profile) {
+  const [earned,reviews,spends]=await Promise.all([readAll("coinEvents"),readAll("reviewEvents"),readAll("coinSpends")]);
+  return availableCoins(earned,reviews,spends,who);
+}
 async function refreshCoinDisplay() {
-  const balance=coinBalance(await readAll("coinEvents"),profile);
+  const balance=await getAvailableCoins(profile);
   // SVGをtextContentで消さず、数値のテキストノードだけを更新する。
   $("header-coin-amount").textContent=balance.toLocaleString("ja-JP");
   $("header-coins").setAttribute("aria-label",`${profile==="test"?"テスト用":"学習用"}コイン ${balance}枚`);
@@ -758,6 +866,232 @@ async function ensureCoinMigration() {
     tx.onabort=()=>reject(tx.error||new Error("コインデータ移行を中断しました"));
   });
 }
+
+// --- ごほうびゲームセンター v1.0 ---
+const CRANE_COST=100;
+const PLUSH_TYPES=Object.freeze({
+  shiba:"しば犬", sloth:"なまけもの", goldfish:"金魚", salamander:"オオサンショウウオ", bear:"くま"
+});
+const PLUSH_IDS=Object.keys(PLUSH_TYPES);
+const PRIZE_POSITIONS=[20,50,80];
+let arcadePlay=null;
+let arcadeBusy=false;
+let arcadeMoveTimer=null;
+const plushPath=id=>`assets/plush/${id}.webp`;
+const craneSleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+function randomArcadePrizes() {
+  const items=[...PLUSH_IDS];
+  for(let i=items.length-1;i>0;i--) {const j=Math.floor(Math.random()*(i+1));[items[i],items[j]]=[items[j],items[i]];}
+  return items.slice(0,3);
+}
+function newArcadePlay(who) {
+  return {id:crypto.randomUUID(),profile:who,game:"crane",status:"aiming",startedAt:new Date().toISOString(),armX:50,prizes:randomArcadePrizes()};
+}
+// 100金貨の消費とプレイ開始を同一トランザクションで保存。
+// coinEventsを同時にロックし、回答による入金と並行しても残高を正しく検査する。
+function purchaseCranePlay(play) {
+  return new Promise((resolve,reject)=>{
+    const stores=["coinEvents","reviewEvents","coinSpends","arcadePlays"];
+    const tx=db.transaction(stores,"readwrite");
+    let remaining=4;
+    const results={};
+    for(const name of ["coinEvents","reviewEvents","coinSpends","arcadePlays"]) {
+      const req=tx.objectStore(name).getAll();
+      req.onsuccess=()=>{
+        results[name]=req.result;
+        if(--remaining!==0)return;
+        const balance=availableCoins(results.coinEvents,results.reviewEvents,results.coinSpends,play.profile);
+        if(results.arcadePlays.some(p=>p.profile===play.profile && p.status==="aiming") || balance<CRANE_COST) {tx.abort();return;}
+        tx.objectStore("coinSpends").add({id:play.id,profile:play.profile,game:"crane",amount:CRANE_COST,at:play.startedAt});
+        tx.objectStore("arcadePlays").add(play);
+      };
+    }
+    tx.oncomplete=()=>resolve(play);
+    tx.onerror=()=>reject(tx.error||new Error("金貨の消費処理に失敗しました"));
+    tx.onabort=()=>reject(new Error("金貨が足りないか、プレイの保存に失敗しました"));
+  });
+}
+function persistArcadeArm(playId,position) {
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction("arcadePlays","readwrite");
+    const store=tx.objectStore("arcadePlays");
+    const req=store.get(playId);
+    req.onsuccess=()=>{
+      if(req.result?.status==="aiming") store.put({...req.result,armX:position});
+    };
+    tx.oncomplete=resolve;
+    tx.onerror=()=>reject(tx.error);
+    tx.onabort=()=>reject(tx.error);
+  });
+}
+function decideCraneOutcome(play) {
+  let targetIndex=0;
+  for(let i=1;i<3;i++) if(Math.abs(play.armX-PRIZE_POSITIONS[i])<Math.abs(play.armX-PRIZE_POSITIONS[targetIndex]))targetIndex=i;
+  const distance=Math.abs(play.armX-PRIZE_POSITIONS[targetIndex]);
+  const alignment=distance<=3.2?"perfect":distance<=7?"good":distance<=13?"edge":"miss";
+  const chance=alignment==="perfect"?.95:alignment==="good"?.80:alignment==="edge"?.40:0;
+  const carry=alignment==="perfect"?.90:alignment==="good"?.80:alignment==="edge"?.70:0;
+  const grabbed=Math.random()<chance;
+  const won=grabbed&&Math.random()<carry;
+  return {targetIndex,alignment,grabbed,won,at:new Date().toISOString()};
+}
+// 判定はアニメーションより先に保存。ページを再読み込みしても引き直せない。
+function commitCraneOutcome(play,result) {
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(["arcadePlays","arcadePrizes"],"readwrite");
+    const store=tx.objectStore("arcadePlays");
+    let updated=null;
+    const req=store.get(play.id);
+    req.onsuccess=()=>{
+      if(!req.result || req.result.status!=="aiming") {tx.abort();return;}
+      updated={...req.result,status:"finished",result};
+      store.put(updated);
+      if(result.won) tx.objectStore("arcadePrizes").add({id:play.id,profile:play.profile,prizeId:play.prizes[result.targetIndex],wonAt:result.at});
+    };
+    tx.oncomplete=()=>resolve(updated);
+    tx.onerror=()=>reject(tx.error||new Error("景品の保存に失敗しました"));
+    tx.onabort=()=>reject(new Error("このプレイはすでに終了しています"));
+  });
+}
+async function latestArcadePlay(who) {
+  const records=(await readAll("arcadePlays")).filter(p=>p.profile===who);
+  return records.sort((a,b)=>b.startedAt.localeCompare(a.startedAt))[0]||null;
+}
+async function refreshArcadeHome() {
+  const [plays,prizes]=await Promise.all([readAll("arcadePlays"),readAll("arcadePrizes")]);
+  const pending=plays.some(p=>p.profile===profile&&p.status==="aiming");
+  const owned=prizes.filter(p=>p.profile===profile);
+  const kinds=new Set(owned.map(p=>p.prizeId)).size;
+  $("arcade-home-status").textContent=`獲得：${owned.length}体（${kinds}/5種類）${pending?" ／ プレイ途中のクレーンがあります":""}`;
+  $("open-arcade").textContent=pending?"クレーンの続きを遊ぶ →":"ゲームセンターへ →";
+}
+function paintArcadeArm() {
+  if(arcadePlay) $("crane-arm").style.left=`${arcadePlay.armX}%`;
+}
+function paintArcadePrizes() {
+  const host=$("crane-prizes");host.replaceChildren();
+  if(!arcadePlay)return;
+  arcadePlay.prizes.forEach((id,i)=>{
+    const toy=document.createElement("div");toy.className="crane-toy";toy.dataset.slot=i;toy.style.left=`${PRIZE_POSITIONS[i]}%`;
+    const img=document.createElement("img");img.src=plushPath(id);img.alt="";img.decoding="async";
+    toy.append(img);host.append(toy);
+  });
+}
+async function renderArcadeCollection() {
+  const all=(await readAll("arcadePrizes")).filter(p=>p.profile===profile);
+  const counts=Object.fromEntries(PLUSH_IDS.map(id=>[id,all.filter(p=>p.prizeId===id).length]));
+  const found=PLUSH_IDS.filter(id=>counts[id]>0).length;
+  $("arcade-collection-count").textContent=found===5?`🎉 コンプリート！ ／ ${all.length}体`:`${found}/5種類 ／ ${all.length}体`;
+  const host=$("arcade-collection-list");host.replaceChildren();
+  for(const id of PLUSH_IDS) {
+    const box=document.createElement("div");box.className="plush-item"+(counts[id]?"":" not-owned");
+    const img=document.createElement("img");img.src=plushPath(id);img.alt="";img.loading="lazy";
+    const name=document.createElement("strong");name.textContent=PLUSH_TYPES[id];
+    const count=document.createElement("div");count.className="owned";count.textContent=counts[id]?`×${counts[id]}`:"未獲得";
+    box.append(img,name,count);host.append(box);
+  }
+}
+async function renderArcade() {
+  const balance=await getAvailableCoins();
+  $("arcade-balance").textContent=balance.toLocaleString("ja-JP");
+  $("arcade-profile-note").textContent=profile==="test"?"🔧 テスト用のコイン・景品です。娘さん用の記録とは分離されています。":"👧 学習用のコイン・景品です。";
+  arcadePlay=await latestArcadePlay(profile);
+  $("crane-stage").className="crane-stage";
+  paintArcadeArm();paintArcadePrizes();
+  const aiming=arcadePlay?.status==="aiming";
+  const start=$("crane-start");
+  $("crane-controls").classList.toggle("hidden",!aiming);
+  start.classList.toggle("hidden",aiming);
+  start.disabled=balance<CRANE_COST||arcadeBusy;
+  start.textContent=balance<CRANE_COST?`あと${CRANE_COST-balance}金貨でプレイ可能`:`100金貨で${arcadePlay?.status==="finished"?"もう一度":"プレイ"}`;
+  if(aiming) $("arcade-message").textContent="◀ ▶ で位置を合わせて、「キャッチ！」を押そう！";
+  else if(arcadePlay?.status==="finished") {
+    const r=arcadePlay.result;
+    $("arcade-message").textContent=r.won?`🎉 ${PLUSH_TYPES[arcadePlay.prizes[r.targetIndex]]}をゲット！`:r.grabbed?"あと少し！ 途中で落ちちゃった…":"おしい！ 今度はもっと近くをねらおう！";
+  } else $("arcade-message").textContent="100金貨で1回遊べます。";
+  await renderArcadeCollection();
+  await refreshCoinDisplay();
+}
+async function openArcade() {
+  if(saving||importing||backingUp||updatingQuestions||arcadeBusy)return;
+  notice("");show("arcade");
+  try{await renderArcade();}catch(error){err(error);}
+}
+async function startCrane() {
+  if(arcadeBusy)return;
+  arcadeBusy=true;$("crane-start").disabled=true;
+  try {
+    const previous=await latestArcadePlay(profile);
+    if(previous?.status==="aiming") {arcadePlay=previous;await renderArcade();return;}
+    const balance=await getAvailableCoins();
+    if(balance<CRANE_COST){await renderArcade();return;}
+    if(!confirm(`100金貨を使ってUFOキャッチャーを1回遊びますか？\n現在の金貨：${balance}枚`))return;
+    const play=newArcadePlay(profile);
+    await purchaseCranePlay(play);
+    arcadePlay=play;
+    await renderArcade();
+    $("arcade-message").textContent="スタート！ 好きなぬいぐるみをねらおう！";
+  } catch(error) {err(error);} finally {
+    arcadeBusy=false;
+    $("crane-start").disabled=(await getAvailableCoins().catch(()=>0))<CRANE_COST;
+  }
+}
+function moveCrane(step) {
+  if(arcadeBusy || !arcadePlay || arcadePlay.status!=="aiming") return;
+  arcadePlay.armX=Math.max(12,Math.min(88,Math.round((arcadePlay.armX+step)*10)/10));
+  paintArcadeArm();
+}
+function stopCraneMotion() {
+  if(arcadeMoveTimer!==null){clearInterval(arcadeMoveTimer);arcadeMoveTimer=null;}
+  if(arcadePlay?.status==="aiming") persistArcadeArm(arcadePlay.id,arcadePlay.armX).catch(err);
+}
+function bindDirectionButton(id,step) {
+  const button=$(id);
+  button.addEventListener("pointerdown",event=>{
+    if(button.disabled || arcadeBusy || !arcadePlay || arcadePlay.status!=="aiming")return;
+    event.preventDefault();stopCraneMotion();moveCrane(step*2.5);
+    try{button.setPointerCapture(event.pointerId);}catch(_){}
+    arcadeMoveTimer=setInterval(()=>moveCrane(step*1.7),75);
+  });
+  button.addEventListener("pointerup",stopCraneMotion);
+  button.addEventListener("pointercancel",stopCraneMotion);
+  button.addEventListener("lostpointercapture",stopCraneMotion);
+  button.addEventListener("keydown",event=>{
+    if(event.key==="Enter"||event.key===" ") {event.preventDefault();if(!event.repeat)moveCrane(step*2.5);}
+  });
+  button.addEventListener("keyup",event=>{if(event.key==="Enter"||event.key===" ")stopCraneMotion();});
+}
+async function catchCrane() {
+  if(arcadeBusy || !arcadePlay || arcadePlay.status!=="aiming")return;
+  stopCraneMotion();arcadeBusy=true;
+  $("crane-controls").querySelectorAll("button").forEach(b=>b.disabled=true);
+  const play=arcadePlay;
+  try {
+    // 永続化を先に確定した上で結果を演出する。
+    const outcome=decideCraneOutcome(play);
+    const completed=await commitCraneOutcome(play,outcome);
+    arcadePlay=completed;
+    $("arcade-message").textContent="アーム下降中…つかめるかな？";
+    const stage=$("crane-stage");stage.classList.add("dropping");
+    await craneSleep(720);
+    const toy=$("crane-prizes").querySelector(`[data-slot="${outcome.targetIndex}"]`);
+    if(outcome.grabbed && toy){toy.classList.add("grabbed");$("arcade-message").textContent="つかんだ！ 落ちないで…！";}
+    else $("arcade-message").textContent="あっ、つかめなかった！";
+    stage.classList.remove("dropping");
+    await craneSleep(780);
+    if(toy && outcome.grabbed)toy.classList.add(outcome.won?"won":"fallen");
+    await craneSleep(520);
+    await renderArcade();
+    if(outcome.won) $("arcade-message").textContent=`🎉 大成功！ ${PLUSH_TYPES[play.prizes[outcome.targetIndex]]}をゲット！`;
+  }catch(error){err(error);await renderArcade().catch(err);}finally{
+    arcadeBusy=false;
+    $("crane-controls").querySelectorAll("button").forEach(b=>b.disabled=false);
+    if(!$("crane-start").classList.contains("hidden")) {
+      $("crane-start").disabled=(await getAvailableCoins().catch(()=>0))<CRANE_COST;
+    }
+  }
+}
+
 const CARD_MIN_QUESTIONS = 50;
 const RANKS = [
   {min:0, title:"🥚 れきしのたまご"},
@@ -1076,6 +1410,10 @@ function openDatabase() {
       if (!database.objectStoreNames.contains("coinClaims")) database.createObjectStore("coinClaims", {keyPath:"key"});
       if (!database.objectStoreNames.contains("coinEvents")) database.createObjectStore("coinEvents", {keyPath:"key"});
       if (!database.objectStoreNames.contains("coinMeta")) database.createObjectStore("coinMeta", {keyPath:"id"});
+      if (!database.objectStoreNames.contains("reviewEvents")) database.createObjectStore("reviewEvents", {keyPath:"key"});
+      if (!database.objectStoreNames.contains("coinSpends")) database.createObjectStore("coinSpends", {keyPath:"id"});
+      if (!database.objectStoreNames.contains("arcadePlays")) database.createObjectStore("arcadePlays", {keyPath:"id"});
+      if (!database.objectStoreNames.contains("arcadePrizes")) database.createObjectStore("arcadePrizes", {keyPath:"id"});
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
@@ -1106,24 +1444,49 @@ function writeSession(session) {
 }
 // 回答・セッション・獲得カード・コインを同一トランザクションで確定。
 // claimの存在確認から書き込みまで単一のreadwriteトランザクション内で行う。
-function saveAnswer(progress, session, answerEvent, award=null, question=null) {
+// 通常報酬は従来どおり1問1回。既習得問題の正解には、回答ごとに独立した復習報酬。
+// 同一セッションの二重回答を同時トランザクションで拒否し、コインの重複付与を防ぐ。
+function saveAnswer(progress, session, answerEvent, award=null, question=null, wasMastered=false) {
   return new Promise((resolve,reject)=>{
-    const tx=db.transaction(["progress","sessions","answers","awards","coinClaims","coinEvents"],"readwrite");
+    const tx=db.transaction(["progress","sessions","answers","awards","coinClaims","coinEvents","reviewEvents"],"readwrite");
     const claimStore=tx.objectStore("coinClaims");
     const eventStore=tx.objectStore("coinEvents");
     const granted={amount:0,stages:[]};
-    const eligible=answerEvent.correct && question ? ["first",...(progress.mastered?["master"]:[])] : [];
+    const eligible=answerEvent.correct && question && !wasMastered ? ["first",...(progress.mastered?["master"]:[])] : [];
     const keys=eligible.map(stage=>[stage,coinClaimKey(progress.profile,progress.questionId,stage)]);
-    let remaining=keys.length;
     const existing=new Map();
+    const sessionReq=tx.objectStore("sessions").get(session.key);
+    sessionReq.onsuccess=()=>{
+      const onDisk=sessionReq.result;
+      if (!onDisk || onDisk.phase!=="question" || onDisk.questionId!==session.questionId || (onDisk.revision||1)!==(session.revision||1)) {
+        tx.abort(); return;
+      }
+      if(!keys.length) commitAnswer();
+      else {
+        let remaining=keys.length;
+        for(const [stage,key] of keys) {
+          const req=claimStore.get(key);
+          req.onsuccess=()=>{
+            existing.set(key,!!req.result);
+            if(--remaining===0) commitAnswer();
+          };
+        }
+      }
+    };
     function commitAnswer() {
       for(const [stage,key] of keys) if(!existing.get(key)) {
         const amount=coinReward(question,stage);
-        const when=answerEvent.at;
-        claimStore.add({key,profile:progress.profile,questionId:progress.questionId,stage,source:"reward",claimedAt:when});
-        eventStore.add({key,profile:progress.profile,questionId:progress.questionId,stage,amount,at:when,difficulty:question.difficulty||"basic"});
+        claimStore.add({key,profile:progress.profile,questionId:progress.questionId,stage,source:"reward",claimedAt:answerEvent.at});
+        eventStore.add({key,profile:progress.profile,questionId:progress.questionId,stage,amount,at:answerEvent.at,difficulty:question.difficulty||"basic"});
         granted.amount+=amount;
         granted.stages.push(stage);
+      }
+      if(answerEvent.correct && question && wasMastered) {
+        const amount=coinReward(question,"first");
+        const key=`review:${progress.profile}:${answerEvent.token}`;
+        tx.objectStore("reviewEvents").add({key,profile:progress.profile,questionId:progress.questionId,amount,difficulty:question.difficulty||"basic",at:answerEvent.at});
+        granted.amount+=amount;
+        granted.stages.push("review");
       }
       session.coinAward=granted.amount;
       session.coinStages=[...granted.stages];
@@ -1132,18 +1495,9 @@ function saveAnswer(progress, session, answerEvent, award=null, question=null) {
       tx.objectStore("answers").add(answerEvent);
       if(award) tx.objectStore("awards").put(award);
     }
-    if(!remaining) commitAnswer();
-    else for(const [stage,key] of keys) {
-      const req=claimStore.get(key);
-      req.onsuccess=()=>{
-        existing.set(key,!!req.result);
-        remaining--;
-        if(remaining===0) commitAnswer();
-      };
-    }
     tx.oncomplete=()=>resolve(granted);
     tx.onerror=()=>reject(tx.error||new Error("回答・コインの保存に失敗しました"));
-    tx.onabort=()=>reject(tx.error||new Error("回答・コインの保存が中止されました"));
+    tx.onabort=()=>reject(tx.error||new Error("回答は保存されませんでした（ほかのタブで回答済みの可能性があります）"));
   });
 }
 // 公開プログラムには問題データを含めない。選択したJSONだけを端末内で取り込む。
@@ -1621,8 +1975,8 @@ async function applyQuestionUpdate() {
 
 // バックアップは端末内でJSONファイルを生成するのみ。ネットワーク通信は行わない。
 const BACKUP_FORMAT = "history-master-backup";
-const BACKUP_VERSION = 4;
-const BACKUP_STORES = ["questions", "progress", "sessions", "answers", "awards", "sampleSettings", "coinClaims", "coinEvents", "coinMeta"];
+const BACKUP_VERSION = 5;
+const BACKUP_STORES = ["questions", "progress", "sessions", "answers", "awards", "sampleSettings", "coinClaims", "coinEvents", "coinMeta", "reviewEvents", "coinSpends", "arcadePlays", "arcadePrizes"];
 function snapshotAllStores() {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(BACKUP_STORES, "readonly");
@@ -1671,8 +2025,8 @@ function validIndexList(values, max) {
   return Array.isArray(values) && new Set(values).size === values.length && values.every(i => Number.isInteger(i) && i >= 0 && i < max);
 }
 function validateBackup(obj) {
-  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.backupFormat !== BACKUP_FORMAT || ![1, 2, 3, BACKUP_VERSION].includes(obj.backupVersion) || !obj.data || typeof obj.data !== "object") {
-    throw new Error("このアプリのバックアップ形式ではありません（バージョン1〜4が必要です）。");
+  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.backupFormat !== BACKUP_FORMAT || ![1, 2, 3, 4, BACKUP_VERSION].includes(obj.backupVersion) || !obj.data || typeof obj.data !== "object") {
+    throw new Error("このアプリのバックアップ形式ではありません（バージョン1〜5が必要です）。");
   }
   // v1〜v3からの復元では旧履歴の報酬済み情報のみ作成し、コイン残高は0枚。
   const legacy=obj.backupVersion<4;
@@ -1683,7 +2037,13 @@ function validateBackup(obj) {
     data.coinEvents=[];
     data.coinMeta=[{id:COIN_MIGRATION_KEY,migratedAt:new Date().toISOString(),legacyClaims:data.coinClaims.length}];
   }
-  const maxSizes = {questions:20000, progress:100000, sessions:100, answers:300000, awards:20, sampleSettings:9, coinClaims:100000, coinEvents:100000, coinMeta:2};
+  if(obj.backupVersion<5) {
+    data.reviewEvents=[];
+    data.coinSpends=[];
+    data.arcadePlays=[];
+    data.arcadePrizes=[];
+  }
+  const maxSizes = {questions:20000, progress:100000, sessions:100, answers:300000, awards:20, sampleSettings:9, coinClaims:100000, coinEvents:100000, coinMeta:2, reviewEvents:300000, coinSpends:100000, arcadePlays:100000, arcadePrizes:100000};
   for (const name of BACKUP_STORES) {
     if (!Array.isArray(data[name]) || data[name].length > maxSizes[name]) throw new Error(`${name} のデータ件数が不正です。`);
   }
@@ -1744,7 +2104,33 @@ function validateBackup(obj) {
     eventKeys.add(ev.key);
   }
   if(data.coinMeta.length!==1 || data.coinMeta[0]?.id!==COIN_MIGRATION_KEY || !isNonemptyString(data.coinMeta[0].migratedAt,64)) throw new Error("コインの移行情報が不正です。");
-  for(const who of ["student","test"]) if(coinBalance(data.coinEvents,who)<0) throw new Error("コイン残高が不正です。");
+  // ゲームの取引履歴と景品が矛盾していないことを全件検証する。
+  const reviews=new Set();
+  for(const r of data.reviewEvents) {
+    if(!r || !isProfile(r.profile) || !allQuestions.has(r.questionId) || !isNonemptyString(r.key,100) || !/^review:(student|test):[0-9a-f-]{36}$/.test(r.key) || !r.key.startsWith(`review:${r.profile}:`) || reviews.has(r.key) || !Object.hasOwn(COIN_REWARDS,r.difficulty) || r.amount!==COIN_REWARDS[r.difficulty].first || !isNonemptyString(r.at,64)) throw new Error("復習コイン履歴が不正です。");
+    reviews.add(r.key);
+  }
+  const plays=new Map();
+  for(const p of data.arcadePlays) {
+    if(!p || !isNonemptyString(p.id,100) || plays.has(p.id) || !isProfile(p.profile) || p.game!=="crane" || !["aiming","finished"].includes(p.status) || !isNonemptyString(p.startedAt,64) || !Number.isFinite(p.armX) || p.armX<12 || p.armX>88 || !Array.isArray(p.prizes) || p.prizes.length!==3 || new Set(p.prizes).size!==3 || !p.prizes.every(id=>Object.hasOwn(PLUSH_TYPES,id))) throw new Error("クレーンのプレイ記録が不正です。");
+    if(p.status==="finished" && (!p.result || typeof p.result.grabbed!=="boolean" || typeof p.result.won!=="boolean" || !["perfect","good","edge","miss"].includes(p.result.alignment) || !Number.isInteger(p.result.targetIndex) || p.result.targetIndex<0 || p.result.targetIndex>2 || !isNonemptyString(p.result.at,64) || (p.result.won&&!p.result.grabbed))) throw new Error("クレーンの結果が不正です。");
+    if(p.status==="aiming" && p.result!==undefined) throw new Error("クレーンの途中状態が不正です。");
+    plays.set(p.id,p);
+  }
+  const spends=new Set();
+  for(const s of data.coinSpends) {
+    if(!s || !isNonemptyString(s.id,100) || spends.has(s.id) || !isProfile(s.profile) || !plays.has(s.id) || plays.get(s.id).profile!==s.profile || s.game!=="crane" || s.amount!==CRANE_COST || !isNonemptyString(s.at,64)) throw new Error("コイン消費履歴が不正です。");
+    spends.add(s.id);
+  }
+  if(spends.size!==plays.size) throw new Error("クレーンの料金記録が不足しています。");
+  const prizeRecords=new Set();
+  for(const a of data.arcadePrizes) {
+    const play=plays.get(a?.id);
+    if(!a || prizeRecords.has(a.id) || !play || play.profile!==a.profile || play.status!=="finished" || !play.result.won || play.prizes[play.result.targetIndex]!==a.prizeId || !isNonemptyString(a.wonAt,64)) throw new Error("景品コレクションの記録が不正です。");
+    prizeRecords.add(a.id);
+  }
+  for(const play of plays.values()) if(play.status==="finished" && play.result.won && !prizeRecords.has(play.id)) throw new Error("獲得済み景品の記録が不足しています。");
+  for(const who of ["student","test"]) if(availableCoins(data.coinEvents,data.reviewEvents,data.coinSpends,who)<0) throw new Error("コイン残高が不正です。");
   return data;
 }
 function setBackupPreview(message, cssClass="") {
@@ -1764,7 +2150,7 @@ async function previewRestore() {
   try {
     const data = validateBackup(JSON.parse(await file.text()));
     pendingRestore = data;
-    setBackupPreview(`検査OK（${file.name}）\n取り込み問題：${data.questions.length}問\n学習履歴：${data.progress.length}件\n中断情報：${data.sessions.length}件\n回答記録：${data.answers.length}件\n獲得カード：${data.awards.length}枚\n学習用コイン：${coinBalance(data.coinEvents,"student")}枚\nテスト用コイン：${coinBalance(data.coinEvents,"test")}枚\n非表示サンプル：${data.sampleSettings.length}問\n\n「復元する」を押すと、現在の問題と本番・テスト両方の学習履歴がすべて置き換わります。`);
+    setBackupPreview(`検査OK（${file.name}）\n取り込み問題：${data.questions.length}問\n学習履歴：${data.progress.length}件\n中断情報：${data.sessions.length}件\n回答記録：${data.answers.length}件\n獲得カード：${data.awards.length}枚\n学習用コイン：${availableCoins(data.coinEvents,data.reviewEvents,data.coinSpends,"student")}枚\nテスト用コイン：${availableCoins(data.coinEvents,data.reviewEvents,data.coinSpends,"test")}枚\nクレーン履歴：${data.arcadePlays.length}件\nぬいぐるみ獲得：${data.arcadePrizes.length}体\n非表示サンプル：${data.sampleSettings.length}問\n\n「復元する」を押すと、現在の問題と本番・テスト両方の学習履歴がすべて置き換わります。`);
     $("backup-restore").classList.remove("hidden");
   } catch (error) {
     setBackupPreview("復元できません：" + error.message + "\n現在のデータは変更されていません。", "import-error");
@@ -1786,8 +2172,8 @@ function activeResetLabels(choice, counts) {
   return [
     choice.hideSamples && `内蔵サンプルを非表示：${counts.visibleSamples}問`,
     choice.hideImported && `取り込み問題を非表示：${counts.activeImported}問`,
-    choice.student && `娘さん用の履歴消去：回答${counts.student.answers}件／習得${counts.student.progress}件／途中${counts.student.sessions}件／カード${counts.student.awards}枚／コイン${counts.student.coins}枚`,
-    choice.test && `テスト用の履歴消去：回答${counts.test.answers}件／習得${counts.test.progress}件／途中${counts.test.sessions}件／カード${counts.test.awards}枚／コイン${counts.test.coins}枚`
+    choice.student && `娘さん用の履歴消去：回答${counts.student.answers}件／習得${counts.student.progress}件／途中${counts.student.sessions}件／カード${counts.student.awards}枚／コイン${counts.student.coins}枚／クレーン${counts.student.plays}回／景品${counts.student.plush}体`,
+    choice.test && `テスト用の履歴消去：回答${counts.test.answers}件／習得${counts.test.progress}件／途中${counts.test.sessions}件／カード${counts.test.awards}枚／コイン${counts.test.coins}枚／クレーン${counts.test.plays}回／景品${counts.test.plush}体`
   ].filter(Boolean);
 }
 async function updateResetPreview() {
@@ -1798,7 +2184,9 @@ async function updateResetPreview() {
     sessions: snapshot.sessions.filter(x => x.profile === who).length,
     answers: snapshot.answers.filter(x => x.profile === who).length,
     awards: snapshot.awards.filter(x => x.profile === who).length,
-    coins:coinBalance(snapshot.coinEvents,who)
+    coins:availableCoins(snapshot.coinEvents,snapshot.reviewEvents,snapshot.coinSpends,who),
+    plays:snapshot.arcadePlays.filter(x=>x.profile===who).length,
+    plush:snapshot.arcadePrizes.filter(x=>x.profile===who).length
   });
   resetCounts = {
     visibleSamples: SAMPLE_QUESTIONS.length - snapshot.sampleSettings.filter(x => x.hidden).length,
@@ -1833,7 +2221,7 @@ function performReset(choice, complete=false) {
         };
       }
       if (choice.student || choice.test) {
-        for (const name of ["progress", "sessions", "answers", "awards", "coinClaims", "coinEvents"]) {
+        for (const name of ["progress", "sessions", "answers", "awards", "coinClaims", "coinEvents", "reviewEvents", "coinSpends", "arcadePlays", "arcadePrizes"]) {
           const store = tx.objectStore(name);
           if (choice.student && choice.test) {
             store.clear();
@@ -1953,7 +2341,7 @@ function replaceAllStores(data) {
 }
 async function applyRestore() {
   if (saving || importing || backingUp || updatingQuestions || !pendingRestore) return;
-  if (!confirm("現在の取り込み問題・娘さんの学習履歴・テスト履歴・中断情報・獲得カード・コインを、バックアップの内容ですべて置き換えます。\n現在のデータのバックアップは作成しましたか？\n\n復元を実行しますか？")) return;
+  if (!confirm("現在の問題・学習履歴・カード・コイン・クレーン景品とプレイ履歴を、バックアップの内容ですべて置き換えます。\n現在のデータのバックアップは作成しましたか？\n\n復元を実行しますか？")) return;
   backingUp = true;
   $("backup-restore").disabled = true;
   const data = pendingRestore;
@@ -1963,6 +2351,7 @@ async function applyRestore() {
     await loadImportedQuestions();
     await ensureCoinMigration();
     answerEvents=await readAll("answers");
+    arcadePlay=null;
     lastCoinAward=null;
     invalidateTagMapPreview();
     // 初回起動時はHTMLの案内文をそのまま表示する。
@@ -1993,7 +2382,7 @@ async function applyRestore() {
 }
 
 function show(sectionId) {
-  for (const id of ["home", "admin", "quiz", "finished"]) $(id).classList.toggle("hidden", id !== sectionId);
+  for (const id of ["home", "admin", "quiz", "finished", "arcade"]) $(id).classList.toggle("hidden", id !== sectionId);
   const inAdmin = sectionId === "admin";
   $("header-mode").textContent = inAdmin ? "🔧 保護者用" : profile === "test" ? "🔧 テスト中" : "👧 学習用";
   $("header-mode").classList.toggle("testtag", inAdmin || profile === "test");
@@ -2013,12 +2402,12 @@ async function refreshDashboardStay() {
   if (wasAdmin) show("admin");
 }
 function openAdmin() {
-  if (saving || importing || backingUp || managing || updatingQuestions) return;
+  if (saving || importing || backingUp || managing || updatingQuestions || arcadeBusy) return;
   notice("");
   show("admin");
 }
 async function beginTestMode() {
-  if (saving || importing || backingUp || managing || updatingQuestions) return;
+  if (saving || importing || backingUp || managing || updatingQuestions || arcadeBusy) return;
   if (!confirm("テストモードを開始しますか？\n※ 娘さんの学習履歴には影響しません。")) return;
   closeQuestionEditor();
   profile = "test";
@@ -2030,7 +2419,7 @@ async function beginTestMode() {
   await renderHome();
 }
 async function returnToStudentHome() {
-  if (saving || importing || backingUp || managing || updatingQuestions) return;
+  if (saving || importing || backingUp || managing || updatingQuestions || arcadeBusy) return;
   closeQuestionEditor();
   profile = "student";
   currentEra = null;
@@ -2079,6 +2468,7 @@ async function renderHome() {
   renderOverallMastery(allStats);
   renderGenreDashboard(records);
   renderCollection(allStats,awards);
+  await refreshArcadeHome();
   $("dashboard").classList.remove("hidden");
   show("home");
 }
@@ -2223,7 +2613,7 @@ async function grade() {
     const previousSession=await readOne("sessions",`${profileAtSubmit}:${eraAtSubmit}`);
     const session = { key:`${profileAtSubmit}:${eraAtSubmit}`, profile:profileAtSubmit, era:eraAtSubmit, questionId:q.id, revision:questionRevision(q), phase:"result", selected:answerAtSubmit,
       optionOrder:[...optionOrder], recentIds:previousSession?.recentIds||[q.id] };
-    const event = { profile:profileAtSubmit, questionId:q.id, revision:questionRevision(q), correct, selected:answerAtSubmit, at:now };
+    const event = { profile:profileAtSubmit, questionId:q.id, revision:questionRevision(q), correct, selected:answerAtSubmit, at:now, token:crypto.randomUUID() };
     let award=null;
     const eraQuestions=QUESTIONS.filter(item=>item.era===eraAtSubmit);
     if (progress.mastered && eraQuestions.length>=CARD_MIN_QUESTIONS) {
@@ -2237,7 +2627,7 @@ async function grade() {
         }
       }
     }
-    const granted=await saveAnswer(progress, session, event, award, q);
+    const granted=await saveAnswer(progress, session, event, award, q, !!before?.mastered);
     answerEvents.push(event);
     lastCoinAward=granted;
     phase = "result";
@@ -2279,7 +2669,7 @@ function showResult(newAward=null,coinAward=lastCoinAward) {
     const coin=document.createElement("div");coin.className="coin-reward";
     if(coinAward?.amount>0) {
       coin.classList.add("earned");
-      const detail=coinAward.stages.includes("master") && coinAward.stages.includes("first") ? "初正解＆初習得ボーナス" : coinAward.stages.includes("master") ? "初習得ボーナス" : "初正解ボーナス";
+      const detail=coinAward.stages.includes("review") ? "習得済み問題の復習ボーナス" : coinAward.stages.includes("master") && coinAward.stages.includes("first") ? "初正解＆初習得ボーナス" : coinAward.stages.includes("master") ? "初習得ボーナス" : "初正解ボーナス";
       const head=document.createElement("span");head.className="coin-reward-title";
       const amount=document.createElement("span");amount.textContent=`+${coinAward.amount} コイン獲得！`;
       head.append(createCoinIcon(),amount);
@@ -2287,7 +2677,7 @@ function showResult(newAward=null,coinAward=lastCoinAward) {
       coin.append(head,note);
     } else {
       const head=document.createElement("span");head.className="coin-reward-title";
-      const caption=document.createElement("span");caption.textContent="今回の追加コインは0枚（復習も大切！）";
+      const caption=document.createElement("span");caption.textContent="今回の追加コインは0枚（習得まであと少し！）";
       head.append(createCoinIcon(),caption);
       coin.append(head);
     }
@@ -2589,6 +2979,12 @@ $("reset-all").addEventListener("click", () => applyFullReset().catch(err));
 $("import-file").addEventListener("change", () => previewImport().catch(err));
 $("import-apply").addEventListener("click", () => applyImport().catch(err));
 $("open-admin").addEventListener("click", openAdmin);
+$("open-arcade").addEventListener("click",()=>openArcade().catch(err));
+$("arcade-back").addEventListener("click",()=>{if(!arcadeBusy){stopCraneMotion();renderHome().catch(err);}});
+$("crane-start").addEventListener("click",()=>startCrane().catch(err));
+$("crane-catch").addEventListener("click",()=>catchCrane().catch(err));
+bindDirectionButton("crane-left",-1);
+bindDirectionButton("crane-right",1);
 $("admin-start-test").addEventListener("click", () => beginTestMode().catch(err));
 $("admin-back").addEventListener("click", () => returnToStudentHome().catch(err));
 $("test-return-admin").addEventListener("click", openAdmin);
