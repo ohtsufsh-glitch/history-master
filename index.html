@@ -941,6 +941,9 @@ let arcadeSweepFrame=null;
 let arcadeSweepAt=null;
 let arcadeDirection=1;
 let arcadeAnimationPromise=null;
+// 続きのあるプレイを自動開始せず、ユーザーの明示操作まで待機する。
+// 端末内のプレイ履歴には記録せず、画面を開くたびに確認する。
+let arcadeResumeRequired=false;
 const plushPath=id=>`assets/plush/${id}.webp`;
 const craneSleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 function randomArcadePrizes() {
@@ -1085,7 +1088,7 @@ function stopCraneSweep(persist=false) {
   if(persist && arcadePlay?.status==="aiming")persistArcadeArm(arcadePlay.id,arcadePlay.armX,arcadeDirection).catch(err);
 }
 function startCraneSweep() {
-  if(arcadeSweepFrame!==null||arcadeBusy||document.hidden||$("arcade").classList.contains("hidden")||arcadePlay?.status!=="aiming")return;
+  if(arcadeSweepFrame!==null||arcadeBusy||arcadeResumeRequired||document.hidden||$("arcade").classList.contains("hidden")||arcadePlay?.status!=="aiming")return;
   $("crane-stage").classList.add("sweeping");
   const velocity=(CRANE_CONFIG.right-CRANE_CONFIG.left)/CRANE_CONFIG.oneWaySeconds;
   function frame(now) {
@@ -1115,29 +1118,41 @@ async function renderArcade() {
   paintArcadeArm();paintArcadePrizes();
   const aiming=arcadePlay?.status==="aiming";
   const resolving=arcadePlay?.status==="resolving";
+  const waitingForResume=arcadeResumeRequired && (aiming || resolving);
   const start=$("crane-start");
-  $("crane-controls").classList.toggle("hidden",!aiming);
-  $("crane-catch").disabled=!aiming||arcadeBusy;
-  start.classList.toggle("hidden",aiming||resolving);
-  start.disabled=(!testMode && balance<CRANE_COST)||arcadeBusy;
-  start.textContent=testMode?`無料で${arcadePlay?.status==="finished"?"もう一度":"プレイ"}（回数無制限）`:
-    balance<CRANE_COST?`あと${CRANE_COST-balance}金貨でプレイ可能`:`100金貨で${arcadePlay?.status==="finished"?"もう一度":"プレイ"}`;
-  if(aiming)$("arcade-message").textContent="動くアームを見て、ねらった場所で「キャッチ！」を押そう！";
-  else if(resolving)$("arcade-message").textContent="前回のキャッチ結果を再生します。金貨は追加で使いません。";
-  else if(arcadePlay?.status==="finished") {
-    const r=arcadePlay.result;
-    $("arcade-message").textContent=r.won?`🎉 ${PLUSH_TYPES[arcadePlay.prizes[r.targetIndex]]}をゲット！`:r.grabbed?"あと少し！ 運ぶ途中で落ちちゃった…":"おしい！ 今度はもっと近くをねらおう！";
-  } else $("arcade-message").textContent=testMode?"テストモードでは金貨を使わず、何度でも遊べます。":"100金貨で1回遊べます。";
+  // 続きの確認中はキャッチさせず、ボタンで明示的に再開する。
+  $("crane-controls").classList.toggle("hidden",!aiming||waitingForResume);
+  $("crane-catch").disabled=!aiming||waitingForResume||arcadeBusy;
+  // resolving のエラー時にも、結果再生を再試行できるようにする。
+  start.classList.toggle("hidden",(aiming&&!waitingForResume)||(resolving&&arcadeBusy));
+  // 前回のプレイを再開する場合には追加料金も残高チェックも不要。
+  start.disabled=arcadeBusy||(!aiming&&!resolving&& !testMode&&balance<CRANE_COST);
+  if(waitingForResume){
+    start.textContent=aiming?"▶ 前回のプレイを再開（追加料金なし）":"▶ 前回のキャッチ結果を見る（追加料金なし）";
+    $("arcade-message").textContent=aiming?"前回のプレイが途中です。ボタンを押すまでアームは動きません。":"前回のキャッチ結果が残っています。ボタンを押して続きを確認してください。";
+  }else{
+    start.textContent=resolving?"▶ キャッチ結果の続きを見る（追加料金なし）":
+      testMode?`無料で${arcadePlay?.status==="finished"?"もう一度":"プレイ"}（回数無制限）`:
+      balance<CRANE_COST?`あと${CRANE_COST-balance}金貨でプレイ可能`:`100金貨で${arcadePlay?.status==="finished"?"もう一度":"プレイ"}`;
+    if(aiming)$("arcade-message").textContent="動くアームを見て、ねらった場所で「キャッチ！」を押そう！";
+    else if(resolving)$("arcade-message").textContent="前回のキャッチ結果を再生できます。金貨は追加で使いません。";
+    else if(arcadePlay?.status==="finished") {
+      const r=arcadePlay.result;
+      $("arcade-message").textContent=r.won?`🎉 ${PLUSH_TYPES[arcadePlay.prizes[r.targetIndex]]}をゲット！`:r.grabbed?"あと少し！ 運ぶ途中で落ちちゃった…":"おしい！ 今度はもっと近くをねらおう！";
+    }else $("arcade-message").textContent=testMode?"テストモードでは金貨を使わず、何度でも遊べます。":"100金貨で1回遊べます。";
+  }
   await renderArcadeCollection();
   await refreshCoinDisplay();
   if(aiming && !arcadeBusy)startCraneSweep();
 }
 async function openArcade() {
   if(saving||importing||backingUp||updatingQuestions||arcadeBusy)return;
+  // ホームから入り直した場合も、未完了プレイを勝手に始めない。
+  stopCraneSweep(true);
+  arcadeResumeRequired=true;
   notice("");show("arcade");
   try {
     await renderArcade();
-    if(arcadePlay?.status==="resolving")await animatePendingCrane();
   }catch(error){err(error);}
 }
 async function startCrane() {
@@ -1146,23 +1161,26 @@ async function startCrane() {
   try {
     const previous=await latestArcadePlay(profile);
     if(previous?.status==="aiming"||previous?.status==="resolving") {
+      // 再開ボタンを押したときだけ待機解除する。
       arcadePlay=previous;
+      arcadeResumeRequired=false;
       await renderArcade();
       if(previous.status==="resolving")await animatePendingCrane(true);
       return;
     }
     const balance=await getAvailableCoins();
-    if(profile!=="test" && balance<CRANE_COST){await renderArcade();return;}
+    if(profile!=="test" && balance<CRANE_COST)return;
     if(profile!=="test" && !confirm(`100金貨を使ってUFOキャッチャーを1回遊びますか？\n現在の金貨：${balance}枚`))return;
     const play=newArcadePlay(profile);
     await purchaseCranePlay(play);
     arcadePlay=play;
+    arcadeResumeRequired=false;
     await renderArcade();
-    $("arcade-message").textContent="スタート！ タイミングよく「キャッチ！」を押そう！";
   } catch(error){err(error);} finally {
+    // 開始中にrenderArcade()がdisabledにしたボタンを、
+    // フラグ解除後の再描画で必ず有効・無効判定し直す。
     arcadeBusy=false;
-    $("crane-start").disabled=profile!=="test" && (await getAvailableCoins().catch(()=>0))<CRANE_COST;
-    startCraneSweep();
+    await renderArcade().catch(err);
   }
 }
 // 左右手動ボタンを廃止したため、アームは移動ボタンから書き換えない。
