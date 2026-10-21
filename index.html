@@ -435,7 +435,7 @@
       .era { transition:none; }
     }
 
-    /* v1.6.0 ごほうびゲームセンター（タッチ操作優先） */
+    /* v1.6.2 ぬいぐるみキャッチャー（タッチ操作優先） */
     .arcade-home-panel { background:linear-gradient(145deg,#fff7e5,#fffdf6);border-color:#ddc487; }
     .arcade-home-cost,.arcade-balance{display:flex;align-items:center;gap:7px;font-weight:800;color:#805315;background:#fff3ce;border-radius:999px;padding:7px 12px;white-space:nowrap;}
     .arcade-home-body{display:flex;align-items:center;gap:18px;margin:8px 0;}
@@ -512,7 +512,7 @@
   <section id="home" class="card home-screen">
     <div id="test-home-panel" class="test-banner hidden">
       <strong>🔧 テストモード</strong>
-      <p class="small">ここでの回答・理解度・カード・コインはテスト用に保存され、娘さんの学習成績とは分離されます。</p>
+      <p class="small">ここでの回答・理解度・カード・コイン・クレーン景品はテスト用に保存され、娘さんの学習成績とは分離されます。クレーンは無料で何回でも遊べます。</p>
       <button id="test-return-admin" type="button" class="small-action">← 保護者用管理画面に戻る</button>
     </div>
 
@@ -551,12 +551,12 @@
     </div>
 
     <div id="game-center-home" class="home-panel arcade-home-panel">
-      <div class="panel-head"><div><span class="section-kicker">ARCADE</span><h3>🕹️ ごほうびゲームセンター</h3></div><div class="arcade-home-cost"><img src="assets/coins/crown-gold.webp" width="30" height="30" alt="">100枚 / 1プレイ</div></div>
+      <div class="panel-head"><div><span class="section-kicker">ARCADE</span><h3>🧸 ぬいぐるみキャッチャー</h3></div><div class="arcade-home-cost"><img src="assets/coins/crown-gold.webp" width="30" height="30" alt=""><span id="arcade-home-cost-text">100枚 / 1プレイ</span></div></div>
       <div class="arcade-home-body">
         <div class="arcade-home-preview" aria-hidden="true">🧸 <span>🎁</span> 🕹️</div>
-        <div class="arcade-home-copy"><strong>ぬいぐるみキャッチャー</strong><p>金貨を使ってクレーンに挑戦！ しば犬・なまけもの・金魚・オオサンショウウオ・くまを集めよう。</p><p id="arcade-home-status" class="small muted">景品を集めよう</p></div>
+        <div class="arcade-home-copy"><p>金貨を使ってクレーンに挑戦！ しば犬・なまけもの・金魚・オオサンショウウオ・くまを集めよう。</p><p id="arcade-home-status" class="small muted">景品を集めよう</p></div>
       </div>
-      <button id="open-arcade" class="primary arcade-entry" type="button">ゲームセンターへ →</button>
+      <button id="open-arcade" class="primary arcade-entry" type="button">キャッチャーで遊ぶ →</button>
     </div>
 
     <div id="collection" class="home-panel collection-panel">
@@ -566,9 +566,9 @@
     </div>
   </section>
 
-  <section id="arcade" class="card arcade-screen hidden" aria-label="ごほうびゲームセンター">
+  <section id="arcade" class="card arcade-screen hidden" aria-label="ぬいぐるみキャッチャー">
     <button id="arcade-back" type="button" class="nav">← 学習ホームに戻る</button>
-    <div class="arcade-title-row"><div><span class="section-kicker">REWARD ARCADE</span><h2>🧸 ぬいぐるみキャッチャー</h2></div><div class="arcade-balance"><img src="assets/coins/crown-gold.webp" alt="" width="33" height="33"><strong id="arcade-balance">0</strong></div></div>
+    <div class="arcade-title-row"><div><span class="section-kicker">PLUSH CATCHER</span><h2>🧸 ぬいぐるみキャッチャー</h2></div><div class="arcade-balance"><img src="assets/coins/crown-gold.webp" alt="" width="33" height="33"><strong id="arcade-balance">0</strong></div></div>
     <p id="arcade-profile-note" class="arcade-profile-note"></p>
     <p class="arcade-intro">左右ボタンでアームを動かして、ぬいぐるみをキャッチ！ 上手に狙っても途中で落とすことがあります。</p>
     <div class="machine-wrap">
@@ -604,8 +604,8 @@
     <p class="muted admin-lead">教材の問題追加・修正・削除、バックアップ・復元を行います。問題データは端末内に保存されます。</p>
     <div class="admin-test-area">
       <h3>🔧 動作確認</h3>
-      <p class="muted small">テストモードで解いた結果・コインは娘さんの学習履歴には反映されません。問題データ自体は共通です。</p>
-      <button id="admin-start-test" class="primary" type="button">テストモードで問題を解く</button>
+      <p class="muted small">テストモードで解いた結果・コイン・クレーン景品は娘さん用に反映されません。クレーンは残高0枚でも無料で何度でも遊べます。問題データ自体は共通です。</p>
+      <button id="admin-start-test" class="primary" type="button">テストモードを開始（問題・クレーン）</button>
     </div>
     <button id="toggle-import" class="import-toggle" type="button" aria-expanded="false">＋ 問題ファイルを取り込む</button>
     <div id="import-panel" class="import-panel hidden">
@@ -686,7 +686,7 @@
       <label class="reset-option"><input id="reset-hide-samples" type="checkbox"><span><strong>内蔵サンプルをすべて非表示にする</strong><span>内蔵の9問を出題対象から外します。いつでも個別に再表示できます。</span></span></label>
       <label class="reset-option"><input id="reset-hide-imported" type="checkbox"><span><strong>取り込み問題をすべて出題対象から外す</strong><span>削除済みを除く取り込み問題を一括で論理削除します。問題と履歴は保持され、個別に復元可能です。</span></span></label>
       <label class="reset-option"><input id="reset-student" type="checkbox"><span><strong>娘さん用の学習データを初期化する</strong><span>娘さん用の回答履歴・習得状況・途中状態・獲得カード・コインを削除します。テスト用は保持します。</span></span></label>
-      <label class="reset-option"><input id="reset-test" type="checkbox"><span><strong>テスト用の学習データを初期化する</strong><span>テスト用の回答履歴・習得状況・途中状態・獲得カード・コインを削除します。娘さん用は保持します。</span></span></label>
+      <label class="reset-option"><input id="reset-test" type="checkbox"><span><strong>テスト用の学習データを初期化する</strong><span>テスト用の回答履歴・習得状況・途中状態・獲得カード・コイン・クレーン履歴・景品を削除します。娘さん用は保持します。</span></span></label>
       <div id="reset-preview" class="reset-status small" role="status" aria-live="polite">初期化する項目を選択すると、対象件数が表示されます。</div>
       <label class="reset-ack"><input id="reset-ack" type="checkbox"><span>必要なバックアップを保存したか確認し、選択したデータが変更・削除されることを理解しました。</span></label>
       <button id="reset-apply" class="primary" type="button" disabled>選択した項目を初期化する</button>
@@ -733,7 +733,7 @@
 
 <script>
 "use strict";
-// 歴史マスター v1.6.1：景品5体の画像を採用済みのぬいぐるみデザインへ差し替え。コイン・学習データ仕様はv1.6.0と同一。
+// 歴史マスター v1.6.2：ぬいぐるみ画像は確定版を維持。テストモードのクレーンは無料・回数無制限、表示名称を調整。
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -867,7 +867,7 @@ async function ensureCoinMigration() {
   });
 }
 
-// --- ごほうびゲームセンター v1.0 ---
+// --- ぬいぐるみキャッチャー v1.2 ---
 const CRANE_COST=100;
 const PLUSH_TYPES=Object.freeze({
   shiba:"しば犬", sloth:"なまけもの", goldfish:"金魚", salamander:"オオサンショウウオ", bear:"くま"
@@ -901,8 +901,10 @@ function purchaseCranePlay(play) {
         results[name]=req.result;
         if(--remaining!==0)return;
         const balance=availableCoins(results.coinEvents,results.reviewEvents,results.coinSpends,play.profile);
-        if(results.arcadePlays.some(p=>p.profile===play.profile && p.status==="aiming") || balance<CRANE_COST) {tx.abort();return;}
-        tx.objectStore("coinSpends").add({id:play.id,profile:play.profile,game:"crane",amount:CRANE_COST,at:play.startedAt});
+        const isTest=play.profile==="test";
+        if(results.arcadePlays.some(p=>p.profile===play.profile && p.status==="aiming") || (!isTest && balance<CRANE_COST)) {tx.abort();return;}
+        // テスト用プレイは金貨消費0。履歴は残すことでバックアップ・リセットも一貫させる。
+        tx.objectStore("coinSpends").add({id:play.id,profile:play.profile,game:"crane",amount:isTest?0:CRANE_COST,at:play.startedAt});
         tx.objectStore("arcadePlays").add(play);
       };
     }
@@ -963,7 +965,8 @@ async function refreshArcadeHome() {
   const owned=prizes.filter(p=>p.profile===profile);
   const kinds=new Set(owned.map(p=>p.prizeId)).size;
   $("arcade-home-status").textContent=`獲得：${owned.length}体（${kinds}/5種類）${pending?" ／ プレイ途中のクレーンがあります":""}`;
-  $("open-arcade").textContent=pending?"クレーンの続きを遊ぶ →":"ゲームセンターへ →";
+  $("open-arcade").textContent=pending?"クレーンの続きを遊ぶ →":"キャッチャーで遊ぶ →";
+  $("arcade-home-cost-text").textContent=profile==="test"?"テスト中：無料で何回でも":"100枚 / 1プレイ";
 }
 function paintArcadeArm() {
   if(arcadePlay) $("crane-arm").style.left=`${arcadePlay.armX}%`;
@@ -993,8 +996,9 @@ async function renderArcadeCollection() {
 }
 async function renderArcade() {
   const balance=await getAvailableCoins();
-  $("arcade-balance").textContent=balance.toLocaleString("ja-JP");
-  $("arcade-profile-note").textContent=profile==="test"?"🔧 テスト用のコイン・景品です。娘さん用の記録とは分離されています。":"👧 学習用のコイン・景品です。";
+  const testMode=profile==="test";
+  $("arcade-balance").textContent=testMode?"∞（無料）":balance.toLocaleString("ja-JP");
+  $("arcade-profile-note").textContent=testMode?"🔧 テストモード：金貨を消費せず何回でも遊べます。景品と履歴はテスト用に保存されます。":"👧 学習用のコイン・景品です。";
   arcadePlay=await latestArcadePlay(profile);
   $("crane-stage").className="crane-stage";
   paintArcadeArm();paintArcadePrizes();
@@ -1002,13 +1006,14 @@ async function renderArcade() {
   const start=$("crane-start");
   $("crane-controls").classList.toggle("hidden",!aiming);
   start.classList.toggle("hidden",aiming);
-  start.disabled=balance<CRANE_COST||arcadeBusy;
-  start.textContent=balance<CRANE_COST?`あと${CRANE_COST-balance}金貨でプレイ可能`:`100金貨で${arcadePlay?.status==="finished"?"もう一度":"プレイ"}`;
+  start.disabled=(!testMode && balance<CRANE_COST)||arcadeBusy;
+  start.textContent=testMode?`無料で${arcadePlay?.status==="finished"?"もう一度":"プレイ"}（回数無制限）`:
+    balance<CRANE_COST?`あと${CRANE_COST-balance}金貨でプレイ可能`:`100金貨で${arcadePlay?.status==="finished"?"もう一度":"プレイ"}`;
   if(aiming) $("arcade-message").textContent="◀ ▶ で位置を合わせて、「キャッチ！」を押そう！";
   else if(arcadePlay?.status==="finished") {
     const r=arcadePlay.result;
     $("arcade-message").textContent=r.won?`🎉 ${PLUSH_TYPES[arcadePlay.prizes[r.targetIndex]]}をゲット！`:r.grabbed?"あと少し！ 途中で落ちちゃった…":"おしい！ 今度はもっと近くをねらおう！";
-  } else $("arcade-message").textContent="100金貨で1回遊べます。";
+  } else $("arcade-message").textContent=testMode?"テストモードでは金貨を使わず、何度でも遊べます。":"100金貨で1回遊べます。";
   await renderArcadeCollection();
   await refreshCoinDisplay();
 }
@@ -1024,8 +1029,8 @@ async function startCrane() {
     const previous=await latestArcadePlay(profile);
     if(previous?.status==="aiming") {arcadePlay=previous;await renderArcade();return;}
     const balance=await getAvailableCoins();
-    if(balance<CRANE_COST){await renderArcade();return;}
-    if(!confirm(`100金貨を使ってUFOキャッチャーを1回遊びますか？\n現在の金貨：${balance}枚`))return;
+    if(profile!=="test" && balance<CRANE_COST){await renderArcade();return;}
+    if(profile!=="test" && !confirm(`100金貨を使ってUFOキャッチャーを1回遊びますか？\n現在の金貨：${balance}枚`))return;
     const play=newArcadePlay(profile);
     await purchaseCranePlay(play);
     arcadePlay=play;
@@ -1033,7 +1038,7 @@ async function startCrane() {
     $("arcade-message").textContent="スタート！ 好きなぬいぐるみをねらおう！";
   } catch(error) {err(error);} finally {
     arcadeBusy=false;
-    $("crane-start").disabled=(await getAvailableCoins().catch(()=>0))<CRANE_COST;
+    $("crane-start").disabled=profile!=="test" && (await getAvailableCoins().catch(()=>0))<CRANE_COST;
   }
 }
 function moveCrane(step) {
@@ -1087,7 +1092,7 @@ async function catchCrane() {
     arcadeBusy=false;
     $("crane-controls").querySelectorAll("button").forEach(b=>b.disabled=false);
     if(!$("crane-start").classList.contains("hidden")) {
-      $("crane-start").disabled=(await getAvailableCoins().catch(()=>0))<CRANE_COST;
+      $("crane-start").disabled=profile!=="test" && (await getAvailableCoins().catch(()=>0))<CRANE_COST;
     }
   }
 }
@@ -2119,7 +2124,7 @@ function validateBackup(obj) {
   }
   const spends=new Set();
   for(const s of data.coinSpends) {
-    if(!s || !isNonemptyString(s.id,100) || spends.has(s.id) || !isProfile(s.profile) || !plays.has(s.id) || plays.get(s.id).profile!==s.profile || s.game!=="crane" || s.amount!==CRANE_COST || !isNonemptyString(s.at,64)) throw new Error("コイン消費履歴が不正です。");
+    if(!s || !isNonemptyString(s.id,100) || spends.has(s.id) || !isProfile(s.profile) || !plays.has(s.id) || plays.get(s.id).profile!==s.profile || s.game!=="crane" || !(s.amount===CRANE_COST || (s.profile==="test" && s.amount===0)) || !isNonemptyString(s.at,64)) throw new Error("コイン消費履歴が不正です。");
     spends.add(s.id);
   }
   if(spends.size!==plays.size) throw new Error("クレーンの料金記録が不足しています。");
