@@ -210,6 +210,7 @@
     .edit-form label { margin-top:12px; }
     .edit-form textarea { resize:vertical; min-height:75px; }
     .edit-form .manager-actions { margin-top:16px; }
+    .edit-form .manager-actions button { min-height:44px; }
     .warning-text { color:#99502d; font-size:.85rem; line-height:1.65; }
     @media (max-width: 430px) { .manager-controls {grid-template-columns:1fr;} }
     @media(min-width:640px) { .trophy-grid {grid-template-columns:repeat(3,minmax(0,1fr));} }
@@ -2962,11 +2963,11 @@ function openQuestionEditor(id) {
   const area=$("manage-edit");area.replaceChildren();area.classList.remove("hidden");
   const form=document.createElement("form");form.className="edit-form";
   const heading=document.createElement("h3");heading.textContent="問題を修正："+id;form.appendChild(heading);
-  function field(labelText,kind,value,rows=2) {
+  function field(labelText,kind,value,rows=2,parent=form) {
     const label=document.createElement("label");label.textContent=labelText;
     const control=document.createElement(kind);control.value=value;
     if (kind==="textarea") control.rows=rows;
-    label.appendChild(control);form.appendChild(label);
+    label.appendChild(control);parent.appendChild(label);
     return control;
   }
   const eraLabel=document.createElement("label");eraLabel.textContent="時代";
@@ -2986,7 +2987,31 @@ function openQuestionEditor(id) {
   }
   tagInput.value=q.tag||"";tagLabel.appendChild(tagInput);form.appendChild(tagLabel);
   const questionInput=field("問題文","textarea",q.q,4);
-  const choicesInput=field("選択肢（1行に1つ、2〜6行）","textarea",q.options.join("\n"),6);
+  const choicesArea=document.createElement("div");form.appendChild(choicesArea);
+  const choiceInputs=[];
+  function addChoice(text="") {
+    const input=field(`選択肢 ${choiceInputs.length+1}`,"textarea",text,3,choicesArea);
+    choiceInputs.push({input,originalText:text,initialValue:input.value});
+    return input;
+  }
+  q.options.forEach(text=>addChoice(text));
+  const choiceHint=document.createElement("p");choiceHint.className="muted small";
+  choiceHint.textContent="選択肢は2〜6個です。それぞれの入力欄の中で改行できます。正解には選択肢の番号を入力してください。";
+  const choiceButtons=document.createElement("div");choiceButtons.className="manager-actions";
+  function updateChoiceButtons() {
+    addChoiceButton.disabled=choiceInputs.length>=6;
+    removeChoiceButton.disabled=choiceInputs.length<=2;
+  }
+  const addChoiceButton=makeAction("選択肢を追加","",()=>{
+    if (choiceInputs.length>=6) return;
+    const input=addChoice();updateChoiceButtons();input.focus();
+  });
+  const removeChoiceButton=makeAction("最後の選択肢を削除","",()=>{
+    if (choiceInputs.length<=2) return;
+    choiceInputs.pop().input.parentElement.remove();updateChoiceButtons();
+  });
+  choiceButtons.append(addChoiceButton,removeChoiceButton);form.append(choiceHint,choiceButtons);
+  updateChoiceButtons();
   const correctInput=field("正解の選択肢番号（例：1 または 1,3）","input",q.answers.map(i=>i+1).join(","));
   const explanationInput=field("解説","textarea",q.why,4);
   const shuffleLabel=document.createElement("label");
@@ -3005,8 +3030,8 @@ function openQuestionEditor(id) {
     event.preventDefault();
     if (saving||importing||backingUp||managing||updatingQuestions) return;
     try {
-      const optionTexts=choicesInput.value.split(/\r?\n/).map(s=>s.trim());
-      if (optionTexts.some(x=>!x)) throw new Error("選択肢に空行が含まれています。");
+      const optionTexts=choiceInputs.map(({input})=>input.value);
+      if (optionTexts.some(x=>!x.trim())) throw new Error("空の選択肢が含まれています。文章を入力するか、最後の選択肢を削除してください。");
       const input=correctInput.value.replace(/，/g,",").split(",").map(s=>s.trim());
       if (!input.length || input.some(s=>!/^[1-6]$/.test(s))) throw new Error("正解は1〜6の番号を、例『1,3』のように入力してください。");
       const answers=input.map(Number);
@@ -3017,6 +3042,10 @@ function openQuestionEditor(id) {
         ...(difficultyInput.value ? {difficulty:difficultyInput.value} : {}),
         ...(tagInput.value ? {tag:tagInput.value} : {})}]};
       const updated=validateImportObject(obj)[0];
+      // 未編集の選択肢は、textareaによる改行コード変換や検証時のtrimでも変えない。
+      choiceInputs.forEach(({input,originalText,initialValue},i)=>{
+        if (input.value===initialValue) updated.options[i]=originalText;
+      });
       const conflict=allQuestionRecords().find(other=>other.id!==id&&!isInactive(other)&&contentKey(other)===contentKey(updated));
       if (conflict) throw new Error(`別の問題（${conflict.id}）と内容が完全一致しています。`);
       const similar=allQuestionRecords().filter(other=>other.id!==id&&!isInactive(other)&&promptKey(other)===promptKey(updated));
