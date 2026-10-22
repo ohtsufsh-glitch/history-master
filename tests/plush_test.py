@@ -30,7 +30,7 @@ TYPES = {
 }
 IDS = list(TYPES)
 
-# 全13ストアに公開可能な架空データを作る。報酬も実際の検証条件を満たす。
+# 全14ストアに公開可能な架空データを作る。報酬も実際の検証条件を満たす。
 FIXTURE_HELPERS = """() => {
   window.plushFixture = (ids=[], who='test', slots=7) => {
     const at='2020-01-01T00:00:00.000Z', qid='TEST-PLUSH-001';
@@ -68,6 +68,7 @@ FIXTURE_HELPERS = """() => {
       data.coinSpends.push({id:playId,profile:who,game:'crane',amount:who==='test'?0:100,at:startedAt});
       data.arcadePrizes.push({id:playId,profile:who,prizeId:id,wonAt:startedAt});
     });
+    data.arcadeBoards=['student','test'].map(who=>initialArcadeBoard(who,data.arcadePlays)).filter(Boolean);
     return data;
   };
   window.plushInstall = async data => {
@@ -129,7 +130,7 @@ class PlushTest(unittest.TestCase):
         # getAll() は主キー順。バックアップの配列順は記録の内容ではない。
         self.assertEqual(actual.keys(), expected.keys())
         for store in expected:
-            key = lambda row: row.get('key', row.get('id'))
+            key = lambda row: row.get('key', row.get('id', row.get('profile')))
             self.assertEqual(sorted(actual[store], key=key),
                              sorted(expected[store], key=key), store)
 
@@ -159,7 +160,7 @@ class PlushTest(unittest.TestCase):
         })""")
         self.assertEqual(actual['types'], TYPES)
         self.assertEqual(actual['ids'], IDS)
-        self.assertEqual((actual['db'], actual['backup']), (6, 6))
+        self.assertEqual((actual['db'], actual['backup']), (7, 7))
         for prize_id, image in zip(IDS, actual['images']):
             self.assertEqual(image['path'], f'assets/plush/{prize_id}.webp')
             self.assertGreater(image['width'], 0)
@@ -257,6 +258,7 @@ class PlushTest(unittest.TestCase):
             'prizes': ['star', 'cloud', 'bird', 'otter', 'jelly', 'piglet', 'puppy']})
         data['coinSpends'].append({'id': 'pending-new', 'profile': 'student', 'game': 'crane',
                                    'amount': 100, 'at': '2021-01-01T00:00:00.000Z'})
+        data['arcadeBoards'][0]['slots']=data['arcadePlays'][-1]['prizes'][:]
         self.install(data)
         before = self.snapshot()
         self.page.locator('#open-admin').click()
@@ -264,7 +266,7 @@ class PlushTest(unittest.TestCase):
         with self.page.expect_download() as event:
             self.page.locator('#backup-export').click()
         backup = json.loads(Path(event.value.path()).read_text())
-        self.assertEqual(backup['backupVersion'], 6)
+        self.assertEqual(backup['backupVersion'], 7)
         self.assertEqual(backup['data'], before)
         self.install(self.fixture())
         cleared = self.snapshot()
@@ -332,6 +334,7 @@ class PlushTest(unittest.TestCase):
         data = self.fixture()
         for store in ['coinEvents', 'reviewEvents']:
             data[store] = [r for r in data[store] if r['profile'] == 'student']
+        next(b for b in data['arcadeBoards'] if b['profile']=='test')['slots']=['rabbit']*7
         self.install(data)
         self.assertEqual(self.page.evaluate("getAvailableCoins('test')"), 0)
         before = self.snapshot()
@@ -345,17 +348,15 @@ class PlushTest(unittest.TestCase):
         self.page.evaluate("async()=>{stopCraneSweep();profile='test';await openArcade();}")
         # 画面移動時のアーム位置保存が終わってから本番データを比較する。
         student = self.snapshot()
-        for _ in range(3):
+        for slot in range(3):
             self.page.locator('#crane-start').click()
             self.page.wait_for_function("arcadePlay?.profile==='test' && arcadePlay.status==='aiming' && !arcadeBusy")
-            self.page.evaluate("""async()=>{
-              stopCraneSweep();arcadePlay.prizes=Array(7).fill('rabbit');
-              const tx=db.transaction('arcadePlays','readwrite');tx.objectStore('arcadePlays').put(arcadePlay);
-              await new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});
-              arcadePlay=await commitCraneOutcome(arcadePlay,{targetIndex:0,alignment:'perfect',
+            self.page.evaluate("""async slot=>{
+              stopCraneSweep();
+              arcadePlay=await commitCraneOutcome(arcadePlay,{targetIndex:slot,alignment:'perfect',
                 grabbed:true,won:true,fallAt:null,at:new Date().toISOString()});
               arcadePlay=await finishCranePlay(arcadePlay.id);await renderArcade();
-            }""")
+            }""", slot)
         after = self.snapshot()
         self.assertEqual([r['amount'] for r in after['coinSpends'] if r['profile'] == 'test'], [0, 0, 0])
         self.assertEqual([r['prizeId'] for r in after['arcadePrizes']], ['rabbit'] * 3)
@@ -378,6 +379,7 @@ class PlushTest(unittest.TestCase):
                     del play['result']
                 else:
                     play['prizes'] = ['star'] * 7
+                data=self.page.evaluate('data=>validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:6,data})', data)
                 self.install(data)
                 self.page.evaluate("async()=>{profile='student';await openArcade();}")
                 self.assertIn('追加料金なし', self.page.locator('#crane-start').inner_text())
