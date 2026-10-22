@@ -19,16 +19,15 @@
     .header-actions { display:flex; align-items:center; gap:10px; }
     .icon-button { border:1px solid #b8c9d7; border-radius:12px; padding:10px 13px; background:white; color:#235d80; font-weight:700; white-space:nowrap; min-height:44px; }
     .admin-lead { margin:0 0 14px; }
+    #app-version { margin:0 0 14px; }
     .admin-test-area { padding:16px; border-radius:14px; background:#edf6fa; border:1px solid #cbdfea; }
     .admin-test-area .primary { margin-top:12px; }
     .test-banner { background:#fff6e4; border:1px solid #e8cc8b; border-radius:13px; padding:14px; margin:12px 0; }
     .test-banner p { margin:4px 0 10px; }
     .test-banner .small-action { background:#fff; }
     .mode-indicator { color:#527086; font-size:.85rem; font-weight:650; }
-    /* 王冠の金貨WebPをヘッダー・ホーム・正解結果で共用。 */
+    /* 王冠の金貨WebPをホーム・正解結果で共用。 */
     .gold-coin { display:block; width:27px; height:27px; object-fit:contain; flex:0 0 auto; filter:drop-shadow(0 2px 1px #9866173d); }
-    .coin-pill { display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:40px;padding:6px 10px;border:1px solid #e6c87b;background:#fff7d9;border-radius:99px;color:#755000;font-size:.91rem;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums; }
-    .coin-pill .gold-coin { width:25px; height:25px; }
     .coin-home-line { display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fff9e8;border:1px solid #f0dfa9;padding:10px 13px;border-radius:12px;margin:4px 0 16px; }
     .coin-home-line strong { display:inline-flex;align-items:center;gap:6px;color:#79570c;white-space:nowrap; }
     .coin-reward { display:flex;flex-direction:column;align-items:flex-start;gap:4px;border-radius:11px;background:#fff4c9;border:1px solid #ead18b;color:#795300;padding:11px 12px;margin:12px 0 7px;font-weight:800; }
@@ -55,7 +54,7 @@
     @media(prefers-reduced-motion:reduce) {
       .coin-reward.earned .gold-coin, .coin-reward.earned .coin-reward-title { animation:none; }
     }
-    @media(max-width:430px) { .header-actions { gap:5px; } .coin-pill { min-height:37px;padding:5px 7px;font-size:.83rem; } .coin-pill .gold-coin { width:23px;height:23px; } }
+    @media(max-width:430px) { .header-actions { gap:5px; } }
     .muted { color: #607086; font-size: .91rem; }
     .small { font-size: .82rem; }
     button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -252,12 +251,6 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
     }
     .mode-indicator { color: rgba(255,255,255,.82); }
-    .coin-pill {
-      background: linear-gradient(180deg,#fff6dd 0%,#f6dd96 100%);
-      border-color:#f0d68a;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.75), 0 4px 10px rgba(70,49,7,.15);
-      color:#5f4200;
-    }
     #notice { padding:0 6px 8px; }
     .home-screen {
       border: 1px solid rgba(208,190,152,.75);
@@ -551,12 +544,11 @@
   </style>
 </head>
 <body>
-<!-- 立体的な金貨イラスト：ホーム・ヘッダー・正解時に共用 -->
+<!-- 立体的な金貨イラスト：ホーム・正解時に共用 -->
 <main>
   <header>
     <h1>📚 歴史マスター</h1>
     <div class="header-actions">
-      <span id="header-coins" class="coin-pill" aria-live="polite" aria-label="学習用コイン 0枚"><img class="gold-coin" src="assets/coins/crown-gold.webp" alt="" aria-hidden="true" width="27" height="27" decoding="async"><span id="header-coin-amount">0</span></span>
       <span id="header-mode" class="mode-indicator" aria-live="polite">👧 学習用</span>
       <button id="open-admin" class="icon-button" type="button" aria-label="保護者用の管理画面を開く">⚙️ 管理</button>
     </div>
@@ -623,7 +615,7 @@
   <section id="arcade" class="card arcade-screen hidden" aria-label="ぬいぐるみキャッチャー">
     <button id="arcade-back" type="button" class="nav">← 学習ホームに戻る</button>
     <div class="arcade-title-row"><div><span class="section-kicker">PLUSH CATCHER</span><h2>🧸 ぬいぐるみキャッチャー</h2></div><div class="arcade-balance"><img src="assets/coins/crown-gold.webp" alt="" width="33" height="33"><strong id="arcade-balance">0</strong></div></div>
-    <p id="arcade-profile-note" class="arcade-profile-note"></p>
+    <p id="arcade-profile-note" class="arcade-profile-note hidden"></p>
     <p class="arcade-intro">アームが自動で左右に動きます。「キャッチ！」でタイミングよく止めよう！ つかんだ景品を出口まで運べたらゲットです。</p>
     <div class="machine-wrap">
       <div class="arcade-sign">PLUSH CATCHER <span>★</span> ARCADE</div>
@@ -640,7 +632,7 @@
           <button id="crane-catch" type="button" class="crane-catch" aria-label="自動で動くアームを止めてキャッチする">🎯 キャッチ！</button>
         </div>
         <button id="crane-start" type="button" class="primary crane-start">100金貨でプレイ</button>
-        <p id="arcade-hint" class="arcade-hint">1回の操作で30〜60秒ほど。途中で閉じても続きから再開できます。</p>
+        <p id="arcade-hint" class="arcade-hint">途中で閉じても続きから再開できます。</p>
       </div>
     </div>
     <div class="arcade-collection">
@@ -653,6 +645,7 @@
   <section id="admin" class="card hidden" aria-label="保護者用管理画面">
     <button id="admin-back" class="nav" type="button">← 娘さんの学習ホームに戻る</button>
     <h2>⚙️ 保護者用管理画面</h2>
+    <p id="app-version" class="muted small"></p>
     <p class="muted admin-lead">教材の問題追加・修正・削除、バックアップ・復元を行います。問題データは端末内に保存されます。</p>
     <div class="admin-test-area">
       <h3>🔧 動作確認</h3>
@@ -785,7 +778,8 @@
 
 <script>
 "use strict";
-// 歴史マスター v1.6.5：ぬいぐるみ景品を20種類に追加。既存データとクレーンの仕様は維持。
+// 歴史マスター：画面に表示するアプリ版はこの定数で管理。
+const APP_VERSION = "v1.6.6";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -860,9 +854,7 @@ async function getAvailableCoins(who=profile) {
 }
 async function refreshCoinDisplay() {
   const balance=await getAvailableCoins(profile);
-  // SVGをtextContentで消さず、数値のテキストノードだけを更新する。
-  $("header-coin-amount").textContent=balance.toLocaleString("ja-JP");
-  $("header-coins").setAttribute("aria-label",`${profile==="test"?"テスト用":"学習用"}コイン ${balance}枚`);
+  // 金貨画像をtextContentで消さず、数値のテキストノードだけを更新する。
   $("home-coin-amount").textContent=balance.toLocaleString("ja-JP");
   return balance;
 }
@@ -1116,7 +1108,8 @@ async function renderArcade() {
   const balance=await getAvailableCoins();
   const testMode=profile==="test";
   $("arcade-balance").textContent=testMode?"∞（無料）":balance.toLocaleString("ja-JP");
-  $("arcade-profile-note").textContent=testMode?"🔧 テストモード：金貨を消費せず何回でも遊べます。景品と履歴はテスト用に保存されます。":"👧 学習用のコイン・景品です。";
+  $("arcade-profile-note").textContent=testMode?"🔧 テストモード：金貨を消費せず何回でも遊べます。景品と履歴はテスト用に保存されます。":"";
+  $("arcade-profile-note").classList.toggle("hidden",!testMode);
   arcadePlay=await latestArcadePlay(profile);
   arcadeDirection=arcadePlay?.direction===-1?-1:1;
   const stage=$("crane-stage");stage.className="crane-stage";
@@ -3206,6 +3199,7 @@ $("card-detail-dialog").addEventListener("click", event => {
 });
 (async () => {
   try {
+    $("app-version").textContent=`アプリバージョン：${APP_VERSION}`;
     db = await openDatabase();
     populateManagementEras();
     for(const [id,label] of ERAS) {
