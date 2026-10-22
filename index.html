@@ -608,7 +608,7 @@
       <div class="panel-head"><div><span class="section-kicker">ARCADE</span><h3>🧸 ぬいぐるみキャッチャー</h3></div><div class="arcade-home-cost"><img src="assets/coins/crown-gold.webp" width="30" height="30" alt=""><span id="arcade-home-cost-text">100枚 / 1プレイ</span></div></div>
       <div class="arcade-home-body">
         <div class="arcade-home-preview" aria-hidden="true">🧸 <span>🎁</span> 🕹️</div>
-        <div class="arcade-home-copy"><p>金貨を使ってクレーンに挑戦！ しば犬・なまけもの・金魚・オオサンショウウオ・くまを集めよう。</p><p id="arcade-home-status" class="small muted">景品を集めよう</p></div>
+        <div class="arcade-home-copy"><p id="arcade-home-description">金貨を使ってクレーンに挑戦！ かわいいぬいぐるみを集めよう！</p><p id="arcade-home-status" class="small muted">景品を集めよう</p></div>
       </div>
       <button id="open-arcade" class="primary arcade-entry" type="button">キャッチャーで遊ぶ →</button>
     </div>
@@ -644,7 +644,7 @@
       </div>
     </div>
     <div class="arcade-collection">
-      <div class="panel-head"><div><span class="section-kicker">PRIZE COLLECTION</span><h3>🎁 ぬいぐるみコレクション</h3></div><strong id="arcade-collection-count" class="rank-pill">0/5種類</strong></div>
+      <div class="panel-head"><div><span class="section-kicker">PRIZE COLLECTION</span><h3>🎁 ぬいぐるみコレクション</h3></div><strong id="arcade-collection-count" class="rank-pill">読み込み中…</strong></div>
       <div id="arcade-collection-list" class="plush-grid" aria-label="獲得したぬいぐるみ"></div>
       <p class="muted small">同じぬいぐるみを何体でも集められます。獲得した景品とコインの利用履歴は、完全バックアップに保存されます。</p>
     </div>
@@ -785,7 +785,7 @@
 
 <script>
 "use strict";
-// 歴史マスター v1.6.2：ぬいぐるみ画像は確定版を維持。テストモードのクレーンは無料・回数無制限、表示名称を調整。
+// 歴史マスター v1.6.5：ぬいぐるみ景品を20種類に追加。既存データとクレーンの仕様は維持。
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -919,10 +919,13 @@ async function ensureCoinMigration() {
   });
 }
 
-// --- ぬいぐるみキャッチャー v1.6.3 ---
+// --- ぬいぐるみキャッチャー v1.6.5 ---
 const CRANE_COST=100;
 const PLUSH_TYPES=Object.freeze({
-  shiba:"しば犬", sloth:"なまけもの", goldfish:"金魚", salamander:"オオサンショウウオ", bear:"くま"
+  shiba:"しば犬", sloth:"なまけもの", goldfish:"金魚", salamander:"オオサンショウウオ", bear:"くま",
+  rabbit:"うさもち", chick:"ぴよまる", seal:"あざらし", penguin:"ぺんころ", hamster:"はむぷく",
+  capybara:"カピバラ", redpanda:"れさぽん", kitten:"にゃこまる", puppy:"わんころ", piglet:"こぶた",
+  jelly:"くらげ", otter:"らこまる", bird:"ことり", cloud:"くもふわ", star:"ほしぷに"
 });
 const PLUSH_IDS=Object.keys(PLUSH_TYPES);
 const CRANE_CONFIG=Object.freeze({
@@ -948,7 +951,7 @@ let arcadeResumeRequired=false;
 const plushPath=id=>`assets/plush/${id}.webp`;
 const craneSleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 function randomArcadePrizes() {
-  // 7体すべて無作為に配置。5種類すべてが出るとは限らず、重複もあり。
+  // 各景品を等確率で抽選し、7体配置。重複もあり。
   return Array.from({length:7},()=>PLUSH_IDS[Math.floor(Math.random()*PLUSH_IDS.length)]);
 }
 function newArcadePlay(who) {
@@ -1050,7 +1053,8 @@ async function refreshArcadeHome() {
   const pending=plays.some(p=>p.profile===profile&&["aiming","resolving"].includes(p.status));
   const owned=prizes.filter(p=>p.profile===profile);
   const kinds=new Set(owned.map(p=>p.prizeId)).size;
-  $("arcade-home-status").textContent=`獲得：${owned.length}体（${kinds}/5種類）${pending?" ／ 続きから遊べます":""}`;
+  $("arcade-home-description").textContent=`金貨を使ってクレーンに挑戦！ かわいいぬいぐるみ全${PLUSH_IDS.length}種類を集めよう！`;
+  $("arcade-home-status").textContent=`獲得：${owned.length}体（${kinds}/${PLUSH_IDS.length}種類）${pending?" ／ 続きから遊べます":""}`;
   $("open-arcade").textContent=pending?"クレーンの続きを遊ぶ →":"キャッチャーで遊ぶ →";
   $("arcade-home-cost-text").textContent=profile==="test"?"テスト中：無料で何回でも":"100枚 / 1プレイ";
 }
@@ -1072,11 +1076,11 @@ async function renderArcadeCollection() {
   const all=(await readAll("arcadePrizes")).filter(p=>p.profile===profile);
   const counts=Object.fromEntries(PLUSH_IDS.map(id=>[id,all.filter(p=>p.prizeId===id).length]));
   const found=PLUSH_IDS.filter(id=>counts[id]>0).length;
-  $("arcade-collection-count").textContent=found===5?`🎉 コンプリート！ ／ ${all.length}体`:`${found}/5種類 ／ ${all.length}体`;
+  $("arcade-collection-count").textContent=found===PLUSH_IDS.length?`🎉 コンプリート！ ／ ${all.length}体`:`${found}/${PLUSH_IDS.length}種類 ／ ${all.length}体`;
   const host=$("arcade-collection-list");host.replaceChildren();
   for(const id of PLUSH_IDS) {
     const box=document.createElement("div");box.className="plush-item"+(counts[id]?"":" not-owned");
-    const img=document.createElement("img");img.src=plushPath(id);img.alt="";img.loading="lazy";
+    const img=document.createElement("img");img.src=plushPath(id);img.alt="";img.loading="lazy";img.decoding="async";
     const name=document.createElement("strong");name.textContent=PLUSH_TYPES[id];
     const count=document.createElement("div");count.className="owned";count.textContent=counts[id]?`×${counts[id]}`:"未獲得";
     box.append(img,name,count);host.append(box);
