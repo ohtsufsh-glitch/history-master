@@ -231,6 +231,7 @@ class SecretPlushTest(unittest.TestCase):
                 with self.subTest(secret=secret, outcome=outcome):
                     self.prepare('resolving', outcome, secret=secret)
                     states = self.page.evaluate("""async()=>{
+                      arcadeResumeRequired=false;
                       const states=[],observer=new MutationObserver(()=>states.push(secretUI()));
                       observer.observe(document.querySelector('#arcade'),{subtree:true,childList:true,characterData:true,attributes:true});
                       const restore=fastCrane();
@@ -363,13 +364,109 @@ class SecretPlushTest(unittest.TestCase):
         self.page.evaluate('id=>Promise.all([finishCranePlay(id),finishCranePlay(id)])', play_id)
         self.assertEqual(self.snapshot(), before)
 
+    def test_history_back_during_secret_transport_keeps_manual_unknown_result(self):
+        self.prepare(who='student')
+        self.page.evaluate("""async()=>{
+          await startCrane();stopCraneSweep();arcadePlay.armX=50;
+          window.savedRandom=Math.random;Math.random=()=>0;window.catching=catchCrane();
+        }""")
+        self.page.wait_for_function("arcadePlay.status==='resolving'")
+        self.page.go_back()
+        self.page.wait_for_function("!document.querySelector('#home').classList.contains('hidden')")
+        self.page.evaluate('async()=>{await catching;Math.random=savedRandom;}')
+        before = self.snapshot()
+        self.assertEqual(before['arcadePlays'][0]['status'], 'resolving')
+        self.assertEqual(before['arcadePrizes'], [])
+        self.page.go_forward()
+        self.page.wait_for_function("arcadeResumeRequired&&arcadePlay?.status==='resolving'&&!arcadeBusy")
+        self.page.wait_for_function("document.querySelector('#crane-start').textContent.includes('追加料金なし')")
+        self.assertTrue(self.page.locator('#crane-start').is_visible())
+        self.assertFalse(self.page.locator('#crane-start').is_disabled())
+        self.assert_hidden()
+        self.assertEqual(self.snapshot(), before)
+        self.page.evaluate("""async()=>{
+          const choose=chooseCraneOutcome,restore=fastCrane();
+          chooseCraneOutcome=()=>{throw Error('履歴復帰で再抽選した');};
+          try{await startCrane();}finally{chooseCraneOutcome=choose;restore();}
+        }""")
+        after = self.snapshot()
+        self.assertEqual(after['coinSpends'], before['coinSpends'])
+        self.assertEqual([r['amount'] for r in after['coinSpends']], [100])
+        self.assertEqual(after['arcadePlays'][0]['result'], before['arcadePlays'][0]['result'])
+        self.assertEqual(len(after['arcadePrizes']), 1)
+        self.assertIn('こりゅん', self.page.locator('#crane-secret-reveal').inner_text())
+        self.page.evaluate('id=>Promise.all([finishCranePlay(id),finishCranePlay(id)])', after['arcadePlays'][0]['id'])
+        self.assertEqual(self.snapshot(), after)
+
+    def test_secret_award_history_profiles_reload_backup_stay_consistent(self):
+        self.prepare()
+        self.page.evaluate("""async()=>{
+          await startCrane();stopCraneSweep();arcadePlay.armX=50;
+          window.savedRandom=Math.random;Math.random=()=>0;
+          window.savedAnimation=animateCraneOutcome;animateCraneOutcome=async()=>{};
+          window.savedTimer=window.setTimeout;window.lateReveal=false;
+          window.setTimeout=(fn,ms,...args)=>{
+            if(ms===SECRET_REVEAL_MS.hidden){window.allowIdentity=fn;return 0;}
+            if(ms===SECRET_REVEAL_MS.revealed)window.lateReveal=true;
+            return savedTimer(fn,0,...args);
+          };
+          window.catching=catchCrane();
+        }""")
+        self.page.wait_for_function('window.allowIdentity!==undefined')
+        before = self.snapshot()
+        self.page.evaluate("navigate('arcade','student')")
+        self.assertEqual(self.page.locator('#arcade-secret-collection-list strong').all_text_contents(), ['？？？'] * 3)
+        self.assertFalse(self.page.locator('#crane-secret-reveal').is_visible())
+        self.assertNotIn('こりゅん', self.page.locator('#arcade').inner_text())
+        self.page.evaluate("navigate('arcade','test')")
+        self.assertIn('こりゅん', self.page.locator('#crane-secret-reveal').inner_text())
+        self.assertEqual(self.page.locator('#crane-secret-reveal img').evaluate('img=>getComputedStyle(img).animationName'), 'none')
+        self.page.evaluate("""async()=>{
+          allowIdentity();await catching;Math.random=savedRandom;
+          animateCraneOutcome=savedAnimation;window.setTimeout=savedTimer;
+        }""")
+        self.assertFalse(self.page.evaluate('window.lateReveal'))
+        self.assertEqual(self.snapshot(), before)
+        self.assertEqual(self.page.locator('#crane-secret-reveal img').evaluate('img=>getComputedStyle(img).animationName'), 'none')
+        self.page.reload()
+        self.ready()
+        self.assertIn('こりゅん', self.page.locator('#crane-secret-reveal').inner_text())
+        self.assertEqual(self.page.locator('#arcade-secret-collection-list [data-prize-id="secret_koryun"] .owned').inner_text(), '×1')
+        self.page.evaluate("navigate('arcade','student')")
+        self.assertEqual(self.page.locator('#arcade-secret-collection-list strong').all_text_contents(), ['？？？'] * 3)
+        self.page.go_back()
+        self.page.wait_for_function("profile==='test'&&document.querySelector('#arcade-secret-collection-count').textContent.includes('1/3種類')")
+        self.assertEqual(self.page.locator('#crane-secret-reveal img').get_attribute('src'), 'assets/plush/secret_koryun.webp')
+        self.page.go_forward()
+        self.page.wait_for_function("profile==='student'&&document.querySelector('#arcade-secret-collection-count').textContent.includes('0/3種類')")
+        self.assertEqual(self.snapshot(), before)
+        self.page.locator('#open-admin').click()
+        self.page.locator('#toggle-backup').click()
+        with self.page.expect_download() as event:
+            self.page.locator('#backup-export').click()
+        backup = json.loads(Path(event.value.path()).read_text())
+        self.assertEqual(backup['backupVersion'], 7)
+        self.assertEqual(backup['data'], before)
+        self.page.evaluate('async()=>{await plushInstall(plushFixture());}')
+        self.page.locator('#backup-file').set_input_files({
+            'name': 'synthetic-integration-v7.json', 'mimeType': 'application/json', 'buffer': json.dumps(backup).encode()})
+        self.page.wait_for_function("document.querySelector('#backup-preview').textContent.startsWith('検査OK')")
+        self.page.locator('#backup-restore').click()
+        self.page.wait_for_function('!backingUp&&pendingRestore===null')
+        self.assertEqual(self.snapshot(), before, '回答・習得・コインを含む14ストアを保持')
+        self.assertEqual(self.page.evaluate('[profile,history.state.profile]'), ['student', 'student'])
+        self.page.evaluate("navigate('arcade','test')")
+        self.assertEqual(self.page.locator('#crane-secret-reveal img').get_attribute('src'), 'assets/plush/secret_koryun.webp')
+        self.assertEqual(self.page.locator('#arcade-secret-collection-list [data-prize-id="secret_koryun"] .owned').inner_text(), '×1')
+        self.assertEqual(self.snapshot(), before)
+
     def test_process_close_and_reopen_preserves_hidden_resolving_secret_and_charge(self):
         executable = os.environ.get('HISTORY_MASTER_BROWSER') or shutil.which('chromium')
         with tempfile.TemporaryDirectory(prefix='history-secret-test-') as directory:
             first = self.playwright.chromium.launch_persistent_context(directory, executable_path=executable)
             page = first.new_page()
             page.goto(self.url)
-            page.wait_for_function("document.querySelectorAll('#era-list button').length===10")
+            page.wait_for_function('appReady')
             page.evaluate(plush_test.FIXTURE_HELPERS)
             page.evaluate("""async slots=>{
               const data=plushFixture();data.arcadeBoards.find(b=>b.profile==='student').slots=slots;
@@ -382,7 +479,7 @@ class SecretPlushTest(unittest.TestCase):
             try:
                 page = second.new_page()
                 page.goto(self.url)
-                page.wait_for_function("document.querySelectorAll('#era-list button').length===10")
+                page.wait_for_function('appReady')
                 page.evaluate('openArcade()')
                 self.assertEqual(page.locator('.crane-toy[data-slot="3"] img').get_attribute('src'), UNKNOWN)
                 self.assertTrue(page.evaluate('arcadeResumeRequired'))

@@ -53,7 +53,7 @@ class UiCleanupTest(unittest.TestCase):
         self.ready()
 
     def ready(self):
-        self.page.wait_for_function("document.querySelectorAll('#era-list button').length===10")
+        self.page.wait_for_function("(typeof appReady==='undefined'?document.querySelectorAll('#era-list button').length===10:appReady)")
 
     def tearDown(self):
         self.context.close()
@@ -96,7 +96,8 @@ class UiCleanupTest(unittest.TestCase):
         self.page.route(self.url, lambda route: route.fulfill(body=source, content_type='text/html'))
         self.page.reload()
         self.ready()
-        self.page.locator('#open-admin').click()
+        # 履歴にある管理画面をリロード後も復元する。
+        self.assertTrue(self.page.locator('#admin').is_visible())
         self.assertEqual(self.page.locator('#app-version').inner_text(), 'アプリバージョン：v9.9.9')
         self.assertEqual(self.page.evaluate('snapshotAllStores()'), before)
 

@@ -55,7 +55,7 @@ class QuestionEditorTest(unittest.TestCase):
         self.page.on('pageerror', lambda error: self.errors.append(str(error)))
         self.page.on('dialog', self.accept_dialog)
         self.page.goto(self.url)
-        self.page.wait_for_function("document.querySelectorAll('#era-list button').length === 10")
+        self.page.wait_for_function("(typeof appReady==='undefined'?document.querySelectorAll('#era-list button').length===10:appReady)")
         # 公開可能な独自のダミー文章。実際の問題JSON・バックアップは保存しない。
         self.questions = self.page.evaluate("""async () => {
           const variants = [
@@ -141,7 +141,7 @@ class QuestionEditorTest(unittest.TestCase):
             self.assertEqual(q, {**original, 'revision': original.get('revision', 1),
                                  'deleted': False, 'shuffleOptions': original.get('shuffleOptions', True)})
         self.page.reload()
-        self.page.wait_for_function("document.querySelectorAll('#era-list button').length === 10")
+        self.page.wait_for_function("(typeof appReady==='undefined'?document.querySelectorAll('#era-list button').length===10:appReady)")
         self.assertEqual(self.snapshot(), after)
 
     def test_add_remove_options_and_keep_multiline_text(self):

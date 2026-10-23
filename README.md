@@ -5,3 +5,8 @@ Issue #12（v1.6.9）のレビュー用資料：
 
 - [リリースノート・保存互換性](docs/RELEASE_v1.6.9.md)
 - [iPhone・iPad Safari実機テスト手順](docs/SAFARI_TEST_v1.6.9.md)
+
+v1.6.8の資料：
+
+- [v1.6.8 リリースノート・調査結果](docs/RELEASE_v1.6.8.md)
+- [iPhone・iPad Safari実機確認手順](docs/SAFARI_TEST_v1.6.8.md)
