@@ -152,7 +152,7 @@ class PlushTest(unittest.TestCase):
             try {
               // 各等幅区間の両端付近を確認。重複配置も同時に検証する。
               for(let i=0;i<20;i++)for(const offset of [.001,.999]) {
-                Math.random=()=>(i+offset)/20;samples.push(randomArcadePrizes());
+                let first=true;samples.push(randomArcadePrizes(()=>{if(first){first=false;return .5;}return (i+offset)/20;}));
               }
             } finally {Math.random=saved;}
             return samples;
@@ -170,14 +170,14 @@ class PlushTest(unittest.TestCase):
     def test_collection_order_counts_dark_images_completion_and_dynamic_total(self):
         self.install(self.fixture(['shiba', 'shiba', 'rabbit'], 'student'))
         self.page.evaluate("async()=>{profile='student';await openArcade();await refreshArcadeHome();}")
-        self.assertEqual(self.page.locator('.plush-item strong').all_text_contents(), list(TYPES.values()))
-        self.assertEqual(self.page.locator('.plush-item').count(), 20)
-        self.assertEqual(self.page.locator('.plush-item.not-owned').count(), 18)
-        self.assertEqual(self.page.locator('.plush-item .owned').nth(0).inner_text(), '×2')
+        self.assertEqual(self.page.locator('#arcade-collection-list .plush-item strong').all_text_contents(), list(TYPES.values()))
+        self.assertEqual(self.page.locator('#arcade-collection-list .plush-item').count(), 20)
+        self.assertEqual(self.page.locator('#arcade-collection-list .plush-item.not-owned').count(), 18)
+        self.assertEqual(self.page.locator('#arcade-collection-list .plush-item .owned').nth(0).inner_text(), '×2')
         self.assertIn('2/20種類', self.page.locator('#arcade-collection-count').inner_text())
         self.assertIn('2/20種類', self.page.locator('#arcade-home-status').inner_text())
         self.assertIn('全20種類', self.page.locator('#arcade-home-description').inner_text())
-        filters = self.page.locator('.plush-item img').evaluate_all(
+        filters = self.page.locator('#arcade-collection-list .plush-item img').evaluate_all(
             "imgs=>imgs.map(img=>({filter:getComputedStyle(img).filter,lazy:img.loading}))")
         self.assertEqual(filters[0]['filter'], 'none')
         self.assertIn('grayscale', filters[1]['filter'])
@@ -194,18 +194,18 @@ class PlushTest(unittest.TestCase):
         self.page.evaluate('renderArcadeCollection()')
         self.assertIn('コンプリート', self.page.locator('#arcade-collection-count').inner_text())
         self.assertIn('21体', self.page.locator('#arcade-collection-count').inner_text())
-        self.assertEqual(self.page.locator('.plush-item.not-owned').count(), 0)
-        self.assertEqual(self.page.locator('.plush-item .owned').last.inner_text(), '×2')
+        self.assertEqual(self.page.locator('#arcade-collection-list .plush-item.not-owned').count(), 0)
+        self.assertEqual(self.page.locator('#arcade-collection-list .plush-item .owned').last.inner_text(), '×2')
 
     def test_collection_fits_ipad_and_iphone_and_all_lazy_images_load_on_scroll(self):
         self.page.evaluate('openArcade()')
         for width, height, columns in [(1180, 820, 5), (1024, 768, 5), (390, 844, 3)]:
             with self.subTest(width=width):
                 self.page.set_viewport_size({'width': width, 'height': height})
-                for image in self.page.locator('.plush-item img').all():
+                for image in self.page.locator('#arcade-collection-list .plush-item img').all():
                     image.scroll_into_view_if_needed()
                     image.evaluate('img=>img.decode()')
-                layout = self.page.locator('.plush-grid').evaluate("""grid=>({
+                layout = self.page.locator('#arcade-collection-list').evaluate("""grid=>({
                   columns:getComputedStyle(grid).gridTemplateColumns.split(' ').length,
                   fits:document.documentElement.scrollWidth<=innerWidth,
                   loaded:[...grid.querySelectorAll('img')].every(img=>img.complete&&img.naturalWidth>0)
@@ -307,7 +307,7 @@ class PlushTest(unittest.TestCase):
         self.assertEqual(self.snapshot(), before)
         self.page.evaluate('openArcade()')
         self.assertIn('5/20種類', self.page.locator('#arcade-collection-count').inner_text())
-        self.assertEqual(self.page.locator('.plush-item.not-owned').count(), 15)
+        self.assertEqual(self.page.locator('#arcade-collection-list .plush-item.not-owned').count(), 15)
 
     def test_backup_still_rejects_unknown_ids_and_inconsistent_transactions(self):
         data = self.fixture(['rabbit'])
@@ -364,7 +364,7 @@ class PlushTest(unittest.TestCase):
         for store in before:
             self.assertEqual([r for r in after[store] if r.get('profile') == 'student'],
                              [r for r in student[store] if r.get('profile') == 'student'], store)
-        self.assertEqual(self.page.locator('.plush-item .owned').nth(5).inner_text(), '×3')
+        self.assertEqual(self.page.locator('#arcade-collection-list .plush-item .owned').nth(5).inner_text(), '×3')
 
     def test_legacy_aiming_and_new_resolving_require_manual_resume_without_charge_or_duplicate_prize(self):
         for status, slots in [('aiming', 3), ('resolving', 7)]:
@@ -388,7 +388,10 @@ class PlushTest(unittest.TestCase):
                 self.assertEqual(self.page.locator('.crane-toy').count(), slots)
                 self.assert_stores_equal(self.snapshot(), data)
                 self.page.locator('#crane-start').click()
-                self.page.wait_for_function('!arcadeBusy')
+                # busy解除後の非同期renderArcade()がボタンを更新するまで待つ。
+                self.page.wait_for_function("""status=>!arcadeBusy &&
+                  (status==='aiming' ? !document.querySelector('#crane-catch').disabled : arcadePlay?.status==='finished')
+                """, arg=status)
                 if status == 'aiming':
                     self.assertFalse(self.page.locator('#crane-catch').is_disabled())
                     self.assertIsNotNone(self.page.evaluate('arcadeSweepFrame'))
