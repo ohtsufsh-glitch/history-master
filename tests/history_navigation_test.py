@@ -39,7 +39,7 @@ class HistoryNavigationTest(unittest.TestCase):
         self.page.set_default_timeout(7000)
         self.errors = []
         self.page.on('pageerror', lambda error: self.errors.append(str(error)))
-        self.page.on('dialog', lambda dialog: dialog.accept())
+        self.page.on('dialog', lambda dialog: dialog.accept('初期化') if dialog.type=='prompt' else dialog.accept())
         self.page.goto(self.url)
         self.ready()
         self.install()
@@ -611,6 +611,116 @@ class HistoryNavigationTest(unittest.TestCase):
         self.assertEqual(self.snapshot(),first)
         self.assertEqual(other.evaluate('currentQuestion.id'),self.page.evaluate('currentQuestion.id'))
         self.assertEqual(other.evaluate('optionOrder'),self.page.evaluate('optionOrder'))
+
+    def enter_test_admin(self):
+        self.page.locator('#open-admin').click()
+        self.page.locator('#admin-start-test').click()
+        self.page.wait_for_function("profile==='test'&&history.state.screen==='home'")
+        self.page.locator('#open-admin').click()
+        self.screen('admin')
+        self.assertEqual(self.page.evaluate('[profile,history.state.profile]'), ['test','test'])
+
+    def assert_changed_profile_history(self):
+        self.screen('admin')
+        self.assertEqual(self.page.evaluate('[profile,history.state.profile,history.state.screen]'),
+                         ['student','student','admin'])
+        length=self.page.evaluate('history.length')
+        self.return_event()
+        self.assertEqual(self.page.evaluate('[profile,history.state.profile]'), ['student','student'])
+        self.page.reload()
+        self.ready()
+        self.screen('admin')
+        self.assertEqual(self.page.evaluate('[profile,history.state.profile]'), ['student','student'])
+        self.back('home')
+        self.page.wait_for_function("profile==='test'&&history.state.profile==='test'")
+        self.forward('admin')
+        self.page.wait_for_function("profile==='student'&&history.state.profile==='student'")
+        self.assertEqual(self.page.evaluate('history.length'),length)
+        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [7,7,14])
+
+    def test_test_admin_selected_reset_replaces_current_history_profile(self):
+        self.install(mastered=True)
+        before=self.snapshot()
+        self.enter_test_admin()
+        length=self.page.evaluate('history.length')
+        self.page.locator('#toggle-reset').click()
+        self.page.locator('#reset-test').check()
+        self.page.locator('#reset-ack').check()
+        self.page.locator('#reset-apply').click()
+        self.page.wait_for_function("!resetting&&!backingUp&&document.querySelector('#reset-preview').textContent.startsWith('選択した初期化が完了')")
+        self.assertEqual(self.page.evaluate('history.length'),length)
+        self.assert_changed_profile_history()
+        for store in ['answers','progress','sessions','coinEvents','reviewEvents','coinSpends']:
+            self.assertEqual([r for r in self.snapshot()[store] if r.get('profile')=='student'],
+                             [r for r in before[store] if r.get('profile')=='student'],store)
+            self.assertEqual([r for r in self.snapshot()[store] if r.get('profile')=='test'],[],store)
+
+    def test_test_admin_full_reset_replaces_current_history_profile(self):
+        self.install(mastered=True)
+        self.enter_test_admin()
+        length=self.page.evaluate('history.length')
+        self.page.locator('#toggle-reset').click()
+        self.page.locator('#reset-all').click()
+        self.page.wait_for_function("!resetting&&!backingUp&&document.querySelector('#reset-preview').textContent.startsWith('完全初期化しました')")
+        self.assertEqual(self.page.evaluate('history.length'),length)
+        self.assert_changed_profile_history()
+        for store in ['answers','progress','sessions','coinEvents','reviewEvents','coinSpends','arcadePlays','arcadePrizes']:
+            self.assertEqual(self.snapshot()[store],[],store)
+
+    def test_test_admin_backup_restore_replaces_current_history_profile(self):
+        self.install(mastered=True)
+        backup=self.snapshot()
+        self.enter_test_admin()
+        length=self.page.evaluate('history.length')
+        self.page.evaluate("""async data=>{
+          pendingRestore=validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:7,data});
+          await applyRestore();
+        }""",backup)
+        self.assertEqual(self.page.evaluate('history.length'),length)
+        self.assert_changed_profile_history()
+        self.assertEqual(self.snapshot(),backup)
+
+    def select_draft_and_open_admin(self):
+        self.quiz()
+        self.page.locator('#choices button').nth(0).click()
+        self.assertTrue(self.page.evaluate('selected.length>0&&draftSelections.size>0'))
+        session=self.page.evaluate("readOne('sessions','student:E01')")
+        self.page.locator('#open-admin').click()
+        self.screen('admin')
+        return session
+
+    def assert_no_previous_draft(self):
+        self.assertEqual(self.page.evaluate('({drafts:draftSelections.size,session:currentSession,progress:currentProgress,ready:quizReady,selected,order:optionOrder})'),
+                         {'drafts':0,'session':None,'progress':None,'ready':False,'selected':[],'order':[]})
+
+    def test_reset_clears_draft_even_when_identical_session_is_recreated(self):
+        session=self.select_draft_and_open_admin()
+        self.page.locator('#toggle-reset').click()
+        self.page.locator('#reset-student').check()
+        self.page.locator('#reset-ack').check()
+        self.page.locator('#reset-apply').click()
+        self.page.wait_for_function("!resetting&&!backingUp&&document.querySelector('#reset-preview').textContent.startsWith('選択した初期化が完了')")
+        self.assert_no_previous_draft()
+        self.page.evaluate('session=>writeSession(session)',session)
+        self.back('quiz')
+        self.assertEqual(self.page.evaluate('currentSession'),session)
+        self.assertEqual(self.page.evaluate('selected'),[])
+        self.assertEqual(self.page.locator('#choices button[aria-pressed="true"]').count(),0)
+
+    def test_backup_restore_clears_draft_even_for_identical_saved_session(self):
+        session=self.select_draft_and_open_admin()
+        backup=self.snapshot()
+        self.page.evaluate("""async data=>{
+          pendingRestore=validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:7,data});
+          await applyRestore();
+        }""",backup)
+        self.assert_no_previous_draft()
+        self.assertEqual(self.snapshot(),backup)
+        self.back('quiz')
+        self.assertEqual(self.page.evaluate('currentSession'),session)
+        self.assertEqual(self.page.evaluate('selected'),[])
+        self.assertEqual(self.page.locator('#choices button[aria-pressed="true"]').count(),0)
+        self.assertEqual(self.snapshot(),backup)
 
 
 

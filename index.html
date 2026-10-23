@@ -2604,8 +2604,28 @@ function performReset(choice, complete=false) {
     tx.onabort = () => reject(tx.error || new Error("初期化処理が中止されました"));
   });
 }
-async function resetFinished(complete) {
+// DBの初期化・復元が確定した後だけ呼ぶ。古いタブ内選択と描画を引き継がない。
+function resetStudentViewAfterDataChange() {
+  ++viewGeneration;
+  draftSelections.clear();
   stopCraneSweep();arcadePlay=null;arcadeBoard=null;arcadeResumeRequired=true;
+  profile="student";
+  currentEra=null;
+  currentQuestion=null;
+  currentSession=null;
+  currentProgress=null;
+  quizReady=false;
+  selected=[];
+  optionOrder=[];
+  phase="question";
+  lastCoinAward=null;
+  const screen=$("admin").classList.contains("hidden")?"home":"admin";
+  // 過去のtest履歴は残し、現在の画面とプロフィールだけを追加なしで同期する。
+  history.replaceState({app:"history-master",version:1,screen,profile,era:null},"");
+  show(screen);
+}
+async function resetFinished(complete) {
+  resetStudentViewAfterDataChange();
   await loadImportedQuestions();
   answerEvents = await readAll("answers");
   if (!complete) await ensureEarnedCards();
@@ -2622,13 +2642,6 @@ async function resetFinished(complete) {
   closeQuestionEditor();
   for (const id of RESET_CHOICES) $(id).checked = false;
   $("reset-ack").checked = false;
-  profile = "student";
-  currentEra = null;
-  currentQuestion = null;
-  selected = [];
-  optionOrder = [];
-  phase = "question";
-  lastCoinAward=null;
   await refreshDashboardStay();
   if (!$("manage-panel").classList.contains("hidden")) renderManager();
 }
@@ -2710,20 +2723,13 @@ async function applyRestore() {
   try {
     validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:BACKUP_VERSION,data});
     await replaceAllStores(data); // 1つのトランザクションで一括変更。途中失敗なら全変更がロールバックされる。
+    resetStudentViewAfterDataChange();
     await loadImportedQuestions();
     await ensureCoinMigration();
     answerEvents=await readAll("answers");
-    arcadePlay=null;
-    arcadeBoard=null;arcadeResumeRequired=true;
-    lastCoinAward=null;
     invalidateTagMapPreview();
     // 初回起動時はHTMLの案内文をそのまま表示する。
     await ensureEarnedCards();
-    profile = "student";
-    currentEra = null;
-    currentQuestion = null;
-    selected = [];
-    phase = "question";
     pendingRestore = null;
     pendingImport = null;
     $("backup-file").value = "";
