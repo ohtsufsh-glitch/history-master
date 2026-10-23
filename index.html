@@ -487,6 +487,14 @@
     .plush-item.not-owned img{filter:grayscale(1) brightness(.5);opacity:.45;}
     .plush-item strong{font-size:.75rem;display:block;overflow-wrap:anywhere;line-height:1.5;}
     .plush-item .owned{color:#8b5425;font-weight:900;font-size:.88rem;}
+    .secret-collection-head{margin-top:20px;}
+    .plush-item.secret-locked img{filter:none;opacity:1;}
+    .secret-reveal{max-width:300px;margin:12px auto;padding:12px;border:2px solid #d6aa57;border-radius:18px;background:#fff8e6;text-align:center;}
+    .secret-reveal img{display:block;width:min(52vw,180px);aspect-ratio:1;object-fit:contain;margin:0 auto;}
+    .secret-reveal strong{display:block;font-size:1.2rem;line-height:1.6;}
+    .secret-reveal.revealed img{animation:secret-appear .4s ease-out;}
+    @keyframes secret-appear{from{opacity:.4;transform:scale(.96);}to{opacity:1;transform:scale(1);}}
+    @media(prefers-reduced-motion:reduce){.secret-reveal.revealed img{animation:none;}}
     @media(max-width:640px){.arcade-home-body{gap:10px;}.arcade-home-preview{flex-basis:75px;height:78px;font-size:1.65rem;}.plush-grid{grid-template-columns:repeat(3,minmax(0,1fr));}.crane-stage{height:310px;}.crane-controls{gap:10px;grid-template-columns:65px minmax(110px,1fr) 65px;}.crane-dir,.crane-catch{min-height:58px;}.machine-wrap{border-width:5px;}}
     @media(prefers-reduced-motion:reduce){.crane-arm,.crane-cable,.crane-head,.claw,.crane-toy{transition:none!important;}}
 
@@ -629,6 +637,7 @@
       </div>
       <div class="machine-lower">
         <p id="arcade-message" class="arcade-message" role="status" aria-live="polite">100金貨で1回遊べます。</p>
+        <div id="crane-secret-reveal" class="secret-reveal hidden" role="status" aria-live="polite" aria-atomic="true"></div>
         <div id="crane-controls" class="crane-controls hidden">
           <button id="crane-catch" type="button" class="crane-catch" aria-label="自動で動くアームを止めてキャッチする">🎯 キャッチ！</button>
         </div>
@@ -640,6 +649,8 @@
     <div class="arcade-collection">
       <div class="panel-head"><div><span class="section-kicker">PRIZE COLLECTION</span><h3>🎁 ぬいぐるみコレクション</h3></div><strong id="arcade-collection-count" class="rank-pill">読み込み中…</strong></div>
       <div id="arcade-collection-list" class="plush-grid" aria-label="獲得したぬいぐるみ"></div>
+      <div class="panel-head secret-collection-head"><h3>✨ シークレット</h3><strong id="arcade-secret-collection-count" class="rank-pill">読み込み中…</strong></div>
+      <div id="arcade-secret-collection-list" class="plush-grid" aria-label="シークレットのコレクション"></div>
       <p class="muted small">同じぬいぐるみを何体でも集められます。獲得した景品とコインの利用履歴は、完全バックアップに保存されます。</p>
     </div>
   </section>
@@ -781,7 +792,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.6.8";
+const APP_VERSION = "v1.6.9";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -940,7 +951,7 @@ async function ensureCoinMigration() {
   });
 }
 
-// --- ぬいぐるみキャッチャー v1.6.7 ---
+// --- ぬいぐるみキャッチャー（永続盤面・シークレット） ---
 const CRANE_COST=100;
 const PLUSH_TYPES=Object.freeze({
   shiba:"しば犬", sloth:"なまけもの", goldfish:"金魚", salamander:"オオサンショウウオ", bear:"くま",
@@ -949,6 +960,15 @@ const PLUSH_TYPES=Object.freeze({
   jelly:"くらげ", otter:"らこまる", bird:"ことり", cloud:"くもふわ", star:"ほしぷに"
 });
 const PLUSH_IDS=Object.keys(PLUSH_TYPES);
+// 通常抽選・秘密の実景品・非公開表示素材を別々に扱う。保存は実景品IDのまま。
+const SECRET_PLUSH_TYPES=Object.freeze({secret_koryun:"こりゅん",secret_yuniko:"ゆにこ",secret_kappamaru:"かっぱまる"});
+const SECRET_PLUSH_IDS=Object.freeze(Object.keys(SECRET_PLUSH_TYPES));
+const SECRET_UNKNOWN=Object.freeze({name:"？？？",assetId:"secret_unknown"});
+const SECRET_BOARD_CHANCE=.10;
+const SECRET_CARRY_FACTOR=.90;
+const SECRET_REVEAL_MS=Object.freeze({hidden:1000,revealed:1400});
+const isSecretPlush=id=>typeof id==="string" && Object.hasOwn(SECRET_PLUSH_TYPES,id);
+const plushName=id=>PLUSH_TYPES[id]||SECRET_PLUSH_TYPES[id];
 const CRANE_CONFIG=Object.freeze({
   left:12,right:88,oneWaySeconds:2.5,exitX:92,
   dropMs:760,liftMs:750,transportMs:1350,releaseMs:480,
@@ -971,13 +991,24 @@ let arcadeAnimationPromise=null;
 // 端末内のプレイ履歴には記録せず、画面を開くたびに確認する。
 let arcadeResumeRequired=false;
 const plushPath=id=>`assets/plush/${id}.webp`;
+// revealは獲得確定済みの結果・プロフィール別の獲得済みコレクションだけで指定。
+function plushPresentation(id,reveal=false) {
+  const hidden=isSecretPlush(id)&&!reveal;
+  return {name:hidden?SECRET_UNKNOWN.name:plushName(id),path:plushPath(hidden?SECRET_UNKNOWN.assetId:id)};
+}
 const craneSleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-function randomArcadePrizes() {
-  // 各景品を等確率で抽選し、7体配置。重複もあり。
-  return Array.from({length:7},()=>PLUSH_IDS[Math.floor(Math.random()*PLUSH_IDS.length)]);
+function randomArcadePrizes(random=Math.random) {
+  // 判定単位は盤面。通常20種類は等確率・重複あり、秘密は最大1体。
+  const secret=random()<SECRET_BOARD_CHANCE;
+  const slots=Array.from({length:7},()=>PLUSH_IDS[Math.floor(random()*PLUSH_IDS.length)]);
+  if(secret) {
+    const id=SECRET_PLUSH_IDS[Math.floor(random()*SECRET_PLUSH_IDS.length)];
+    slots[Math.floor(random()*slots.length)]=id;
+  }
+  return slots;
 }
 const pendingArcadePlay=play=>["aiming","resolving"].includes(play.status);
-const validPlushId=id=>typeof id==="string" && Object.hasOwn(PLUSH_TYPES,id);
+const validPlushId=id=>typeof id==="string" && (Object.hasOwn(PLUSH_TYPES,id)||isSecretPlush(id));
 const validBoardSlots=slots=>Array.isArray(slots) && slots.length===7 && Array.from(slots).every(id=>id===null||validPlushId(id));
 const sameArcadeSlots=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const EMPTY_ARCADE_MESSAGE="景品がなくなったよ！『景品を入れ替える』で新しくしよう！";
@@ -1062,7 +1093,8 @@ function chooseCraneOutcome(play,random=Math.random) {
   const distance=Math.abs(play.armX-positions[targetIndex]);
   const band=CRANE_CONFIG.bands.find(b=>distance<=b.max);
   const grabbed=validPlushId(play.prizes[targetIndex]) && !!band && random()<band.grab;
-  const won=grabbed && random()<band.carry;
+  const carryFactor=isSecretPlush(play.prizes[targetIndex])?SECRET_CARRY_FACTOR:1;
+  const won=grabbed && random()<band.carry*carryFactor;
   // 落下する場合の位置も1回だけ抽選し、リロード後も同じ結果を演出する。
   const fallAt=grabbed&&!won?(0.22+random()*.64):null;
   return {targetIndex,alignment:band?.alignment||"miss",grabbed,won,fallAt,at:new Date().toISOString()};
@@ -1130,9 +1162,10 @@ async function refreshArcadeHome(ctx=viewContext(),request=homeRender) {
   if(!viewCurrent(ctx)||request!==homeRender)return;
   const pending=plays.some(p=>p.profile===profile&&["aiming","resolving"].includes(p.status));
   const owned=prizes.filter(p=>p.profile===profile);
-  const kinds=new Set(owned.map(p=>p.prizeId)).size;
-  $("arcade-home-description").textContent=`金貨を使ってクレーンに挑戦！ かわいいぬいぐるみ全${PLUSH_IDS.length}種類を集めよう！`;
-  $("arcade-home-status").textContent=`獲得：${owned.length}体（${kinds}/${PLUSH_IDS.length}種類）${pending?" ／ 続きから遊べます":""}`;
+  const kinds=PLUSH_IDS.filter(id=>owned.some(p=>p.prizeId===id)).length;
+  const secrets=SECRET_PLUSH_IDS.filter(id=>owned.some(p=>p.prizeId===id)).length;
+  $("arcade-home-description").textContent=`金貨を使ってクレーンに挑戦！ 通常のぬいぐるみ全${PLUSH_IDS.length}種類とシークレット${SECRET_PLUSH_IDS.length}種類を集めよう！`;
+  $("arcade-home-status").textContent=`獲得：${owned.length}体（通常：${kinds}/${PLUSH_IDS.length}種類 ／ シークレット：${secrets}/${SECRET_PLUSH_IDS.length}種類）${pending?" ／ 続きから遊べます":""}`;
   $("open-arcade").textContent=pending?"クレーンの続きを遊ぶ →":"キャッチャーで遊ぶ →";
   $("arcade-home-cost-text").textContent=profile==="test"?"テスト中：無料で何回でも":"100枚 / 1プレイ";
 }
@@ -1148,24 +1181,60 @@ function paintArcadePrizes() {
   prizes.forEach((id,i)=>{
     if(id===null)return;
     const toy=document.createElement("div");toy.className="crane-toy";toy.dataset.slot=i;toy.style.left=`${positions[i]}%`;
-    const img=document.createElement("img");img.src=plushPath(id);img.alt="";img.decoding="async";
+    const shown=plushPresentation(id);
+    const img=document.createElement("img");img.src=shown.path;img.alt=shown.name;img.decoding="async";
     toy.append(img);host.append(toy);
   });
+}
+// 通常・秘密で共通の項目構造。将来の拡大表示は獲得済みのdata-prize-idを利用できる。
+function plushCollectionItem(id,amount) {
+  const shown=plushPresentation(id,amount>0);
+  const box=document.createElement("div");
+  box.className="plush-item"+(amount?"":" not-owned")+(!amount&&isSecretPlush(id)?" secret-locked":"");
+  if(amount)box.dataset.prizeId=id;
+  const img=document.createElement("img");img.src=shown.path;img.alt=shown.name;img.loading="lazy";img.decoding="async";
+  const name=document.createElement("strong");name.textContent=shown.name;
+  const count=document.createElement("div");count.className="owned";count.textContent=amount?`×${amount}`:"未獲得";
+  box.append(img,name,count);return box;
 }
 async function renderArcadeCollection(ctx=viewContext(),request=arcadeRender) {
   const all=(await readAll("arcadePrizes")).filter(p=>p.profile===ctx.who);
   if(!viewCurrent(ctx)||request!==arcadeRender)return;
-  const counts=Object.fromEntries(PLUSH_IDS.map(id=>[id,all.filter(p=>p.prizeId===id).length]));
-  const found=PLUSH_IDS.filter(id=>counts[id]>0).length;
-  $("arcade-collection-count").textContent=found===PLUSH_IDS.length?`🎉 コンプリート！ ／ ${all.length}体`:`${found}/${PLUSH_IDS.length}種類 ／ ${all.length}体`;
-  const host=$("arcade-collection-list");host.replaceChildren();
-  for(const id of PLUSH_IDS) {
-    const box=document.createElement("div");box.className="plush-item"+(counts[id]?"":" not-owned");
-    const img=document.createElement("img");img.src=plushPath(id);img.alt="";img.loading="lazy";img.decoding="async";
-    const name=document.createElement("strong");name.textContent=PLUSH_TYPES[id];
-    const count=document.createElement("div");count.className="owned";count.textContent=counts[id]?`×${counts[id]}`:"未獲得";
-    box.append(img,name,count);host.append(box);
+  const counts=new Map();
+  for(const prize of all)counts.set(prize.prizeId,(counts.get(prize.prizeId)||0)+1);
+  for(const [ids,listId,countId,label] of [
+    [PLUSH_IDS,"arcade-collection-list","arcade-collection-count","通常"],
+    [SECRET_PLUSH_IDS,"arcade-secret-collection-list","arcade-secret-collection-count","シークレット"]
+  ]) {
+    const found=ids.filter(id=>counts.has(id)).length,total=ids.reduce((n,id)=>n+(counts.get(id)||0),0);
+    $(countId).textContent=`${label}：${found}/${ids.length}種類 ／ ${total}体${found===ids.length?" 🎉 コンプリート！":""}`;
+    $(listId).replaceChildren(...ids.map(id=>plushCollectionItem(id,counts.get(id)||0)));
   }
+}
+function paintSecretPrizeResult(play,revealed=true,animate=false) {
+  const host=$("crane-secret-reveal");host.replaceChildren();host.className="secret-reveal hidden";
+  const id=play?.prizes[play.result?.targetIndex];
+  if(play?.status!=="finished"||!play.result?.won||play.profile!==profile||!isSecretPlush(id))return;
+  const shown=plushPresentation(id,revealed);
+  const title=document.createElement("strong");title.textContent="🎉 シークレットゲット！";
+  const img=document.createElement("img");img.src=shown.path;img.alt=shown.name;img.decoding="async";
+  const name=document.createElement("strong");name.textContent=shown.name;
+  host.append(title,img,name);host.classList.remove("hidden");host.classList.toggle("revealed",animate);
+}
+// finishCranePlayのtx.oncomplete後だけ呼ぶ。再表示は保存済み結果を静的に表示する。
+async function revealSecretPrize(play) {
+  if(play.status!=="finished"||!play.result?.won||!isSecretPlush(play.prizes[play.result.targetIndex]))return;
+  const ctx=viewContext();
+  const visible=()=>viewCurrent(ctx)&&!arcadeResumeRequired&&profile===play.profile&&arcadePlay?.id===play.id&&!document.hidden&&!$("arcade").classList.contains("hidden");
+  if(!visible())return;
+  $("arcade-message").textContent="🎉 シークレットゲット！";
+  paintSecretPrizeResult(play,false);
+  $("crane-secret-reveal").scrollIntoView({block:"center",behavior:"auto"});
+  await craneSleep(SECRET_REVEAL_MS.hidden);
+  if(!visible())return;
+  paintSecretPrizeResult(play,true,true);
+  $("arcade-message").textContent=`🎉 ${plushName(play.prizes[play.result.targetIndex])}をゲット！`;
+  await craneSleep(SECRET_REVEAL_MS.revealed);
 }
 function stopCraneSweep(persist=false) {
   if(arcadeSweepFrame!==null){cancelAnimationFrame(arcadeSweepFrame);arcadeSweepFrame=null;}
@@ -1216,6 +1285,7 @@ async function renderArcade() {
   arcadeDirection=arcadePlay?.direction===-1?-1:1;
   const stage=$("crane-stage");stage.className="crane-stage";
   paintArcadeArm();paintArcadePrizes();
+  paintSecretPrizeResult(arcadePlay);
   const aiming=arcadePlay?.status==="aiming";
   const resolving=arcadePlay?.status==="resolving";
   const waitingForResume=arcadeResumeRequired && (aiming || resolving);
@@ -1241,7 +1311,7 @@ async function renderArcade() {
     else if(resolving)$("arcade-message").textContent="前回のキャッチ結果を再生できます。金貨は追加で使いません。";
     else if(arcadePlay?.status==="finished") {
       const r=arcadePlay.result;
-      $("arcade-message").textContent=r.won?`🎉 ${PLUSH_TYPES[arcadePlay.prizes[r.targetIndex]]}をゲット！`:r.grabbed?"あと少し！ 運ぶ途中で落ちちゃった…":"おしい！ 今度はもっと近くをねらおう！";
+      $("arcade-message").textContent=r.won?`🎉 ${plushName(arcadePlay.prizes[r.targetIndex])}をゲット！`:r.grabbed?"あと少し！ 運ぶ途中で落ちちゃった…":"おしい！ 今度はもっと近くをねらおう！";
     }else $("arcade-message").textContent=testMode?"テストモードでは金貨を使わず、何度でも遊べます。":"100金貨で1回遊べます。";
   }
   await renderArcadeCollection(ctx);
@@ -1307,6 +1377,8 @@ async function catchCrane() {
     const finished=await finishCranePlay(play.id);
     if(!viewCurrent(ctx))return;
     arcadePlay=finished;
+    await revealSecretPrize(arcadePlay);
+    if(!viewCurrent(ctx))return;
     await renderArcade();
   }catch(error){if(!error.navigationInterrupted)err(error);await renderArcade().catch(err);}finally{
     arcadeBusy=false;
@@ -1324,6 +1396,8 @@ async function animatePendingCrane(insideBusy=false) {
     const finished=await finishCranePlay(play.id);
     if(!viewCurrent(ctx))return;
     arcadePlay=finished;
+    await revealSecretPrize(arcadePlay);
+    if(!viewCurrent(ctx))return;
     await renderArcade();
   }catch(error){if(!error.navigationInterrupted)err(error);}finally{
     if(!insideBusy)arcadeBusy=false;
@@ -1406,7 +1480,8 @@ async function animateCraneOutcome(play) {
       toy.classList.add("delivered");
       await craneSleep(CRANE_CONFIG.releaseMs);
       checkView();
-      $("arcade-message").textContent=`🎉 ${PLUSH_TYPES[play.prizes[result.targetIndex]]}をゲット！`;
+      const id=play.prizes[result.targetIndex];
+      $("arcade-message").textContent=isSecretPlush(id)?"景品を保存しています…":`🎉 ${plushName(id)}をゲット！`;
     } else {
       $("arcade-message").textContent="あっ！ 運ぶ途中で落としてしまった…";
       toy.classList.remove("grabbed");toy.classList.add("fallen");

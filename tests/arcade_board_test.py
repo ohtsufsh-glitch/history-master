@@ -101,7 +101,7 @@ class ArcadeBoardTest(unittest.TestCase):
         self.assertEqual(len(initial['arcadeBoards']), 2)
         for board in initial['arcadeBoards']:
             self.assertEqual(len(board['slots']), 7)
-            self.assertTrue(all(prize in plush_test.IDS for prize in board['slots']))
+            self.assertTrue(all(prize in plush_test.IDS + ['secret_koryun', 'secret_yuniko', 'secret_kappamaru'] for prize in board['slots']))
         self.page.evaluate('openArcade()')
         self.assertEqual(self.page.locator('.crane-toy').count(), 7)
         self.assertIsNone(self.page.evaluate('arcadePlay'))
@@ -112,7 +112,8 @@ class ArcadeBoardTest(unittest.TestCase):
         self.page.evaluate('openArcade()')
         self.assertEqual(self.page.locator('.crane-toy img').evaluate_all(
             'imgs=>imgs.map(img=>img.getAttribute("src").split("/").pop().replace(".webp",""))'),
-            next(b['slots'] for b in initial['arcadeBoards'] if b['profile'] == 'student'))
+            ['secret_unknown' if prize.startswith('secret_') else prize
+             for prize in next(b['slots'] for b in initial['arcadeBoards'] if b['profile'] == 'student')])
 
     def test_win_clears_only_target_duplicate_and_next_snapshot_keeps_null(self):
         self.install()

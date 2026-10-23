@@ -363,8 +363,12 @@ class HistoryNavigationTest(unittest.TestCase):
         play_id = self.page.evaluate('arcadePlay.id')
         self.back('home')
         self.forward('arcade')
-        self.page.wait_for_function('arcadeResumeRequired&&arcadeSweepFrame===null')
+        # restoreRouteは画面表示後に保存プレイを非同期で取得する。
+        self.page.wait_for_function("""arcadeResumeRequired&&arcadeSweepFrame===null&&
+          document.querySelector('#crane-start').textContent.includes('追加料金なし')""")
         self.assertIn('追加料金なし', self.page.locator('#crane-start').inner_text())
+        self.assertTrue(self.page.locator('#crane-start').is_visible())
+        self.assertFalse(self.page.locator('#crane-start').is_disabled())
         self.page.evaluate("dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}))")
         self.return_event()
         self.assertIsNone(self.page.evaluate('arcadeSweepFrame'))
