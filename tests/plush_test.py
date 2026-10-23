@@ -116,7 +116,7 @@ class PlushTest(unittest.TestCase):
         self.ready()
 
     def ready(self):
-        self.page.wait_for_function("document.querySelectorAll('#era-list button').length === 10")
+        self.page.wait_for_function("(typeof appReady==='undefined'?document.querySelectorAll('#era-list button').length===10:appReady)")
         self.page.evaluate(FIXTURE_HELPERS)
 
     def tearDown(self):

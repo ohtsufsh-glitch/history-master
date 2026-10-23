@@ -53,7 +53,7 @@ class UiCleanupTest(unittest.TestCase):
         self.ready()
 
     def ready(self):
-        self.page.wait_for_function("document.querySelectorAll('#era-list button').length===10")
+        self.page.wait_for_function("(typeof appReady==='undefined'?document.querySelectorAll('#era-list button').length===10:appReady)")
 
     def tearDown(self):
         self.context.close()
@@ -82,7 +82,7 @@ class UiCleanupTest(unittest.TestCase):
         self.page.locator('#open-admin').click()
         version = self.page.locator('#app-version')
         self.assertTrue(version.is_visible())
-        self.assertEqual(version.inner_text(), 'アプリバージョン：v1.6.7')
+        self.assertEqual(version.inner_text(), 'アプリバージョン：v1.6.8')
         self.assertEqual(version.inner_text(), 'アプリバージョン：' + self.page.evaluate('APP_VERSION'))
         self.assertEqual(version.evaluate('el=>el.previousElementSibling.textContent'), '⚙️ 保護者用管理画面')
         self.assertEqual(self.page.evaluate('[DB_NAME,DB_VERSION,BACKUP_VERSION]'),
@@ -96,7 +96,8 @@ class UiCleanupTest(unittest.TestCase):
         self.page.route(self.url, lambda route: route.fulfill(body=source, content_type='text/html'))
         self.page.reload()
         self.ready()
-        self.page.locator('#open-admin').click()
+        # 履歴にある管理画面をリロード後も復元する。
+        self.assertTrue(self.page.locator('#admin').is_visible())
         self.assertEqual(self.page.locator('#app-version').inner_text(), 'アプリバージョン：v9.9.9')
         self.assertEqual(self.page.evaluate('snapshotAllStores()'), before)
 

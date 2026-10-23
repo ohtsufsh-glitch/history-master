@@ -56,7 +56,7 @@ class ArcadeBoardTest(unittest.TestCase):
         self.ready()
 
     def ready(self):
-        self.page.wait_for_function("document.querySelectorAll('#era-list button').length===10")
+        self.page.wait_for_function("(typeof appReady==='undefined'?document.querySelectorAll('#era-list button').length===10:appReady)")
         self.page.evaluate(plush_test.FIXTURE_HELPERS)
 
     def on_dialog(self, dialog):
@@ -192,7 +192,7 @@ class ArcadeBoardTest(unittest.TestCase):
             first = self.playwright.chromium.launch_persistent_context(directory, executable_path=executable)
             page = first.new_page()
             page.goto(self.url)
-            page.wait_for_function("document.querySelectorAll('#era-list button').length===10")
+            page.wait_for_function("(typeof appReady==='undefined'?document.querySelectorAll('#era-list button').length===10:appReady)")
             page.evaluate("""async()=>{
               const tx=db.transaction('arcadeBoards','readwrite');
               tx.objectStore('arcadeBoards').put({profile:'student',slots:[null,'rabbit',null,'star',null,'seal',null]});
@@ -205,7 +205,7 @@ class ArcadeBoardTest(unittest.TestCase):
             try:
                 page = second.new_page()
                 page.goto(self.url)
-                page.wait_for_function("document.querySelectorAll('#era-list button').length===10")
+                page.wait_for_function("(typeof appReady==='undefined'?document.querySelectorAll('#era-list button').length===10:appReady)")
                 self.assertEqual(page.evaluate('snapshotAllStores()'), before)
                 page.evaluate('openArcade()')
                 self.assertEqual(page.locator('.crane-toy').count(), 3)
@@ -307,7 +307,7 @@ class ArcadeBoardTest(unittest.TestCase):
         self.install()
         other = self.context.new_page()
         other.goto(self.url)
-        other.wait_for_function("document.querySelectorAll('#era-list button').length===10")
+        other.wait_for_function("(typeof appReady==='undefined'?document.querySelectorAll('#era-list button').length===10:appReady)")
         other.evaluate("async()=>{profile='test';await openArcade();}")
         self.page.locator('#crane-start').click()
         self.page.wait_for_function("arcadePlay?.status==='aiming'&&!arcadeBusy")
@@ -424,7 +424,7 @@ class ArcadeBoardTest(unittest.TestCase):
         }""")
         self.page.route(self.url, lambda route: route.fulfill(body=old_source, content_type='text/html'))
         self.page.reload()
-        self.page.wait_for_function("document.querySelectorAll('#era-list button').length===10")
+        self.page.wait_for_function("(typeof appReady==='undefined'?document.querySelectorAll('#era-list button').length===10:appReady)")
         self.page.evaluate('data=>replaceAllStores(data)', data)
         before = self.snapshot()
         self.assertEqual(self.page.evaluate('db.version'), 6)

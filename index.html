@@ -781,7 +781,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.6.7";
+const APP_VERSION = "v1.6.8";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -833,6 +833,18 @@ let editingId = null;
 let answerEvents = []; // 現行の回答記録。旧版の回答記録もバックアップには残す。
 let optionOrder = []; // 表示上の選択肢位置 -> JSON内の選択肢インデックス
 let lastCoinAward = null; // 回答済み画面を再表示するときの獲得表示
+let viewGeneration = 0;
+let appReady = false;
+let currentSession = null;
+let currentProgress = null;
+let quizReady = false;
+let pendingAnswer = null;
+let homeRender = 0, arcadeRender = 0, coinRender = 0;
+// 未確定の選択だけをタブ内に保持。保存状態が変わったら再利用しない。
+const draftSelections = new Map();
+const viewContext = () => ({generation:viewGeneration,who:profile});
+const viewCurrent = ctx => ctx.generation===viewGeneration && ctx.who===profile;
+const sameRecord = (a,b) => JSON.stringify(a??null)===JSON.stringify(b??null);
 // JSONのdifficultyは問題そのものの属性。既存問題は未設定として扱う。
 const DIFFICULTIES = {basic:"基礎", standard:"標準", advanced:"応用"};
 function difficultyLabel(q) { return DIFFICULTIES[q.difficulty] || "未設定"; }
@@ -851,14 +863,29 @@ function availableCoins(events, reviews, spends, who) {
   return coinBalance(events,who) + coinBalance(reviews,who) - coinBalance(spends,who);
 }
 async function getAvailableCoins(who=profile) {
-  const [earned,reviews,spends]=await Promise.all([readAll("coinEvents"),readAll("reviewEvents"),readAll("coinSpends")]);
-  return availableCoins(earned,reviews,spends,who);
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(["coinEvents","reviewEvents","coinSpends"],"readonly");
+    const earned=tx.objectStore("coinEvents").getAll();
+    const reviews=tx.objectStore("reviewEvents").getAll();
+    const spends=tx.objectStore("coinSpends").getAll();
+    tx.oncomplete=()=>resolve(availableCoins(earned.result,reviews.result,spends.result,who));
+    tx.onerror=tx.onabort=()=>reject(tx.error||new Error("残高を確認できませんでした"));
+  });
 }
 async function refreshCoinDisplay() {
-  const balance=await getAvailableCoins(profile);
-  // 金貨画像をtextContentで消さず、数値のテキストノードだけを更新する。
-  $("home-coin-amount").textContent=balance.toLocaleString("ja-JP");
-  return balance;
+  const ctx=viewContext(),request=++coinRender;
+  try {
+    const balance=await getAvailableCoins(ctx.who);
+    if(viewCurrent(ctx)&&request===coinRender) $("home-coin-amount").textContent=balance.toLocaleString("ja-JP");
+    return balance;
+  } catch(error) {
+    if(viewCurrent(ctx)&&request===coinRender) {
+      $("home-coin-amount").textContent="確認できません";
+      $("arcade-balance").textContent="確認できません";
+      $("crane-start").disabled=true;
+    }
+    throw error;
+  }
 }
 // 旧履歴から『報酬済み扱い』を再構成。付与取引は作らないので残高は増えない。
 // 履歴のrevisionごとに連続正解を数え、旧版をまたいだ2連続は認めない。
@@ -1098,8 +1125,9 @@ async function latestArcadePlay(who) {
   return records.filter(pendingArcadePlay).sort((a,b)=>b.startedAt.localeCompare(a.startedAt))[0]||
     records.sort((a,b)=>b.startedAt.localeCompare(a.startedAt))[0]||null;
 }
-async function refreshArcadeHome() {
+async function refreshArcadeHome(ctx=viewContext(),request=homeRender) {
   const [plays,prizes]=await Promise.all([readAll("arcadePlays"),readAll("arcadePrizes")]);
+  if(!viewCurrent(ctx)||request!==homeRender)return;
   const pending=plays.some(p=>p.profile===profile&&["aiming","resolving"].includes(p.status));
   const owned=prizes.filter(p=>p.profile===profile);
   const kinds=new Set(owned.map(p=>p.prizeId)).size;
@@ -1124,8 +1152,9 @@ function paintArcadePrizes() {
     toy.append(img);host.append(toy);
   });
 }
-async function renderArcadeCollection() {
-  const all=(await readAll("arcadePrizes")).filter(p=>p.profile===profile);
+async function renderArcadeCollection(ctx=viewContext(),request=arcadeRender) {
+  const all=(await readAll("arcadePrizes")).filter(p=>p.profile===ctx.who);
+  if(!viewCurrent(ctx)||request!==arcadeRender)return;
   const counts=Object.fromEntries(PLUSH_IDS.map(id=>[id,all.filter(p=>p.prizeId===id).length]));
   const found=PLUSH_IDS.filter(id=>counts[id]>0).length;
   $("arcade-collection-count").textContent=found===PLUSH_IDS.length?`🎉 コンプリート！ ／ ${all.length}体`:`${found}/${PLUSH_IDS.length}種類 ／ ${all.length}体`;
@@ -1165,15 +1194,25 @@ function startCraneSweep() {
   arcadeSweepFrame=requestAnimationFrame(frame);
 }
 async function renderArcade() {
+  if($("arcade").classList.contains("hidden"))return;
+  const ctx=viewContext(),request=++arcadeRender;
   $("crane-replace").disabled=true;
   $("crane-start").disabled=true;
-  arcadeBoard=await ensureArcadeBoard(profile);
-  const balance=await getAvailableCoins();
-  const testMode=profile==="test";
+  const board=await ensureArcadeBoard(ctx.who);
+  let balance;
+  try {balance=await getAvailableCoins(ctx.who);}
+  catch(error) {
+    if(viewCurrent(ctx)&&request===arcadeRender)$("arcade-balance").textContent="確認できません";
+    throw error;
+  }
+  const play=await latestArcadePlay(ctx.who);
+  if(!viewCurrent(ctx)||request!==arcadeRender)return;
+  arcadeBoard=board;
+  const testMode=ctx.who==="test";
   $("arcade-balance").textContent=testMode?"∞（無料）":balance.toLocaleString("ja-JP");
   $("arcade-profile-note").textContent=testMode?"🔧 テストモード：金貨を消費せず何回でも遊べます。景品と履歴はテスト用に保存されます。":"";
   $("arcade-profile-note").classList.toggle("hidden",!testMode);
-  arcadePlay=await latestArcadePlay(profile);
+  arcadePlay=play;
   arcadeDirection=arcadePlay?.direction===-1?-1:1;
   const stage=$("crane-stage");stage.className="crane-stage";
   paintArcadeArm();paintArcadePrizes();
@@ -1205,40 +1244,41 @@ async function renderArcade() {
       $("arcade-message").textContent=r.won?`🎉 ${PLUSH_TYPES[arcadePlay.prizes[r.targetIndex]]}をゲット！`:r.grabbed?"あと少し！ 運ぶ途中で落ちちゃった…":"おしい！ 今度はもっと近くをねらおう！";
     }else $("arcade-message").textContent=testMode?"テストモードでは金貨を使わず、何度でも遊べます。":"100金貨で1回遊べます。";
   }
-  await renderArcadeCollection();
+  await renderArcadeCollection(ctx);
+  if(!viewCurrent(ctx)||request!==arcadeRender)return;
   await refreshCoinDisplay();
+  if(!viewCurrent(ctx)||request!==arcadeRender)return;
   if(aiming && !arcadeBusy)startCraneSweep();
 }
 async function openArcade() {
   if(saving||importing||backingUp||updatingQuestions||arcadeBusy)return;
-  // ホームから入り直した場合も、未完了プレイを勝手に始めない。
-  stopCraneSweep(true);
-  arcadeResumeRequired=true;
-  notice("");show("arcade");
-  try {
-    await renderArcade();
-  }catch(error){err(error);}
+  await navigate("arcade");
 }
 async function startCrane() {
   if(arcadeBusy||backingUp||resetting)return;
+  const ctx=viewContext();
   arcadeBusy=true;$("crane-start").disabled=true;$("crane-replace").disabled=true;
   try {
-    const previous=await latestArcadePlay(profile);
+    const previous=await latestArcadePlay(ctx.who);
+    if(!viewCurrent(ctx))return;
     if(previous?.status==="aiming"||previous?.status==="resolving") {
       // 再開ボタンを押したときだけ待機解除する。
       arcadePlay=previous;
       arcadeResumeRequired=false;
       await renderArcade();
+      if(!viewCurrent(ctx))return;
       if(previous.status==="resolving")await animatePendingCrane(true);
       return;
     }
-    const board=await ensureArcadeBoard(profile);
+    const board=await ensureArcadeBoard(ctx.who);
     if(!board?.slots.some(validPlushId))return;
     const balance=await getAvailableCoins();
+    if(!viewCurrent(ctx))return;
     if(profile!=="test" && balance<CRANE_COST)return;
     if(profile!=="test" && !confirm(`100金貨を使ってUFOキャッチャーを1回遊びますか？\n現在の金貨：${balance}枚`))return;
     const play=newArcadePlay(profile);
     await purchaseCranePlay(play);
+    if(!viewCurrent(ctx))return;
     arcadePlay=play;
     arcadeResumeRequired=false;
     await renderArcade();
@@ -1257,13 +1297,18 @@ async function catchCrane() {
   $("crane-replace").disabled=true;
   $("crane-catch").disabled=true;
   try {
+    const ctx=viewContext();
     const play=arcadePlay;
     const outcome=chooseCraneOutcome(play);
-    arcadePlay=await commitCraneOutcome(play,outcome);
+    const committed=await commitCraneOutcome(play,outcome);
+    if(!viewCurrent(ctx))return;
+    arcadePlay=committed;
     await animateCraneOutcome(arcadePlay);
-    arcadePlay=await finishCranePlay(play.id);
+    const finished=await finishCranePlay(play.id);
+    if(!viewCurrent(ctx))return;
+    arcadePlay=finished;
     await renderArcade();
-  }catch(error){err(error);await renderArcade().catch(err);}finally{
+  }catch(error){if(!error.navigationInterrupted)err(error);await renderArcade().catch(err);}finally{
     arcadeBusy=false;
     await renderArcade().catch(err);
   }
@@ -1272,12 +1317,15 @@ async function animatePendingCrane(insideBusy=false) {
   if(arcadeBusy&&!insideBusy)return;
   if(arcadePlay?.status!=="resolving")return;
   if(!insideBusy)arcadeBusy=true;
+  const ctx=viewContext();
   try {
     const play=arcadePlay;
     await animateCraneOutcome(play);
-    arcadePlay=await finishCranePlay(play.id);
+    const finished=await finishCranePlay(play.id);
+    if(!viewCurrent(ctx))return;
+    arcadePlay=finished;
     await renderArcade();
-  }catch(error){err(error);}finally{
+  }catch(error){if(!error.navigationInterrupted)err(error);}finally{
     if(!insideBusy)arcadeBusy=false;
     await renderArcade().catch(err);
   }
@@ -1304,6 +1352,7 @@ function replaceCraneBoard(who,expectedSlots) {
 async function replaceArcadePrizes() {
   if(arcadeBusy||backingUp||resetting||(arcadePlay&&pendingArcadePlay(arcadePlay)))return;
   arcadeBusy=true;
+  const ctx=viewContext();
   $("crane-replace").disabled=true;$("crane-start").disabled=true;
   try {
     const who=profile,previous=await latestArcadePlay(who);
@@ -1311,22 +1360,29 @@ async function replaceArcadePrizes() {
     const board=await ensureArcadeBoard(who);
     if(!board)return;
     if(board.slots.some(validPlushId)&&!confirm("今ある景品をすべて入れ替えますか？（無料）"))return;
-    arcadeBoard=await replaceCraneBoard(who,board.slots);
+    const updated=await replaceCraneBoard(who,board.slots);
+    if(viewCurrent(ctx))arcadeBoard=updated;
   }catch(error){err(error);}finally{
     arcadeBusy=false;await renderArcade().catch(err);
   }
 }
 // 判定そのものは保存済みの値だけを読み、演出中の乱数は使用しない。
 async function animateCraneOutcome(play) {
+  const ctx=viewContext();
+  function checkView() {
+    if(!viewCurrent(ctx)||arcadeResumeRequired)throw Object.assign(new Error("キャッチを中断しました"),{navigationInterrupted:true});
+  }
   const stage=$("crane-stage"),arm=$("crane-arm"),result=play.result;
   const toy=$("crane-prizes").querySelector(`[data-slot="${result.targetIndex}"]`);
   $("arcade-message").textContent="アームが下降中…つかめるかな？";
   stage.classList.add("dropping");
   await craneSleep(CRANE_CONFIG.dropMs);
+  checkView();
   if(result.grabbed&&toy){toy.classList.add("grabbed");$("arcade-message").textContent="つかんだ！ 出口まで落とさず運ぼう！";}
   else $("arcade-message").textContent="あっ、つかめなかった！";
   stage.classList.remove("dropping");
   await craneSleep(CRANE_CONFIG.liftMs);
+  checkView();
   if(result.grabbed&&toy) {
     const fromX=play.armX;
     const toX=CRANE_CONFIG.exitX;
@@ -1340,28 +1396,32 @@ async function animateCraneOutcome(play) {
     arm.style.transitionDuration=`${armDuration}ms`;
     toy.style.transitionDuration=`${armDuration}ms, .63s, .35s, .4s`;
     await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    checkView();
     arm.style.left=`${result.won?toX:travelEnd}%`;
     toy.style.left=`${result.won?toX:travelEnd}%`;
     await craneSleep(armDuration+100);
+    checkView();
     if(result.won) {
       $("arcade-message").textContent="取り出し口に到着！ 景品をおろすよ！";
       toy.classList.add("delivered");
       await craneSleep(CRANE_CONFIG.releaseMs);
+      checkView();
       $("arcade-message").textContent=`🎉 ${PLUSH_TYPES[play.prizes[result.targetIndex]]}をゲット！`;
     } else {
       $("arcade-message").textContent="あっ！ 運ぶ途中で落としてしまった…";
       toy.classList.remove("grabbed");toy.classList.add("fallen");
       await craneSleep(720);
+      checkView();
     }
-  } else await craneSleep(420);
+  } else {await craneSleep(420);checkView();}
   arm.style.transitionDuration="";
 }
-// タブ非表示中に自動移動が進み過ぎないよう停止し、表示復帰で再開。
+// ページ/タブ復帰は手動再開。保存済み結果を勝手に再生・課金しない。
 document.addEventListener("visibilitychange",()=>{
-  if(document.hidden)stopCraneSweep(true);
-  else startCraneSweep();
+  if(document.hidden){++viewGeneration;stopCraneSweep(true);arcadeResumeRequired=true;}
+  else reconcilePage().catch(err);
 });
-window.addEventListener("pagehide",()=>stopCraneSweep(true));
+window.addEventListener("pagehide",()=>{++viewGeneration;stopCraneSweep(true);arcadeResumeRequired=true;});
 
 const CARD_MIN_QUESTIONS = 50;
 const RANKS = [
@@ -1705,20 +1765,26 @@ function readAll(storeName) {
     request.onerror = () => reject(request.error);
   });
 }
-function writeSession(session) {
+function writeSession(session, expected) {
+  const compare=arguments.length>1;
   return new Promise((resolve, reject) => {
     const tx = db.transaction("sessions", "readwrite");
-    tx.objectStore("sessions").put(session);
+    const store=tx.objectStore("sessions");
+    if(!compare) store.put(session);
+    else {
+      const req=store.get(session.key);
+      req.onsuccess=()=>{if(sameRecord(req.result,expected))store.put(session);else tx.abort();};
+    }
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error||new Error("中断情報が変わりました。最新の問題を確認してください。"));
   });
 }
 // 回答・セッション・獲得カード・コインを同一トランザクションで確定。
 // claimの存在確認から書き込みまで単一のreadwriteトランザクション内で行う。
 // 通常報酬は従来どおり1問1回。既習得問題の正解には、回答ごとに独立した復習報酬。
 // 同一セッションの二重回答を同時トランザクションで拒否し、コインの重複付与を防ぐ。
-function saveAnswer(progress, session, answerEvent, award=null, question=null, wasMastered=false) {
+function saveAnswer(progress, session, answerEvent, award=null, question=null, wasMastered=false, expected=null) {
   return new Promise((resolve,reject)=>{
     const tx=db.transaction(["progress","sessions","answers","awards","coinClaims","coinEvents","reviewEvents"],"readwrite");
     const claimStore=tx.objectStore("coinClaims");
@@ -1730,20 +1796,24 @@ function saveAnswer(progress, session, answerEvent, award=null, question=null, w
     const sessionReq=tx.objectStore("sessions").get(session.key);
     sessionReq.onsuccess=()=>{
       const onDisk=sessionReq.result;
-      if (!onDisk || onDisk.phase!=="question" || onDisk.questionId!==session.questionId || (onDisk.revision||1)!==(session.revision||1)) {
+      if (!onDisk || onDisk.phase!=="question" || onDisk.questionId!==session.questionId || (onDisk.revision||1)!==(session.revision||1) || (expected&&!sameRecord(onDisk,expected.session))) {
         tx.abort(); return;
       }
-      if(!keys.length) commitAnswer();
-      else {
-        let remaining=keys.length;
-        for(const [stage,key] of keys) {
-          const req=claimStore.get(key);
-          req.onsuccess=()=>{
-            existing.set(key,!!req.result);
-            if(--remaining===0) commitAnswer();
-          };
+      const progressReq=tx.objectStore("progress").get(progress.key);
+      progressReq.onsuccess=()=>{
+        if(expected&&!sameRecord(progressReq.result,expected.progress)){tx.abort();return;}
+        if(!keys.length) commitAnswer();
+        else {
+          let remaining=keys.length;
+          for(const [stage,key] of keys) {
+            const req=claimStore.get(key);
+            req.onsuccess=()=>{
+              existing.set(key,!!req.result);
+              if(--remaining===0) commitAnswer();
+            };
+          }
         }
-      }
+      };
     };
     function commitAnswer() {
       for(const [stage,key] of keys) if(!existing.get(key)) {
@@ -1773,9 +1843,12 @@ function saveAnswer(progress, session, answerEvent, award=null, question=null, w
   });
 }
 // 公開プログラムには問題データを含めない。選択したJSONだけを端末内で取り込む。
-async function loadImportedQuestions() {
-  importedQuestions = await readAll("questions");
-  hiddenSampleIds = new Set((await readAll("sampleSettings")).filter(x=>x.hidden).map(x=>x.id));
+async function loadImportedQuestions(ctx=null) {
+  const questions=await readAll("questions");
+  const settings=await readAll("sampleSettings");
+  if(ctx&&!viewCurrent(ctx))return;
+  importedQuestions = questions;
+  hiddenSampleIds = new Set(settings.filter(x=>x.hidden).map(x=>x.id));
   QUESTIONS = [
     ...SAMPLE_QUESTIONS.filter(q=>!hiddenSampleIds.has(q.id)),
     ...importedQuestions.filter(q=>!q.deleted)
@@ -2671,6 +2744,70 @@ async function applyRestore() {
   }
 }
 
+// 履歴は画面の入口だけ。問題の進行・選択肢・報酬の正本はsessions。
+function historyRoute(state) {
+  if(state?.app!=="history-master" || state.version!==1 ||
+    !["home","quiz","admin","arcade"].includes(state.screen) ||
+    !["student","test"].includes(state.profile) ||
+    (state.screen==="quiz"&&!ERAS.some(([id])=>id===state.era))) return null;
+  return {screen:state.screen,profile:state.profile,era:state.screen==="quiz"?state.era:null};
+}
+function navigate(screen, who=profile, era=null) {
+  const target={screen,profile:who,era:screen==="quiz"?era:null};
+  if(!sameRecord(target,historyRoute(history.state))) {
+    history.pushState({app:"history-master",version:1,...target},"");
+  }
+  return restoreRoute(target,{allowCreate:screen==="quiz"});
+}
+// アプリ内ホームは必ず同じ文書内に追加。外部履歴へhistory.back()しない。
+function navigateHome(who=profile) { return navigate("home",who); }
+async function restoreRoute(target,{allowCreate=false}={}) {
+  stopCraneSweep(true);
+  arcadeResumeRequired=true;
+  ++viewGeneration;
+  profile=target.profile;
+  quizReady=false;
+  const ctx=viewContext();
+  notice("");
+  $("home-coin-amount").textContent="確認中…";
+  $("arcade-balance").textContent="確認中…";
+  if(target.screen==="quiz") {
+    $("result").classList.add("hidden");
+    $("check").disabled=true;$("next").disabled=true;
+    $("choices").querySelectorAll("button").forEach(b=>b.disabled=true);
+  }
+  show(target.screen);
+  // 保存中に戻る→進むをした場合も、確定/中断を待ってから正本を読む。
+  if(pendingAnswer) await pendingAnswer.catch(()=>{});
+  if(!viewCurrent(ctx))return;
+  await loadImportedQuestions(ctx);
+  if(!viewCurrent(ctx))return;
+  const events=await readAll("answers");
+  if(!viewCurrent(ctx))return;
+  answerEvents=events;
+  if(target.screen==="quiz") {
+    const restored=await restoreQuiz(target.era,ctx,allowCreate);
+    if(!viewCurrent(ctx))return;
+    if(!restored) {
+      // 削除・復元等で対応するセッションがない履歴からは、新規出題しない。
+      const home={screen:"home",profile:ctx.who,era:null};
+      history.replaceState({app:"history-master",version:1,...home},"");
+      await restoreRoute(home);
+    } else await refreshCoinDisplay();
+  }
+  else if(target.screen==="home") await renderHome();
+  else if(target.screen==="arcade") await renderArcade();
+  else await refreshCoinDisplay();
+}
+function reconcilePage() {
+  if(!appReady)return Promise.resolve();
+  return restoreRoute(historyRoute(history.state)||{screen:"home",profile:"student",era:null});
+}
+window.addEventListener("popstate",()=>{reconcilePage().catch(err);});
+window.addEventListener("pageshow",event=>{
+  // 初回/reloadは起動処理が復元。bfcacheだけここで再照合し、二重初期化しない。
+  if(event.persisted)reconcilePage().catch(err);
+});
 function show(sectionId) {
   // どの画面へ移っても、プレイ中のアーム位置を一度保存する。
   if(sectionId!=="arcade" && !$("arcade").classList.contains("hidden")) stopCraneSweep(true);
@@ -2678,7 +2815,7 @@ function show(sectionId) {
   const inAdmin = sectionId === "admin";
   $("header-mode").textContent = inAdmin ? "🔧 保護者用" : profile === "test" ? "🔧 テスト中" : "👧 学習用";
   $("header-mode").classList.toggle("testtag", inAdmin || profile === "test");
-  if(db) refreshCoinDisplay().catch(err);
+  if(db) {const ctx=viewContext();refreshCoinDisplay().catch(error=>{if(viewCurrent(ctx))err(error);});}
   $("open-admin").classList.toggle("hidden", inAdmin);
   $("test-home-panel").classList.toggle("hidden", sectionId !== "home" || profile !== "test");
 }
@@ -2689,43 +2826,30 @@ function err(error) {
 }
 // 管理画面での編集後に進捗表示を更新しても、管理画面から離れない。
 async function refreshDashboardStay() {
-  const wasAdmin = !$("admin").classList.contains("hidden");
-  await renderHome();
-  if (wasAdmin) show("admin");
+  await renderHome({stay:!$("admin").classList.contains("hidden")});
 }
 function openAdmin() {
-  if (saving || importing || backingUp || managing || updatingQuestions || arcadeBusy) return;
-  notice("");
-  show("admin");
+  if (importing || backingUp || managing || updatingQuestions) return;
+  navigate("admin").catch(err);
 }
 async function beginTestMode() {
   if (saving || importing || backingUp || managing || updatingQuestions || arcadeBusy) return;
   if (!confirm("テストモードを開始しますか？\n※ 娘さんの学習履歴には影響しません。")) return;
   closeQuestionEditor();
-  profile = "test";
-  currentEra = null;
-  currentQuestion = null;
-  selected = [];
-  phase = "question";
-  notice("");
-  await renderHome();
+  await navigateHome("test");
 }
 async function returnToStudentHome() {
   if (saving || importing || backingUp || managing || updatingQuestions || arcadeBusy) return;
   closeQuestionEditor();
-  profile = "student";
-  currentEra = null;
-  currentQuestion = null;
-  selected = [];
-  phase = "question";
-  notice("");
-  await renderHome();
+  await navigateHome("student");
 }
-async function renderHome() {
-  await refreshCoinDisplay();
+async function renderHome({stay=false}={}) {
+  const ctx=viewContext(),request=++homeRender;
+  await refreshCoinDisplay().catch(error=>{if(viewCurrent(ctx))err(error);});
   const allProgress=await readAll("progress");
-  const records=new Map(allProgress.filter(x=>x.profile===profile).map(x=>[x.questionId,x]));
+  const records=new Map(allProgress.filter(x=>x.profile===ctx.who).map(x=>[x.questionId,x]));
   const awards=await readAll("awards");
+  if(!viewCurrent(ctx)||request!==homeRender)return;
   $("home-subtitle").classList.add("hidden");
   const area=$("era-list");
   area.replaceChildren();
@@ -2760,9 +2884,10 @@ async function renderHome() {
   renderOverallMastery(allStats);
   renderGenreDashboard(records);
   renderCollection(allStats,awards);
-  await refreshArcadeHome();
+  await refreshArcadeHome(ctx);
+  if(!viewCurrent(ctx)||request!==homeRender)return;
   $("dashboard").classList.remove("hidden");
-  show("home");
+  if(!stay)show("home");
 }
 function pickQuestion(era, records, previousId, recentIds=[]) {
   let candidates=QUESTIONS.filter(q=>q.era===era); // 習得済みも含めて再出題する
@@ -2787,46 +2912,74 @@ function pickQuestion(era, records, previousId, recentIds=[]) {
 }
 async function startEra(era) {
   if (saving || importing || backingUp || updatingQuestions) return;
-  currentEra = era;
-  notice("");
-  const session = await readOne("sessions", `${profile}:${era}`);
-  const question = session && QUESTIONS.find(q => q.id === session.questionId && q.era === era);
-  if (question) {
-    const progress = activeProgress(question,await readOne("progress", `${profile}:${question.id}`));
-    if ((session.revision||1)===questionRevision(question)) {
-      currentQuestion = question;
-      selected = session.selected || [];
-      phase = session.phase;
-      lastCoinAward=session.phase==="result"?{amount:session.coinAward||0,stages:session.coinStages||[]}:null;
-      optionOrder=validOrder(session.optionOrder,question.options.length) ? [...session.optionOrder] : shuffledOrder(question);
-      // 古い保存形式の中断情報にもランダムな並び順を付与して保存。
-      if (!validOrder(session.optionOrder,question.options.length)) await writeSession({...session,optionOrder});
-      renderQuestion();
-      return;
-    }
-  }
-  await advance(era, session?.questionId || null);
+  await navigate("quiz",profile,era);
 }
-async function advance(era, previousId) {
-  const all = await readAll("progress");
-  const records = new Map(all.filter(x => x.profile === profile).map(x => [x.questionId, x]));
-  const previousSession=await readOne("sessions",`${profile}:${era}`);
-  const recentIds=Array.isArray(previousSession?.recentIds) ? previousSession.recentIds : (previousId?[previousId]:[]);
-  const question = pickQuestion(era, records, previousId, recentIds);
-  if (!question) {
-    show("finished");
-    return;
+function readQuizState(who,era) {
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(["sessions","progress"],"readonly");
+    const req=tx.objectStore("sessions").get(`${who}:${era}`);
+    let progress=null;
+    req.onsuccess=()=>{
+      if(!req.result)return;
+      const p=tx.objectStore("progress").get(`${who}:${req.result.questionId}`);
+      p.onsuccess=()=>{progress=p.result||null;};
+    };
+    tx.oncomplete=()=>resolve({session:req.result,progress});
+    tx.onerror=tx.onabort=()=>reject(tx.error||new Error("問題の保存状態を確認できませんでした"));
+  });
+}
+async function restoreQuiz(era,ctx=viewContext(),allowCreate=false) {
+  const {session,progress}=await readQuizState(ctx.who,era);
+  if(!viewCurrent(ctx))return;
+  const question=session&&QUESTIONS.find(q=>q.id===session.questionId&&q.era===era);
+  if(question&&(session.revision||1)===questionRevision(question)) {
+    if(!validOrder(session.optionOrder,question.options.length)) {
+      const updated={...session,optionOrder:shuffledOrder(question)};
+      await writeSession(updated,session);
+      if(!viewCurrent(ctx))return;
+      return restoreQuiz(era,ctx,allowCreate);
+    }
+    currentSession=structuredClone(session);
+    currentProgress=progress;
+    currentEra=era;currentQuestion=question;
+    const draft=draftSelections.get(session.key);
+    selected=session.phase==="question"&&draft&&sameRecord(draft.session,session)?[...draft.selected]:[...session.selected];
+    phase=session.phase;
+    if(phase==="result")draftSelections.delete(session.key);
+    optionOrder=[...session.optionOrder];
+    lastCoinAward=phase==="result"?{amount:session.coinAward||0,stages:session.coinStages||[]}:null;
+    quizReady=true;
+    $("next").disabled=false;
+    renderQuestion();
+    return true;
   }
-  optionOrder=shuffledOrder(question);
+  if(allowCreate)return advance(era,session?.questionId||null,ctx);
+  quizReady=false;
+  notice("問題が更新されました。ホームから時代を選び直してください。");
+  return false;
+}
+async function advance(era, previousId, ctx=viewContext()) {
+  if(!viewCurrent(ctx))return;
+  quizReady=false;
+  $("next").disabled=true;
+  const previousSession=await readOne("sessions",`${ctx.who}:${era}`);
+  const all=await readAll("progress");
+  if(!viewCurrent(ctx))return;
+  const records=new Map(all.filter(x=>x.profile===ctx.who).map(x=>[x.questionId,x]));
+  const recentIds=Array.isArray(previousSession?.recentIds)?previousSession.recentIds:(previousId?[previousId]:[]);
+  const question=pickQuestion(era,records,previousId,recentIds);
+  if(!question){show("finished");return false;}
   const nextRecent=[question.id,...recentIds.filter(id=>id!==question.id)].slice(0,3);
-  const session = { key:`${profile}:${era}`, profile, era, questionId:question.id, revision:questionRevision(question), phase:"question", selected:[], optionOrder:[...optionOrder], recentIds:nextRecent };
-  await writeSession(session);
-  currentEra = era;
-  currentQuestion = question;
-  selected = [];
-  phase = "question";
-  lastCoinAward=null;
-  renderQuestion();
+  const session={key:`${ctx.who}:${era}`,profile:ctx.who,era,questionId:question.id,revision:questionRevision(question),phase:"question",selected:[],optionOrder:shuffledOrder(question),recentIds:nextRecent};
+  try {await writeSession(session,previousSession);}
+  catch(error) {
+    // 他タブが先に進めた場合はそのセッションを表示し、上書きしない。
+    if(viewCurrent(ctx))await restoreQuiz(era,ctx,false);
+    throw error;
+  }
+  if(!viewCurrent(ctx))return;
+  draftSelections.delete(session.key);
+  return restoreQuiz(era,ctx,false);
 }
 function renderQuestion() {
   const q = currentQuestion;
@@ -2858,8 +3011,9 @@ function renderQuestion() {
     txt.textContent = option;
     btn.append(marker, txt);
     btn.addEventListener("click", () => {
-      if (phase !== "question" || saving) return;
+      if (phase !== "question" || saving || !quizReady) return;
       selected = q.answers.length === 1 ? [i] : selected.includes(i) ? selected.filter(x => x !== i) : [...selected, i];
+      draftSelections.set(currentSession.key,{session:structuredClone(currentSession),selected:[...selected]});
       updateChoices();
     });
     choices.append(btn);
@@ -2883,17 +3037,24 @@ function isCorrect(q, answer) {
   return answer.length === q.answers.length && answer.every(i => q.answers.includes(i));
 }
 async function grade() {
-  if (saving || importing || backingUp || updatingQuestions || phase !== "question" || !selected.length) return;
+  if (saving || importing || backingUp || updatingQuestions || !quizReady || phase !== "question" || !selected.length) return;
   saving = true;
   updateChoices();
-  const q = currentQuestion;
+  const q = structuredClone(currentQuestion);
+  const ctx=viewContext();
+  const sessionAtSubmit=structuredClone(currentSession);
+  const progressAtSubmit=structuredClone(currentProgress);
+  const orderAtSubmit=[...optionOrder];
   const profileAtSubmit = profile;
   const eraAtSubmit = currentEra;
   const answerAtSubmit = [...selected];
+  const eraQuestionsAtSubmit=QUESTIONS.filter(item=>item.era===eraAtSubmit).map(item=>structuredClone(item));
   const correct = isCorrect(q, answerAtSubmit);
+  const task=(async()=>{
   try {
     const key = `${profileAtSubmit}:${q.id}`;
-    const before = activeProgress(q,await readOne("progress", key));
+    const rawBefore=await readOne("progress",key);
+    const before=activeProgress(q,rawBefore);
     const streak = correct ? (before?.streak || 0) + 1 : 0;
     const now = new Date().toISOString();
     const progress = {
@@ -2902,12 +3063,11 @@ async function grade() {
       streak, everWrong:!!before?.everWrong || !correct,
       mastered:streak >= 2, lastAnsweredAt:now
     };
-    const previousSession=await readOne("sessions",`${profileAtSubmit}:${eraAtSubmit}`);
     const session = { key:`${profileAtSubmit}:${eraAtSubmit}`, profile:profileAtSubmit, era:eraAtSubmit, questionId:q.id, revision:questionRevision(q), phase:"result", selected:answerAtSubmit,
-      optionOrder:[...optionOrder], recentIds:previousSession?.recentIds||[q.id] };
+      optionOrder:orderAtSubmit, recentIds:sessionAtSubmit.recentIds||[q.id] };
     const event = { profile:profileAtSubmit, questionId:q.id, revision:questionRevision(q), correct, selected:answerAtSubmit, at:now, token:crypto.randomUUID() };
     let award=null;
-    const eraQuestions=QUESTIONS.filter(item=>item.era===eraAtSubmit);
+    const eraQuestions=eraQuestionsAtSubmit;
     if (progress.mastered && eraQuestions.length>=CARD_MIN_QUESTIONS) {
       const allProgress=await readAll("progress");
       const byId=new Map(allProgress.filter(item=>item.profile===profileAtSubmit).map(item=>[item.questionId,item]));
@@ -2919,18 +3079,31 @@ async function grade() {
         }
       }
     }
-    const granted=await saveAnswer(progress, session, event, award, q, !!before?.mastered);
-    answerEvents.push(event);
-    lastCoinAward=granted;
-    phase = "result";
-    await refreshCoinDisplay();
-    showResult(award,granted);
-    notice("回答を保存しました。");
+    const granted=await saveAnswer(progress, session, event, award, q, !!before?.mastered,{session:sessionAtSubmit,progress:progressAtSubmit});
+    return {award,session};
   } catch (error) {
-    err(error);
-  } finally {
-    saving = false;
-    updateChoices();
+    if(viewCurrent(ctx))err(error);
+  }
+  })();
+  pendingAnswer=task;
+  const saved=await task;
+  if(saved)draftSelections.delete(sessionAtSubmit.key);
+  if(pendingAnswer===task)pendingAnswer=null;
+  if(viewCurrent(ctx))quizReady=false;
+  saving=false;
+  // 復帰処理が待機中なら、そちらが同じ正本を読み直す。
+  if(viewCurrent(ctx)) {
+    try {
+      const events=await readAll("answers");
+      if(!viewCurrent(ctx))return;
+      answerEvents=events;
+      await restoreQuiz(eraAtSubmit,ctx,false);
+      await refreshCoinDisplay();
+      if(viewCurrent(ctx)&&saved&&sameRecord(currentSession,saved.session)) {
+        showResult(saved.award);
+        notice("回答を保存しました。");
+      }
+    }catch(error){if(viewCurrent(ctx))err(error);}
   }
 }
 function createCoinIcon() {
@@ -3300,7 +3473,7 @@ $("import-file").addEventListener("change", () => previewImport().catch(err));
 $("import-apply").addEventListener("click", () => applyImport().catch(err));
 $("open-admin").addEventListener("click", openAdmin);
 $("open-arcade").addEventListener("click",()=>openArcade().catch(err));
-$("arcade-back").addEventListener("click",()=>{if(!arcadeBusy){stopCraneSweep(true);renderHome().catch(err);}});
+$("arcade-back").addEventListener("click",()=>navigateHome().catch(err));
 $("crane-start").addEventListener("click",()=>startCrane().catch(err));
 $("crane-replace").addEventListener("click",()=>replaceArcadePrizes().catch(err));
 $("crane-catch").addEventListener("click",()=>catchCrane().catch(err));
@@ -3308,10 +3481,10 @@ $("crane-catch").addEventListener("click",()=>catchCrane().catch(err));
 $("admin-start-test").addEventListener("click", () => beginTestMode().catch(err));
 $("admin-back").addEventListener("click", () => returnToStudentHome().catch(err));
 $("test-return-admin").addEventListener("click", openAdmin);
-$("back-home").addEventListener("click", () => { if (!saving && !importing && !backingUp) renderHome().catch(err); });
-$("finish-home").addEventListener("click", () => renderHome().catch(err));
+$("back-home").addEventListener("click", () => { if (!importing && !backingUp) navigateHome().catch(err); });
+$("finish-home").addEventListener("click", () => navigateHome().catch(err));
 $("check").addEventListener("click", grade);
-$("next").addEventListener("click", () => advance(currentEra, currentQuestion.id).catch(err));
+$("next").addEventListener("click", () => {if(quizReady&&phase==="result"&&!saving)advance(currentEra,currentQuestion.id).catch(err);});
 $("card-preview-panel").addEventListener("toggle",event=>{
   if(event.target.open) renderAdminCardPreview();
 });
@@ -3336,7 +3509,10 @@ $("card-detail-dialog").addEventListener("click", event => {
     invalidateTagMapPreview();
     // 初回起動時はHTMLの案内文をそのまま表示する。
     await ensureEarnedCards();
-    await renderHome();
+    const target=historyRoute(history.state)||{screen:"home",profile:"student",era:null};
+    history.replaceState({app:"history-master",version:1,...target},"");
+    await restoreRoute(target);
+    appReady=true;
   } catch (error) {
     err(error);
     $("home-subtitle").textContent = "保存機能を利用できません。通常のSafariでページを開き直してください。";
