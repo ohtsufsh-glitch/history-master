@@ -486,7 +486,22 @@
     .plush-item img{width:100%;max-width:105px;aspect-ratio:1;object-fit:contain;display:block;margin:0 auto 5px;}
     .plush-item.not-owned img{filter:grayscale(1) brightness(.5);opacity:.45;}
     .plush-item strong{font-size:.75rem;display:block;overflow-wrap:anywhere;line-height:1.5;}
-    .plush-item .owned{color:#8b5425;font-weight:900;font-size:.88rem;}
+    .plush-item .owned{display:block;color:#8b5425;font-weight:900;font-size:.88rem;}
+    button.plush-item{font:inherit;color:inherit;cursor:pointer;min-height:44px;touch-action:manipulation;}
+    button.plush-item:focus-visible{outline:3px solid #92611f;outline-offset:3px;}
+    body.plush-modal-open{position:fixed;inset-inline:0;overflow:hidden;}
+    .plush-detail-dialog{box-sizing:border-box;width:min(calc(100% - 24px),500px);max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain;padding:16px 20px 24px;border:2px solid #e9cd83;border-radius:26px;background:radial-gradient(ellipse at 50% 35%,#fffef8 15%,transparent 70%),linear-gradient(150deg,#fff9e9,#f9e5ac);color:#634420;box-shadow:0 18px 60px #46331966;text-align:center;}
+    .plush-detail-dialog::backdrop{background:#302539aa;}
+    .plush-detail-close{display:block;position:sticky;top:0;z-index:1;margin:0 0 0 auto;min-width:100px;min-height:44px;border:1px solid #d8b864;border-radius:16px;background:#fffdf4;color:#634420;font:inherit;font-weight:800;touch-action:manipulation;}
+    .plush-detail-art{position:relative;}
+    .plush-detail-sparkles{position:absolute;inset:0;pointer-events:none;}
+    .plush-detail-sparkles::before,.plush-detail-sparkles::after{position:absolute;top:15%;color:#d6aa42;font-size:clamp(20px,5vw,32px);content:"✦";}
+    .plush-detail-sparkles::before{left:2%;}.plush-detail-sparkles::after{right:2%;top:65%;font-size:20px;}
+    .plush-detail-dialog img{display:block;width:100%;max-width:420px;height:min(48vh,420px);height:min(48dvh,420px);object-fit:contain;margin:0 auto;}
+    .plush-detail-dialog h2{margin:6px 0;font-size:clamp(1.2rem,5vw,1.7rem);overflow-wrap:anywhere;}
+    .plush-detail-dialog p{margin:8px 0 0;font-size:1.1rem;font-weight:800;}
+    .plush-detail-dialog[open] .plush-detail-art{animation:secret-appear .18s ease-out;}
+    @media(prefers-reduced-motion:reduce){.plush-detail-dialog[open] .plush-detail-art{animation:none;}}
     .secret-collection-head{margin-top:20px;}
     .plush-item.secret-locked img{filter:none;opacity:1;}
     .secret-reveal{max-width:300px;margin:12px auto;padding:12px;border:2px solid #d6aa57;border-radius:18px;background:#fff8e6;text-align:center;}
@@ -647,7 +662,7 @@
       </div>
     </div>
     <div class="arcade-collection">
-      <div class="panel-head"><div><span class="section-kicker">PRIZE COLLECTION</span><h3>🎁 ぬいぐるみコレクション</h3></div><strong id="arcade-collection-count" class="rank-pill">読み込み中…</strong></div>
+      <div class="panel-head"><div><span class="section-kicker">PRIZE COLLECTION</span><h3 id="arcade-collection-title" tabindex="-1">🎁 ぬいぐるみコレクション</h3></div><strong id="arcade-collection-count" class="rank-pill">読み込み中…</strong></div>
       <div id="arcade-collection-list" class="plush-grid" aria-label="獲得したぬいぐるみ"></div>
       <div class="panel-head secret-collection-head"><h3>✨ シークレット</h3><strong id="arcade-secret-collection-count" class="rank-pill">読み込み中…</strong></div>
       <div id="arcade-secret-collection-list" class="plush-grid" aria-label="シークレットのコレクション"></div>
@@ -788,11 +803,17 @@
   <p id="card-detail-era" class="muted"></p>
   <p id="card-detail-status" class="rank-pill">🏆 獲得済み</p>
 </dialog>
+<dialog id="plush-detail-dialog" class="plush-detail-dialog" aria-labelledby="plush-detail-title" aria-describedby="plush-detail-count">
+  <button id="plush-detail-close" class="plush-detail-close" type="button" autofocus>× 閉じる</button>
+  <div class="plush-detail-art"><span class="plush-detail-sparkles" aria-hidden="true"></span><img id="plush-detail-image" alt="" decoding="async"></div>
+  <h2 id="plush-detail-title"></h2>
+  <p id="plush-detail-count"></p>
+</dialog>
 
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.6.9";
+const APP_VERSION = "v1.6.10";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -1186,16 +1207,62 @@ function paintArcadePrizes() {
     toy.append(img);host.append(toy);
   });
 }
-// 通常・秘密で共通の項目構造。将来の拡大表示は獲得済みのdata-prize-idを利用できる。
+// 獲得済みだけ操作可能。未獲得の秘密はID・ラベルにも正体を出さない。
 function plushCollectionItem(id,amount) {
   const shown=plushPresentation(id,amount>0);
-  const box=document.createElement("div");
+  const box=document.createElement(amount>0?"button":"div");
   box.className="plush-item"+(amount?"":" not-owned")+(!amount&&isSecretPlush(id)?" secret-locked":"");
-  if(amount)box.dataset.prizeId=id;
+  if(amount>0){
+    box.type="button";box.dataset.prizeId=id;
+    box.setAttribute("aria-label",`${shown.name}を大きく見る（獲得数：${amount}体）`);
+    box.setAttribute("aria-haspopup","dialog");
+  }
   const img=document.createElement("img");img.src=shown.path;img.alt=shown.name;img.loading="lazy";img.decoding="async";
   const name=document.createElement("strong");name.textContent=shown.name;
-  const count=document.createElement("div");count.className="owned";count.textContent=amount?`×${amount}`:"未獲得";
+  const count=document.createElement("span");count.className="owned";count.textContent=amount?`×${amount}`:"未獲得";
   box.append(img,name,count);return box;
+}
+// 閲覧状態はタブ内だけ。開閉はDB・プレイ・History APIに書き込まない。
+let plushDetailRequest=0,plushDetailState=null;
+function canOpenPlushDetail() {
+  return !document.hidden&&!$("arcade").classList.contains("hidden")&&
+    !arcadeBusy&&!backingUp&&!resetting&&!(arcadePlay&&pendingArcadePlay(arcadePlay));
+}
+async function openPlushDetail(opener) {
+  const id=opener?.dataset.prizeId;
+  if(!validPlushId(id)||!opener.matches("button.plush-item")||!opener.isConnected||
+    !canOpenPlushDetail()||document.querySelector("dialog[open]"))return;
+  const ctx=viewContext(),request=++plushDetailRequest;
+  // DOMの古い獲得表示を信用せず、現在のプロフィールの保存記録で再確認。
+  const [prizes,plays]=await Promise.all([readAll("arcadePrizes"),readAll("arcadePlays")]);
+  if(request!==plushDetailRequest||!viewCurrent(ctx)||!opener.isConnected||!canOpenPlushDetail()||
+    document.querySelector("dialog[open]")||plays.some(p=>p.profile===ctx.who&&pendingArcadePlay(p)))return;
+  const amount=prizes.filter(p=>p.profile===ctx.who&&p.prizeId===id).length;
+  if(!amount)return;
+  const shown=plushPresentation(id,true);
+  $("plush-detail-image").src=shown.path;$("plush-detail-image").alt=shown.name;
+  $("plush-detail-title").textContent=shown.name;
+  $("plush-detail-count").textContent=`獲得数：${amount}体`;
+  plushDetailState={opener,ctx,x:window.scrollX,y:window.scrollY,top:document.body.style.top};
+  document.body.style.top=`-${window.scrollY}px`;
+  document.body.classList.add("plush-modal-open");
+  $("plush-detail-dialog").showModal();
+  $("plush-detail-close").focus({preventScroll:true});
+}
+function closePlushDetail(restoreFocus=true) {
+  ++plushDetailRequest; // 読み込み中の開く操作も取り消す。
+  const state=plushDetailState;plushDetailState=null;
+  const dialog=$("plush-detail-dialog");
+  if(dialog.open)dialog.close();
+  $("plush-detail-image").removeAttribute("src");$("plush-detail-image").alt="";
+  $("plush-detail-title").textContent="";$("plush-detail-count").textContent="";
+  if(!state)return;
+  document.body.classList.remove("plush-modal-open");document.body.style.top=state.top;
+  window.scrollTo(state.x,state.y);
+  if(restoreFocus&&viewCurrent(state.ctx)&&!$("arcade").classList.contains("hidden")) {
+    const target=state.opener.isConnected?state.opener:$("arcade-collection-title");
+    target.focus({preventScroll:true});
+  }
 }
 async function renderArcadeCollection(ctx=viewContext(),request=arcadeRender) {
   const all=(await readAll("arcadePrizes")).filter(p=>p.profile===ctx.who);
@@ -1493,10 +1560,10 @@ async function animateCraneOutcome(play) {
 }
 // ページ/タブ復帰は手動再開。保存済み結果を勝手に再生・課金しない。
 document.addEventListener("visibilitychange",()=>{
-  if(document.hidden){++viewGeneration;stopCraneSweep(true);arcadeResumeRequired=true;}
+  if(document.hidden){closePlushDetail(false);++viewGeneration;stopCraneSweep(true);arcadeResumeRequired=true;}
   else reconcilePage().catch(err);
 });
-window.addEventListener("pagehide",()=>{++viewGeneration;stopCraneSweep(true);arcadeResumeRequired=true;});
+window.addEventListener("pagehide",()=>{closePlushDetail(false);++viewGeneration;stopCraneSweep(true);arcadeResumeRequired=true;});
 
 const CARD_MIN_QUESTIONS = 50;
 const RANKS = [
@@ -2843,6 +2910,7 @@ function navigate(screen, who=profile, era=null) {
 // アプリ内ホームは必ず同じ文書内に追加。外部履歴へhistory.back()しない。
 function navigateHome(who=profile) { return navigate("home",who); }
 async function restoreRoute(target,{allowCreate=false}={}) {
+  closePlushDetail(false);
   stopCraneSweep(true);
   arcadeResumeRequired=true;
   ++viewGeneration;
@@ -2890,6 +2958,7 @@ window.addEventListener("pageshow",event=>{
   if(event.persisted)reconcilePage().catch(err);
 });
 function show(sectionId) {
+  closePlushDetail(false);
   // どの画面へ移っても、プレイ中のアーム位置を一度保存する。
   if(sectionId!=="arcade" && !$("arcade").classList.contains("hidden")) stopCraneSweep(true);
   for (const id of ["home", "admin", "quiz", "finished", "arcade"]) $(id).classList.toggle("hidden", id !== sectionId);
@@ -3572,6 +3641,34 @@ $("card-preview-panel").addEventListener("toggle",event=>{
 $("card-detail-close").addEventListener("click", () => $("card-detail-dialog").close());
 $("card-detail-dialog").addEventListener("click", event => {
   if(event.target === $("card-detail-dialog")) $("card-detail-dialog").close();
+});
+for(const list of ["arcade-collection-list","arcade-secret-collection-list"]) {
+  $(list).addEventListener("click",event=>{
+    const opener=event.target.closest("button[data-prize-id]");
+    if(opener)openPlushDetail(opener).catch(err);
+  });
+}
+$("plush-detail-close").addEventListener("click",()=>closePlushDetail());
+$("plush-detail-dialog").addEventListener("cancel",event=>{event.preventDefault();closePlushDetail();});
+$("plush-detail-dialog").addEventListener("keydown",event=>{
+  // 操作要素は閉じるボタンだけ。Tabでもフォーカスをdialog内に保つ。
+  if(event.key==="Tab"){event.preventDefault();$("plush-detail-close").focus({preventScroll:true});}
+});
+$("plush-detail-dialog").addEventListener("close",()=>{
+  if(!$("plush-detail-dialog").open)closePlushDetail();
+});
+// 内側の余白や画像からのドラッグでは閉じない。外側で押して離したときだけ閉じる。
+let plushBackdropPressed=false;
+function outsidePlushDetail(event) {
+  const rect=$("plush-detail-dialog").getBoundingClientRect();
+  return event.target===$("plush-detail-dialog")&&
+    (event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom);
+}
+$("plush-detail-dialog").addEventListener("pointerdown",event=>{plushBackdropPressed=outsidePlushDetail(event);});
+$("plush-detail-dialog").addEventListener("pointercancel",()=>{plushBackdropPressed=false;});
+$("plush-detail-dialog").addEventListener("click",event=>{
+  const outside=plushBackdropPressed&&outsidePlushDetail(event);plushBackdropPressed=false;
+  if(outside)closePlushDetail();
 });
 (async () => {
   try {
