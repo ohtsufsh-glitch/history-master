@@ -160,7 +160,7 @@ class PlushTest(unittest.TestCase):
         })""")
         self.assertEqual(actual['types'], TYPES)
         self.assertEqual(actual['ids'], IDS)
-        self.assertEqual((actual['db'], actual['backup']), (7, 7))
+        self.assertEqual((actual['db'], actual['backup']), (8, 8))
         for prize_id, image in zip(IDS, actual['images']):
             self.assertEqual(image['path'], f'assets/plush/{prize_id}.webp')
             self.assertGreater(image['width'], 0)
@@ -230,8 +230,9 @@ class PlushTest(unittest.TestCase):
                 result = self.page.evaluate("""async ({data,version})=>{
                   stopCraneSweep();
                   const normalized=validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:version,data});
+                  const localFeedback=await readAll("questionFeedback");
                   pendingRestore=normalized;await applyRestore();
-                  return {normalized,snapshot:await snapshotAllStores(),
+                  return {normalized:{...normalized,questionFeedback:localFeedback},snapshot:await snapshotAllStores(),
                     positions:normalized.arcadePlays.map(play=>positionsForPlay(play)),
                     balance:await getAvailableCoins('student')};
                 }""", {'data': data, 'version': version})
@@ -268,7 +269,7 @@ class PlushTest(unittest.TestCase):
         with self.page.expect_download() as event:
             self.page.locator('#backup-export').click()
         backup = json.loads(Path(event.value.path()).read_text())
-        self.assertEqual(backup['backupVersion'], 7)
+        self.assertEqual(backup['backupVersion'], 8)
         self.assertEqual(backup['data'], before)
         self.install(self.fixture())
         cleared = self.snapshot()
@@ -382,7 +383,9 @@ class PlushTest(unittest.TestCase):
                 else:
                     play['prizes'] = ['star'] * 7
                 data=self.page.evaluate('data=>validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:6,data})', data)
+                local_feedback = self.page.evaluate('readAll("questionFeedback")')
                 self.install(data)
+                data["questionFeedback"] = local_feedback  # 旧復元は指摘を保持する仕様。比較対象にも含める。
                 self.page.evaluate("async()=>{profile='student';await openArcade();}")
                 self.assertIn('追加料金なし', self.page.locator('#crane-start').inner_text())
                 self.assertTrue(self.page.locator('#crane-catch').is_disabled())

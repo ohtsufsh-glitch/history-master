@@ -295,7 +295,7 @@ class QuestionEditorTest(unittest.TestCase):
         q = next(q for q in self.questions if q['id'] == 'TEST-MULTIPLE')
         self.assertEqual(result, {'options': q['options'], 'answers': q['answers'],
                                  'unchanged': 1, 'changes': 0, 'rejected': 3,
-                                 'dbVersion': 7, 'backupFormat': 'history-master-backup', 'backupVersion': 7})
+                                 'dbVersion': 8, 'backupFormat': 'history-master-backup', 'backupVersion': 8})
 
     def test_touch_layout_and_enter_creates_line_within_one_option(self):
         for width, height in [(375, 812), (390, 844), (820, 1180)]:

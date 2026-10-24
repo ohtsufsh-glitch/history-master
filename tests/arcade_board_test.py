@@ -388,7 +388,7 @@ class ArcadeBoardTest(unittest.TestCase):
         with self.page.expect_download() as event:
             self.page.locator('#backup-export').click()
         backup = json.loads(Path(event.value.path()).read_text())
-        self.assertEqual(backup['backupVersion'], 7)
+        self.assertEqual(backup['backupVersion'], 8)
         self.assertEqual(backup['data'], before)
         self.install()
         changed = self.snapshot()
@@ -453,7 +453,7 @@ class ArcadeBoardTest(unittest.TestCase):
         self.page.reload()
         self.ready()
         after = self.snapshot()
-        self.assertEqual(self.page.evaluate('[db.version,db.objectStoreNames.length]'), [7, 14])
+        self.assertEqual(self.page.evaluate('[db.version,db.objectStoreNames.length]'), [8, 15])
         for name in before:
             self.assertEqual(after[name], before[name], name)
         self.assertEqual(self.board('student')['slots'], [None] + ['rabbit'] * 6)

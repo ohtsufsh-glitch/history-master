@@ -10,7 +10,7 @@ import history_navigation_test as navigation
 
 
 GROUPS = ['admin-questions-group', 'admin-backup-group', 'admin-other-group']
-PANELS = ['import', 'manage', 'question-update', 'tag-map', 'backup', 'reset']
+PANELS = ['import', 'manage', 'question-update', 'feedback', 'tag-map', 'backup', 'reset']
 
 
 class AdminMenuHierarchyTest(unittest.TestCase):
@@ -105,7 +105,7 @@ class AdminMenuHierarchyTest(unittest.TestCase):
         self.assertEqual(self.page.locator('#admin > .admin-group > summary h3').evaluate_all('els=>els.map(el=>el.firstChild.textContent)'),
                          ['📚 問題を管理する', '💾 バックアップ・復元', '⚙️ その他の管理'])
         self.assertEqual(self.page.locator('#admin-questions-group .import-toggle').evaluate_all('els=>els.map(el=>el.id)'),
-                         ['toggle-import', 'toggle-manage', 'toggle-question-update', 'toggle-tag-map'])
+                         ['toggle-import', 'toggle-manage', 'toggle-question-update', 'toggle-feedback', 'toggle-tag-map'])
         self.assertEqual(self.page.locator('#admin-other-group > .admin-group-content').evaluate(
             'el=>[...el.children].map(el=>el.id)'), ['card-preview-panel', 'toggle-reset', 'reset-panel'])
 
@@ -285,14 +285,14 @@ class AdminMenuHierarchyTest(unittest.TestCase):
 
     def test_menu_toggles_leave_all_fourteen_stores_unchanged(self):
         before = self.snapshot()
-        self.assertEqual(len(before), 14)
+        self.assertEqual(len(before), 15)
         for name in PANELS:
             self.panel(name)
         for _ in range(2):
             for group in GROUPS:
                 self.cycle(group)
         self.assertEqual(self.snapshot(), before)
-        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION]'), [7, 7])
+        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION]'), [8, 8])
 
     def test_menu_toggles_do_not_add_browser_history(self):
         before = self.page.evaluate('({length:history.length,state:history.state,url:location.href})')
@@ -323,7 +323,7 @@ class AdminMenuHierarchyTest(unittest.TestCase):
         for group in GROUPS:
             self.group(group)
         targets = self.page.locator('#admin > .admin-group > summary, #admin .import-toggle, #card-preview-panel > summary')
-        self.assertEqual(targets.count(), 10)
+        self.assertEqual(targets.count(), 11)
         for target in targets.all():
             bounds = target.bounding_box()
             self.assertGreaterEqual(bounds['height'], 44)

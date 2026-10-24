@@ -443,14 +443,18 @@ class QuizCoinDisplayTest(unittest.TestCase):
         self.page.evaluate("""async()=>{
           const data=plushFixture(['shiba'],'student');
           data.sampleSettings=SAMPLE_QUESTIONS.map(q=>({id:q.id,hidden:true}));
+          const q=data.questions[0],at='2020-01-01T00:00:00.000Z';
+          data.questionFeedback=[{reportId:crypto.randomUUID(),questionId:q.id,questionRevision:1,
+            questionHash:await sha256Text(questionFingerprintSource(q)),questionSnapshot:{...exportableQuestion(q),deleted:false},
+            reporterRole:'learner',sourceProfile:'student',category:'other',comment:'架空の指摘',createdAt:at,status:'unreviewed',statusUpdatedAt:at}];
           await plushInstall(data);await navigateHome('student');
         }""")
         self.quiz()
         self.balance(705)
         before = self.snapshot()
-        self.assertEqual(len(before), 14)
+        self.assertEqual(len(before), 15)
         self.assertTrue(all(before.values()))
-        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [7, 7, 14])
+        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [8, 8, 15])
         for _ in range(3):
             self.page.evaluate('refreshCoinDisplay()')
             self.return_event()

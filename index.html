@@ -583,6 +583,15 @@
     @media(prefers-reduced-motion:reduce) {
       .crane-stage.transporting .crane-arm, .crane-toy { transition:none!important; }
     }
+    .feedback-link { display:block; min-height:44px; padding:10px 6px; border:0; background:transparent; color:#526577; font-size:.88rem; box-shadow:none; }
+    #feedback-dialog { width:min(440px,calc(100vw - 32px)); max-height:85dvh; overflow:auto; border:1px solid #bacbd4; border-radius:14px; padding:18px; box-sizing:border-box; }
+    #feedback-dialog::backdrop { background:rgba(20,35,50,.35); }
+    #feedback-dialog label { display:block; margin-top:12px; }
+    #feedback-dialog select, #feedback-dialog textarea { width:100%; box-sizing:border-box; min-height:44px; font:inherit; }
+    .feedback-text { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.65; }
+    #feedback-list select, #feedback-panel button { min-height:44px; max-width:100%; }
+    #feedback-list input[type=checkbox] { min-width:24px; min-height:24px; }
+    .feedback-select { display:flex; align-items:center; gap:10px; min-height:44px; }
   </style>
 </head>
 <body>
@@ -749,6 +758,30 @@
           <div id="question-update-diffs"></div>
           <button id="question-update-apply" type="button" class="primary hidden">検査した変更を一括保存する</button>
         </div>
+        <button id="toggle-feedback" class="import-toggle" type="button" aria-expanded="false" aria-controls="feedback-panel">＋ 問題の指摘・改善管理</button>
+        <div id="feedback-panel" class="import-panel hidden">
+          <h4>問題の指摘・改善管理</h4>
+          <p class="muted small">対応済みも履歴として保持します。指摘で問題・難易度・成績は変わりません。内蔵サンプルも報告できます（修正はアプリ側で対応）。</p>
+          <div class="manager-controls">
+            <label>時代<select id="feedback-era"><option value="all">すべて</option></select></label>
+            <label>カテゴリ<select id="feedback-filter-category"><option value="all">すべて</option></select></label>
+            <label>状態<select id="feedback-filter-status"><option value="all">すべて</option></select></label>
+            <label>問題の版<select id="feedback-filter-version"><option value="all">すべて</option><option value="mismatch">要確認（版不一致・問題なし）</option></select></label>
+          </div>
+          <button id="feedback-refresh" type="button">一覧を更新する</button>
+          <div id="feedback-summary" class="feedback-text small" role="status" aria-live="polite"></div>
+          <div id="feedback-list"></div>
+          <button id="feedback-more" class="hidden" type="button">さらに50件表示</button>
+          <div class="manager-actions">
+            <button id="feedback-export-selected" type="button">選択した指摘を書き出す</button>
+            <button id="feedback-export-all" type="button">全指摘JSONを書き出す</button>
+          </div>
+          <p class="muted small">管理状態は交換JSONに含めません。書き出しても指摘は残ります。Safariでダウンロード後、「ファイル」アプリ・iCloud Driveで移動してください。教材の文章を含むため公開しないでください。</p>
+          <label for="feedback-file">取り込む指摘JSON（8MiB以下・最大5,000件）</label>
+          <input id="feedback-file" type="file" accept=".json,application/json">
+          <div id="feedback-import-preview" class="feedback-text small" role="status" aria-live="polite">ファイル選択はプレビューのみです。</div>
+          <button id="feedback-import" class="primary hidden" type="button">指摘を取り込む</button>
+        </div>
         <button id="toggle-tag-map" class="import-toggle" type="button" aria-expanded="false" aria-controls="tag-map-panel">＋ ジャンルタグの一括設定</button>
         <div id="tag-map-panel" class="import-panel hidden">
           <h4>既存問題のジャンルタグを一括更新</h4>
@@ -767,11 +800,11 @@
         <button id="toggle-backup" class="import-toggle" type="button" aria-expanded="false" aria-controls="backup-panel">＋ バックアップ・復元</button>
         <div id="backup-panel" class="import-panel hidden">
           <h4>学習データのバックアップ</h4>
-          <p class="muted small">取り込んだ問題（削除・非表示分を含む）・両モードの学習履歴・回答記録・中断状態・獲得カード・コイン残高／受取済み記録・サンプルの非表示設定をまとめてJSONに書き出します。ファイルは外部サーバーに送信しません。</p>
+          <p class="muted small">取り込んだ問題（削除・非表示分を含む）・指摘と管理状態・両モードの学習履歴・回答記録・中断状態・獲得カード・コイン残高／受取済み記録・サンプルの非表示設定をまとめてJSONに書き出します。ファイルは外部サーバーに送信しません。</p>
           <button id="backup-export" class="primary" type="button">バックアップJSONを書き出す</button>
           <p class="muted small">Safariのダウンロード先を確認し、必要に応じて「ファイル」アプリからiCloud Driveへ保存してください。書き出したJSONをGitHubにアップロードしないでください。</p>
           <h4 style="margin-top:24px">バックアップから復元</h4>
-          <div class="backup-warn">注意：復元すると、現在の取り込み問題・両モードの学習履歴・途中状態・獲得カード・コインを、バックアップの内容で<strong>すべて置き換えます</strong>。復元する前に、現在のデータもバックアップしてください。</div>
+          <div class="backup-warn">注意：復元すると、現在の取り込み問題・両モードの学習履歴・途中状態・獲得カード・コインを、バックアップの内容で<strong>すべて置き換えます</strong>。v8では指摘も置き換え、旧v1〜v7では現在の指摘を保持します。復元する前に、現在のデータもバックアップしてください。</div>
           <label for="backup-file" style="display:block;margin-top:14px"><strong>復元するJSONファイルを選択</strong></label>
           <input id="backup-file" type="file" accept=".json,application/json">
           <div id="backup-preview" class="backup-status small" role="status" aria-live="polite">ファイルを選択すると、復元前に内容を検査します。</div>
@@ -801,7 +834,7 @@
           <button id="reset-apply" class="primary" type="button" disabled>選択した項目を初期化する</button>
           <div class="reset-danger">
             <h5>⚠️ 完全初期化（すべての端末内データを消去）</h5>
-            <p class="muted small">取り込み問題（削除済みも含む）・両モードの学習履歴・途中状態・獲得カード・コイン・サンプル非表示設定を<strong>すべて完全削除</strong>します。内蔵サンプル9問は再表示されます。取り消し不可です。</p>
+            <p class="muted small">指摘データ・取り込み問題（削除済みも含む）・両モードの学習履歴・途中状態・獲得カード・コイン・サンプル非表示設定を<strong>すべて完全削除</strong>します。内蔵サンプル9問は再表示されます。取り消し不可です。</p>
             <button id="reset-all" class="reset-danger-button" type="button">すべてのデータを完全初期化する</button>
           </div>
         </div>
@@ -823,6 +856,7 @@
       <button id="check" class="primary" type="button" disabled>答え合わせ</button>
       <div id="result" class="result hidden" aria-live="polite"></div>
       <button id="next" class="primary hidden" type="button">次の問題へ →</button>
+      <button id="report-question" class="feedback-link hidden" type="button">⚑ この問題について報告する</button>
     </div>
   </section>
 
@@ -846,10 +880,22 @@
   <p id="plush-detail-count"></p>
 </dialog>
 
+<dialog id="feedback-dialog" aria-labelledby="feedback-title">
+  <h3 id="feedback-title">この問題について報告する</h3>
+  <div id="feedback-target" class="feedback-text small"></div>
+  <form id="feedback-form">
+    <label for="feedback-category">カテゴリ（1つ選択）</label>
+    <select id="feedback-category" required></select>
+    <label for="feedback-comment">コメント（任意・500文字まで）</label>
+    <textarea id="feedback-comment" maxlength="500" rows="4"></textarea>
+    <div id="feedback-save-status" class="feedback-text small" role="status" aria-live="polite"></div>
+    <div class="manager-actions"><button id="feedback-save" class="primary" type="submit">保存する</button><button id="feedback-cancel" type="button">キャンセル</button></div>
+  </form>
+</dialog>
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.6.12";
+const APP_VERSION = "v1.6.13";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -877,7 +923,7 @@ const SAMPLE_QUESTIONS = [
 
 // データベース名は以前と同じ（回答履歴を引き継ぐため変更しない）。
 const DB_NAME = "history-master-sample-v1";
-const DB_VERSION = 7; // arcadeBoardsだけを追加。既存ストアと旧プレイは保持。
+const DB_VERSION = 8; // questionFeedbackを追加。既存14ストアは保持。
 let QUESTIONS = [...SAMPLE_QUESTIONS]; // 出題対象（削除・非表示を除く）
 let importedQuestions = []; // 削除済みも含めて保管
 let hiddenSampleIds = new Set();
@@ -1606,7 +1652,7 @@ document.addEventListener("visibilitychange",()=>{
   if(document.hidden){closePlushDetail(false);++viewGeneration;stopCraneSweep(true);arcadeResumeRequired=true;}
   else reconcilePage().catch(err);
 });
-window.addEventListener("pagehide",()=>{closePlushDetail(false);++viewGeneration;stopCraneSweep(true);arcadeResumeRequired=true;});
+window.addEventListener("pagehide",()=>{closeFeedback();closePlushDetail(false);++viewGeneration;stopCraneSweep(true);arcadeResumeRequired=true;});
 
 const CARD_MIN_QUESTIONS = 50;
 const RANKS = [
@@ -1931,8 +1977,17 @@ function openDatabase() {
       if (!database.objectStoreNames.contains("arcadePlays")) database.createObjectStore("arcadePlays", {keyPath:"id"});
       if (!database.objectStoreNames.contains("arcadePrizes")) database.createObjectStore("arcadePrizes", {keyPath:"id"});
       if (!database.objectStoreNames.contains("arcadeBoards")) database.createObjectStore("arcadeBoards", {keyPath:"profile"});
+      if (!database.objectStoreNames.contains("questionFeedback")) database.createObjectStore("questionFeedback", {keyPath:"reportId"});
     };
-    request.onsuccess = () => resolve(request.result);
+    request.onblocked = () => notice("データベースの更新待ちです。他の歴史マスターのタブを閉じてください。データは削除しません。");
+    request.onsuccess = () => {
+      const database=request.result;
+      database.onversionchange=()=>{
+        database.close(); appReady=false; closeFeedback();
+        notice("別タブでデータベースが更新されます。このページを再読み込みしてください。データは削除しません。");
+      };
+      resolve(database);
+    };
     request.onerror = () => reject(request.error);
   });
 }
@@ -2230,6 +2285,7 @@ async function applyTagMap() {
     $("tag-map-preview").textContent=`${updatedCount}問のジャンルタグを更新しました。回答履歴・習得状況は保持しています。`;
     closeQuestionEditor();
     await refreshDashboardStay();
+    if (!$("feedback-panel").classList.contains("hidden"))await renderFeedback();
     if (!$("manage-panel").classList.contains("hidden")) renderManager();
     notice(`${updatedCount}問のジャンルタグを保存しました。`);
   } catch (error) {
@@ -2253,6 +2309,7 @@ async function applyImport() {
     $("import-file").value = "";
     setImportPreview(`${toAdd.length}問を追加しました！\n既存問題と学習履歴は変更されていません。`, "import-success");
     await refreshDashboardStay();
+    if (!$("feedback-panel").classList.contains("hidden"))await renderFeedback();
     if (!$("manage-panel").classList.contains("hidden")) renderManager();
     notice(`${toAdd.length}問を端末内に保存しました。`);
   } catch (error) {
@@ -2504,9 +2561,275 @@ async function applyQuestionUpdate() {
 }
 
 // バックアップは端末内でJSONファイルを生成するのみ。ネットワーク通信は行わない。
+// 指摘の本文は不変。交換には管理状態を含めず、端末の状態を巻き戻さない。
+const FEEDBACK_FORMAT="history-master-feedback", FEEDBACK_LIMIT=5000;
+const FEEDBACK_CATEGORIES={answer:"正解がちがうと思う",explanation:"説明がわかりにくい",too_hard:"むずかしすぎる",too_easy:"かんたんすぎる",other:"そのほか",fact:"史実・問題文に誤りがある",options:"選択肢が不適切",wording:"表現・誤字・表示の問題"};
+const FEEDBACK_STATUSES={unreviewed:"未確認",reviewing:"確認中",fix_pending:"修正確認待ち",resolved:"対応済み",dismissed:"対応不要"};
+const FEEDBACK_FIELDS=["reportId","questionId","questionRevision","questionHash","questionSnapshot","reporterRole","sourceProfile","category","comment","createdAt"];
+let feedbackDraft=null,feedbackSaving=false,feedbackPlan=null,feedbackImporting=false,feedbackPreviewGeneration=0,feedbackRenderGeneration=0,feedbackVisible=50;
+const feedbackSelected=new Set();
+const feedbackDate=value=>typeof value==="string"&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString()===value;
+function feedbackKeys(obj,allowed) {
+  return obj&&typeof obj==="object"&&!Array.isArray(obj)&&Object.keys(obj).every(k=>allowed.includes(k));
+}
+function feedbackQuestion(snapshot,revision) {
+  // validateImportObjectは検査だけに使い、trim後の値を照合に使わない（改行・空白を保持）。
+  validateImportObject({schemaVersion:1,questions:[snapshot]});
+  const fields=["id","eraId","question","type","options","correctAnswers","explanation","shuffleOptions","difficulty","tag","deleted"];
+  if(!feedbackKeys(snapshot,fields)||typeof snapshot.deleted!=="boolean"||typeof snapshot.shuffleOptions!=="boolean"||
+    !snapshot.options.every((o,i)=>feedbackKeys(o,["id","text"])&&o.id===String(i+1)))throw new Error("問題スナップショットの形式が不正です。");
+  return {id:snapshot.id,era:snapshot.eraId,q:snapshot.question,options:snapshot.options.map(o=>o.text),answers:snapshot.correctAnswers.map(id=>snapshot.options.findIndex(o=>o.id===id)),why:snapshot.explanation,shuffleOptions:snapshot.shuffleOptions,revision,deleted:snapshot.deleted,
+    ...(snapshot.difficulty===undefined?{}:{difficulty:snapshot.difficulty}),...(snapshot.tag===undefined?{}:{tag:snapshot.tag})};
+}
+function feedbackContent(report) {
+  const q=feedbackQuestion(report.questionSnapshot,report.questionRevision);
+  return Object.fromEntries(FEEDBACK_FIELDS.filter(k=>report[k]!==undefined).map(k=>[k,k==="questionSnapshot"?{...exportableQuestion(q),deleted:!!q.deleted}:report[k]]));
+}
+function validateFeedbackRecord(r,management=false) {
+  if(!feedbackKeys(r,management?[...FEEDBACK_FIELDS,"status","statusUpdatedAt"]:FEEDBACK_FIELDS)||
+    typeof r.reportId!=="string"||!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(r.reportId)||
+    !Number.isSafeInteger(r.questionRevision)||r.questionRevision<1||typeof r.questionHash!=="string"||!/^[0-9a-f]{64}$/.test(r.questionHash)||
+    !["learner","admin"].includes(r.reporterRole)||!Object.hasOwn(FEEDBACK_CATEGORIES,r.category)||
+    (r.reporterRole==="learner"&&(!isProfile(r.sourceProfile)||!Object.keys(FEEDBACK_CATEGORIES).slice(0,5).includes(r.category)))||
+    (r.sourceProfile!==undefined&&!isProfile(r.sourceProfile))||typeof r.comment!=="string"||r.comment.length>500||!feedbackDate(r.createdAt))throw new Error("報告ID・日時・カテゴリ・コメントの形式が不正です。");
+  const content=feedbackContent(r);
+  if(r.questionId!==content.questionSnapshot.id)throw new Error("報告先とスナップショットの問題IDが一致しません。");
+  if(management&&(!Object.hasOwn(FEEDBACK_STATUSES,r.status)||!feedbackDate(r.statusUpdatedAt)||r.statusUpdatedAt<r.createdAt))throw new Error("指摘の管理状態・更新日時が不正です。");
+  return management?{...content,status:r.status,statusUpdatedAt:r.statusUpdatedAt}:content;
+}
+async function verifyFeedbackHashes(reports) {
+  for(const r of reports)if(await sha256Text(questionFingerprintSource(feedbackQuestion(r.questionSnapshot,r.questionRevision)))!==r.questionHash)throw new Error(`${r.reportId}：問題スナップショットのハッシュが一致しません。`);
+}
+async function validateFeedbackExchange(obj) {
+  if(!feedbackKeys(obj,["feedbackFormat","formatVersion","exportedAt","reports"])||obj.feedbackFormat!==FEEDBACK_FORMAT||obj.formatVersion!==1||!feedbackDate(obj.exportedAt)||!Array.isArray(obj.reports)||obj.reports.length>FEEDBACK_LIMIT)throw new Error("指摘JSON形式v1・最大5,000件が必要です。");
+  const ids=new Set(),reports=[];
+  for(const raw of obj.reports) {
+    const r=validateFeedbackRecord(raw);
+    if(ids.has(r.reportId.toLowerCase()))throw new Error("ファイル内で報告IDが重複しています："+r.reportId);
+    ids.add(r.reportId.toLowerCase());reports.push(r);
+  }
+  await verifyFeedbackHashes(reports);
+  return reports;
+}
+function feedbackSame(a,b) {return JSON.stringify(feedbackContent(a))===JSON.stringify(feedbackContent(b));}
+function closeFeedback() {
+  feedbackDraft=null;
+  if($("feedback-dialog").open)$("feedback-dialog").close();
+}
+function feedbackContextValid(draft) {
+  return feedbackDraft===draft&&viewCurrent(draft.ctx)&&!document.hidden&&
+    (draft.role==="admin"?!$("admin").classList.contains("hidden"):
+      !$("quiz").classList.contains("hidden")&&quizReady&&phase==="result"&&currentQuestion?.id===draft.question.id&&sameRecord(currentSession,draft.session));
+}
+function feedbackSnapshotText(r) {
+  const q=r.questionSnapshot;
+  return `${r.questionId} · 改訂${r.questionRevision}版\n${q.question}\n${q.options.map(o=>`${o.id}. ${o.text}${q.correctAnswers.includes(o.id)?" ✓ 正解":""}`).join("\n")}\n解説：${q.explanation}\n難易度：${q.difficulty||"未設定"} · ジャンル：${q.tag||"未設定"}`;
+}
+function openFeedback(q,role="learner") {
+  if(feedbackSaving||backingUp||resetting||saving||!appReady||document.hidden)return;
+  if(role==="learner"&&(!quizReady||phase!=="result"||$("quiz").classList.contains("hidden")))return;
+  if(role==="admin"&&$("admin").classList.contains("hidden"))return;
+  closeFeedback();
+  const question=structuredClone(q),createdAt=new Date().toISOString();
+  const draft={ctx:viewContext(),question,role,session:structuredClone(currentSession),reportId:crypto.randomUUID(),createdAt};
+  feedbackDraft=draft;
+  $("feedback-target").textContent=role==="admin"?feedbackSnapshotText({questionId:q.id,questionRevision:questionRevision(q),questionSnapshot:exportableQuestion(question)}):`${q.id} · 改訂${questionRevision(q)}版`;
+  $("feedback-category").replaceChildren();
+  for(const [key,label] of Object.entries(FEEDBACK_CATEGORIES).slice(0,role==="admin"?8:5)) {
+    const opt=document.createElement("option");opt.value=key;opt.textContent=label;$("feedback-category").append(opt);
+  }
+  $("feedback-comment").value="";$("feedback-save-status").textContent="";$("feedback-save").disabled=false;
+  $("feedback-dialog").showModal();$("feedback-category").focus();
+}
+// 問題・中断情報は照合のために読むだけ。指摘以外のストアには書かない。
+function saveFeedbackRecord(report,draft) {
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(["questionFeedback","questions","sessions"],"readwrite");
+    let failure;
+    const fail=message=>{failure=new Error(message);tx.abort();};
+    const qreq=tx.objectStore("questions").get(report.questionId);
+    qreq.onsuccess=()=>{
+      if(!feedbackContextValid(draft)) {fail("画面が変わりました。対象問題から開き直してください。");return;}
+      const current=qreq.result||SAMPLE_QUESTIONS.find(q=>q.id===report.questionId);
+      if(!current||questionFingerprintSource(current)!==questionFingerprintSource(draft.question)){fail("問題の版が変わりました。開き直してください。");return;}
+      const check=()=>{
+        if(!feedbackContextValid(draft)){fail("画面が変わりました。開き直してください。");return;}
+        const store=tx.objectStore("questionFeedback"),req=store.get(report.reportId);
+        req.onsuccess=()=>{
+          if(!feedbackContextValid(draft)){fail("画面が変わりました。開き直してください。");return;}
+          if(req.result) {if(!feedbackSame(req.result,report))fail("同じ報告IDの内容が競合しています。");}
+          else store.add(report);
+        };
+      };
+      if(draft.role==="learner") {
+        const req=tx.objectStore("sessions").get(draft.session.key);
+        req.onsuccess=()=>{if(!sameRecord(req.result,draft.session))fail("別タブで問題が変わりました。開き直してください。");else check();};
+      } else check();
+    };
+    tx.oncomplete=resolve;tx.onerror=()=>reject(failure||tx.error||new Error("保存に失敗しました。"));tx.onabort=()=>reject(failure||tx.error||new Error("保存が中止されました。"));
+  });
+}
+async function submitFeedback(event) {
+  event.preventDefault();const draft=feedbackDraft;
+  if(!draft||feedbackSaving||backingUp||resetting||!feedbackContextValid(draft))return;
+  feedbackSaving=true;$("feedback-save").disabled=true;
+  const comment=$("feedback-comment").value,category=$("feedback-category").value;
+  try {
+    const r=validateFeedbackRecord({reportId:draft.reportId,questionId:draft.question.id,questionRevision:questionRevision(draft.question),
+      questionHash:await sha256Text(questionFingerprintSource(draft.question)),questionSnapshot:{...exportableQuestion(draft.question),deleted:!!draft.question.deleted},
+      reporterRole:draft.role,...(draft.role==="learner"?{sourceProfile:draft.ctx.who}:{}),category,comment,createdAt:draft.createdAt,status:"unreviewed",statusUpdatedAt:draft.createdAt},true);
+    if(!feedbackContextValid(draft))return;
+    await saveFeedbackRecord(r,draft);
+    if(feedbackContextValid(draft)){closeFeedback();notice("報告を保存しました");}
+    if(!$("feedback-panel").classList.contains("hidden"))await renderFeedback();
+  } catch(error) {
+    if(feedbackDraft===draft)$("feedback-save-status").textContent="保存できませんでした："+error.message+" 入力を残しています。再試行できます。";
+  } finally {feedbackSaving=false;$("feedback-save").disabled=false;}
+}
+function changeFeedbackStatus(id,status,expected) {
+  if($("admin").classList.contains("hidden")||!Object.hasOwn(FEEDBACK_STATUSES,status)||backingUp||resetting)return Promise.reject(new Error("保護者画面から変更してください。"));
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction("questionFeedback","readwrite"),store=tx.objectStore("questionFeedback"),req=store.get(id);let failure;
+    req.onsuccess=()=>{
+      const r=req.result;
+      if(!r||r.status!==expected.status||r.statusUpdatedAt!==expected.statusUpdatedAt){failure=new Error("別タブで状態が変更されました。一覧を更新して確認してください。");tx.abort();return;}
+      store.put({...r,status,statusUpdatedAt:new Date(Math.max(Date.now(),Date.parse(r.statusUpdatedAt)+1)).toISOString()});
+    };
+    tx.oncomplete=resolve;tx.onerror=()=>reject(failure||tx.error||new Error("状態変更が中止されました。"));tx.onabort=()=>reject(failure||tx.error||new Error("状態変更が中止されました。"));
+  });
+}
+async function feedbackMismatches(reports,records=allQuestionRecords()) {
+  const current=new Map(records.map(q=>[q.id,q])),hashes=new Map(),mismatches=new Set();
+  for(const r of reports) {
+    const q=current.get(r.questionId);
+    if(!q||questionRevision(q)!==r.questionRevision){mismatches.add(r.reportId);continue;}
+    if(!hashes.has(q.id))hashes.set(q.id,await sha256Text(questionFingerprintSource(q)));
+    if(hashes.get(q.id)!==r.questionHash)mismatches.add(r.reportId);
+  }
+  return mismatches;
+}
+async function renderFeedback() {
+  const gen=++feedbackRenderGeneration;
+  const reports=await readAll("questionFeedback");
+  // 別タブでの問題更新も照合する。描画のために学習側の正本は変更しない。
+  const records=[...SAMPLE_QUESTIONS,...await readAll("questions")],mismatches=await feedbackMismatches(reports,records);
+  if(gen!==feedbackRenderGeneration||$("admin").classList.contains("hidden"))return;
+  const ids=new Set(reports.map(r=>r.reportId));for(const id of feedbackSelected)if(!ids.has(id))feedbackSelected.delete(id);
+  const counts=new Map();for(const r of reports)counts.set(r.questionId,(counts.get(r.questionId)||0)+1);
+  const filtered=reports.filter(r=>($("feedback-era").value==="all"||r.questionSnapshot.eraId===$("feedback-era").value)&&
+    ($("feedback-filter-category").value==="all"||r.category===$("feedback-filter-category").value)&&
+    ($("feedback-filter-status").value==="all"||r.status===$("feedback-filter-status").value)&&
+    ($("feedback-filter-version").value==="all"||mismatches.has(r.reportId))).sort((a,b)=>a.questionId.localeCompare(b.questionId)||b.createdAt.localeCompare(a.createdAt));
+  $("feedback-summary").textContent=`全${reports.length}件・${counts.size}問題／絞り込み${filtered.length}件／選択${feedbackSelected.size}件／要確認${mismatches.size}件`;
+  $("feedback-list").replaceChildren();
+  for(const r of filtered.slice(0,feedbackVisible)) {
+    const row=document.createElement("div");row.className="manager-item feedback-text";
+    const label=document.createElement("label");label.className="feedback-select";
+    const check=document.createElement("input");check.type="checkbox";check.checked=feedbackSelected.has(r.reportId);
+    check.addEventListener("change",()=>{
+      if(check.checked)feedbackSelected.add(r.reportId);else feedbackSelected.delete(r.reportId);
+      $("feedback-summary").textContent=$("feedback-summary").textContent.replace(/選択\d+件/,`選択${feedbackSelected.size}件`);
+    });
+    label.append(check,document.createTextNode(`${r.questionId}（計${counts.get(r.questionId)}件）`));
+    const body=document.createElement("p");body.textContent=`${FEEDBACK_CATEGORIES[r.category]}\n${r.comment||"（コメントなし）"}\n報告日時：${r.createdAt} · 改訂${r.questionRevision}版\n${r.reporterRole==="admin"?"保護者管理画面":`回答結果（${r.sourceProfile}）`}\n${mismatches.has(r.reportId)?"要確認：現在の問題と版不一致、または問題なし":"現在の問題と一致"}`;
+    const details=document.createElement("details"),summary=document.createElement("summary"),snapshot=document.createElement("p");
+    summary.textContent="報告時の問題を確認";snapshot.textContent=feedbackSnapshotText(r);details.append(summary,snapshot);
+    const stateLabel=document.createElement("label");stateLabel.textContent="対応状況 ";const select=document.createElement("select");select.setAttribute("aria-label",`${r.questionId} ${r.reportId}の対応状況`);
+    for(const [key,text] of Object.entries(FEEDBACK_STATUSES)){const opt=document.createElement("option");opt.value=key;opt.textContent=text;select.append(opt);}select.value=r.status;
+    select.addEventListener("change",async()=>{select.disabled=true;try{await changeFeedbackStatus(r.reportId,select.value,r);await renderFeedback();}catch(error){notice(error.message);await renderFeedback();}});
+    stateLabel.append(select);row.append(label,body,details,stateLabel);$("feedback-list").append(row);
+  }
+  $("feedback-more").classList.toggle("hidden",filtered.length<=feedbackVisible);
+}
+function feedbackCounts(reports,existing,mismatches) {
+  const result={new:0,duplicate:0,conflict:0,mismatch:mismatches.size};
+  for(const r of reports){const old=existing.get(r.reportId);if(!old)result.new++;else if(feedbackSame(old,r))result.duplicate++;else result.conflict++;}
+  return result;
+}
+function feedbackCountsText(c) {return `新規${c.new}件・重複${c.duplicate}件・衝突${c.conflict}件・版不一致${c.mismatch}件`;}
+async function previewFeedbackImport() {
+  const gen=++feedbackPreviewGeneration;feedbackPlan=null;$("feedback-import").classList.add("hidden");
+  const file=$("feedback-file").files?.[0];if(!file)return;
+  try {
+    if(file.size>8*1024*1024)throw new Error("8MiB以下のファイルを選択してください。");
+    const reports=await validateFeedbackExchange(JSON.parse(await file.text()));
+    const existing=new Map((await readAll("questionFeedback")).map(r=>[r.reportId,r]));
+    const mismatches=await feedbackMismatches(reports,[...SAMPLE_QUESTIONS,...await readAll("questions")]);
+    const counts=feedbackCounts(reports,existing,mismatches);
+    if(gen!==feedbackPreviewGeneration)return;
+    $("feedback-import-preview").textContent=`検査OK：${reports.length}件\n${feedbackCountsText(counts)}\n${counts.conflict?"同じ報告IDの内容が衝突しています。取り込めません。元ファイルを確認してください。":"まだ保存していません。件数を確認して「指摘を取り込む」を押してください。既存の対応状況は保持します。"}`;
+    if(!counts.conflict){feedbackPlan=reports;$("feedback-import").classList.remove("hidden");}
+  } catch(error){if(gen===feedbackPreviewGeneration)$("feedback-import-preview").textContent="取り込めません："+error.message;}
+}
+function importFeedbackRecords(reports) {
+  // プレビュー後の他タブ更新を含め、重複照合と追加を同じトランザクションで行う。
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(["questionFeedback","questions"],"readwrite"),store=tx.objectStore("questionFeedback");
+    const result={new:0,duplicate:0,conflict:0},current=new Map();let failure;
+    const questions=tx.objectStore("questions").getAll();
+    questions.onsuccess=()=>{for(const q of [...SAMPLE_QUESTIONS,...questions.result])current.set(q.id,q);};
+    for(const r of reports){
+      const req=store.get(r.reportId);
+      req.onsuccess=()=>{
+        if(req.result){if(feedbackSame(req.result,r))result.duplicate++;else {result.conflict++;failure=new Error("保存前に同一IDの衝突を検出しました。全件取り消しました。");tx.abort();}}
+        else {store.add({...r,status:"unreviewed",statusUpdatedAt:r.createdAt});result.new++;}
+      };
+    }
+    tx.oncomplete=()=>resolve({...result,records:[...current.values()]});tx.onerror=()=>reject(failure||tx.error||new Error("取り込みを全件取り消しました。"));tx.onabort=()=>reject(failure||tx.error||new Error("取り込みを全件取り消しました。"));
+  });
+}
+async function applyFeedbackImport() {
+  if(!feedbackPlan||feedbackImporting||backingUp||resetting||$("admin").classList.contains("hidden"))return;
+  const reports=feedbackPlan;feedbackImporting=true;$("feedback-import").disabled=true;$("feedback-file").disabled=true;
+  try {
+    const result=await importFeedbackRecords(reports);
+    const mismatches=await feedbackMismatches(reports,result.records);
+    $("feedback-import-preview").textContent="取り込み完了："+feedbackCountsText({...result,mismatch:mismatches.size});
+    feedbackPlan=null;$("feedback-import").classList.add("hidden");await renderFeedback();
+  } catch(error){$("feedback-import-preview").textContent="取り込み失敗（全件ロールバック）："+error.message+" 再プレビューしてください。";feedbackPlan=null;$("feedback-import").classList.add("hidden");}
+  finally {feedbackImporting=false;$("feedback-import").disabled=false;$("feedback-file").disabled=false;}
+}
+async function exportFeedback(all=false) {
+  const reports=(await readAll("questionFeedback")).filter(r=>all||feedbackSelected.has(r.reportId)).map(feedbackContent);
+  if(!reports.length){notice("書き出す指摘がありません。指摘を選択してください。");return;}
+  // 1ファイルの受理上限に合わせて分割。全件も欠落なく書き出す。
+  const exportedAt=new Date().toISOString(),chunks=[];let chunk=[];
+  const pack=reports=>({feedbackFormat:FEEDBACK_FORMAT,formatVersion:1,exportedAt,reports});
+  let bytes=new Blob([JSON.stringify(pack([]))]).size;
+  for(const r of reports){const size=new Blob([JSON.stringify(r)]).size+2;if(chunk.length&&(chunk.length>=FEEDBACK_LIMIT||bytes+size>7*1024*1024)){chunks.push(chunk);chunk=[];bytes=200;}chunk.push(r);bytes+=size;}
+  if(chunk.length)chunks.push(chunk);
+  // downloadPrivateJSONの整形によるサイズ増を避け、実ファイルの8MiB上限も確認する。
+  for(let i=0;i<chunks.length;i++) {
+    const obj=pack(chunks[i]),blob=new Blob([JSON.stringify(obj)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;a.download=`history-master-feedback-${exportedAt.slice(0,10)}-${i+1}.json`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }
+  notice(`${reports.length}件の指摘の書き出しを開始しました（${chunks.length}ファイル）。Safariのダウンロード先を確認してください。元の指摘は保持しています。`);
+}
+$("report-question").addEventListener("click",()=>openFeedback(currentQuestion));
+$("feedback-form").addEventListener("submit",submitFeedback);
+$("feedback-cancel").addEventListener("click",closeFeedback);
+$("feedback-dialog").addEventListener("cancel",event=>{event.preventDefault();closeFeedback();});
+document.addEventListener("visibilitychange",()=>{if(document.hidden)closeFeedback();});
+$("toggle-feedback").addEventListener("click",()=>{
+  const opening=$("feedback-panel").classList.contains("hidden");$("feedback-panel").classList.toggle("hidden",!opening);
+  $("toggle-feedback").setAttribute("aria-expanded",String(opening));$("toggle-feedback").textContent=opening?"－ 問題の指摘・改善管理を閉じる":"＋ 問題の指摘・改善管理";
+  if(opening)renderFeedback().catch(err);
+});
+for(const [id,items] of [["feedback-era",Object.fromEntries(ERAS)],["feedback-filter-category",FEEDBACK_CATEGORIES],["feedback-filter-status",FEEDBACK_STATUSES]])for(const [key,label] of Object.entries(items)){
+  const option=document.createElement("option");option.value=key;option.textContent=label;$(id).append(option);
+}
+for(const id of ["feedback-era","feedback-filter-category","feedback-filter-status","feedback-filter-version"])$(id).addEventListener("change",()=>{feedbackVisible=50;renderFeedback().catch(err);});
+$("feedback-refresh").addEventListener("click",()=>renderFeedback().catch(err));
+$("feedback-more").addEventListener("click",()=>{feedbackVisible+=50;renderFeedback().catch(err);});
+$("feedback-file").addEventListener("change",previewFeedbackImport);
+$("feedback-import").addEventListener("click",applyFeedbackImport);
+$("feedback-export-all").addEventListener("click",()=>exportFeedback(true).catch(err));
+$("feedback-export-selected").addEventListener("click",()=>exportFeedback(false).catch(err));
+window.addEventListener("focus",()=>{if(appReady&&!$("admin").classList.contains("hidden")&&!$("feedback-panel").classList.contains("hidden"))renderFeedback().catch(err);});
+
 const BACKUP_FORMAT = "history-master-backup";
-const BACKUP_VERSION = 7;
-const BACKUP_STORES = ["questions", "progress", "sessions", "answers", "awards", "sampleSettings", "coinClaims", "coinEvents", "coinMeta", "reviewEvents", "coinSpends", "arcadePlays", "arcadePrizes", "arcadeBoards"];
+const BACKUP_VERSION = 8;
+const BACKUP_STORES = ["questions", "progress", "sessions", "answers", "awards", "sampleSettings", "coinClaims", "coinEvents", "coinMeta", "reviewEvents", "coinSpends", "arcadePlays", "arcadePrizes", "arcadeBoards", "questionFeedback"];
 function snapshotAllStores() {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(BACKUP_STORES, "readonly");
@@ -2517,7 +2840,7 @@ function snapshotAllStores() {
   });
 }
 async function exportBackup() {
-  if (saving || importing || backingUp || updatingQuestions) return;
+  if (feedbackSaving || feedbackImporting || saving || importing || backingUp || updatingQuestions) return;
   backingUp = true;
   $("backup-export").disabled = true;
   try {
@@ -2555,8 +2878,8 @@ function validIndexList(values, max) {
   return Array.isArray(values) && new Set(values).size === values.length && values.every(i => Number.isInteger(i) && i >= 0 && i < max);
 }
 function validateBackup(obj) {
-  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.backupFormat !== BACKUP_FORMAT || ![1, 2, 3, 4, 5, 6, BACKUP_VERSION].includes(obj.backupVersion) || !obj.data || typeof obj.data !== "object") {
-    throw new Error("このアプリのバックアップ形式ではありません（バージョン1〜7が必要です）。");
+  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.backupFormat !== BACKUP_FORMAT || ![1, 2, 3, 4, 5, 6, 7, BACKUP_VERSION].includes(obj.backupVersion) || !obj.data || typeof obj.data !== "object") {
+    throw new Error("このアプリのバックアップ形式ではありません（バージョン1〜8が必要です）。");
   }
   // v1〜v3からの復元では旧履歴の報酬済み情報のみ作成し、コイン残高は0枚。
   const legacy=obj.backupVersion<4;
@@ -2575,9 +2898,19 @@ function validateBackup(obj) {
   }
   // 旧形式に紛れた盤面も引き継がず、復元データだけから後で作る。
   if(obj.backupVersion<7)data.arcadeBoards=[];
-  const maxSizes = {questions:20000, progress:100000, sessions:100, answers:300000, awards:20, sampleSettings:9, coinClaims:100000, coinEvents:100000, coinMeta:2, reviewEvents:300000, coinSpends:100000, arcadePlays:100000, arcadePrizes:100000, arcadeBoards:2};
+  if(obj.backupVersion<8)delete data.questionFeedback; // 旧形式はローカル指摘を保持する。混入した値も採用しない。
+  const maxSizes = {questionFeedback:100000,questions:20000, progress:100000, sessions:100, answers:300000, awards:20, sampleSettings:9, coinClaims:100000, coinEvents:100000, coinMeta:2, reviewEvents:300000, coinSpends:100000, arcadePlays:100000, arcadePrizes:100000, arcadeBoards:2};
   for (const name of BACKUP_STORES) {
+    if(name==="questionFeedback"&&obj.backupVersion<8)continue;
     if (!Array.isArray(data[name]) || data[name].length > maxSizes[name]) throw new Error(`${name} のデータ件数が不正です。`);
+  }
+  if(obj.backupVersion>=8) {
+    const ids=new Set();
+    data.questionFeedback=data.questionFeedback.map(raw=>{
+      const r=validateFeedbackRecord(raw,true);
+      if(ids.has(r.reportId.toLowerCase()))throw new Error("指摘の報告IDが重複しています。");
+      ids.add(r.reportId.toLowerCase());return r;
+    });
   }
   const eras = new Set(ERAS.map(x => x[0]));
   const builtinIDs = new Set(SAMPLE_QUESTIONS.map(q => q.id));
@@ -2683,7 +3016,7 @@ function setBackupPreview(message, cssClass="") {
   $("backup-preview").className = `backup-status small ${cssClass}`;
 }
 async function previewRestore() {
-  if (saving || importing || backingUp || updatingQuestions) return;
+  if (feedbackSaving || feedbackImporting || saving || importing || backingUp || updatingQuestions) return;
   pendingRestore = null;
   $("backup-restore").classList.add("hidden");
   const file = $("backup-file").files?.[0];
@@ -2694,8 +3027,12 @@ async function previewRestore() {
   }
   try {
     const data = validateBackup(JSON.parse(await file.text()));
+    if(data.questionFeedback)await verifyFeedbackHashes(data.questionFeedback);
+    if($("backup-file").files?.[0]!==file)return;
+    const localFeedback=(await readAll("questionFeedback")).length;
+    if($("backup-file").files?.[0]!==file)return;
     pendingRestore = data;
-    setBackupPreview(`検査OK（${file.name}）\n取り込み問題：${data.questions.length}問\n学習履歴：${data.progress.length}件\n中断情報：${data.sessions.length}件\n回答記録：${data.answers.length}件\n獲得カード：${data.awards.length}枚\n学習用コイン：${availableCoins(data.coinEvents,data.reviewEvents,data.coinSpends,"student")}枚\nテスト用コイン：${availableCoins(data.coinEvents,data.reviewEvents,data.coinSpends,"test")}枚\nクレーン履歴：${data.arcadePlays.length}件\nぬいぐるみ獲得：${data.arcadePrizes.length}体\n非表示サンプル：${data.sampleSettings.length}問\n\n「復元する」を押すと、現在の問題と本番・テスト両方の学習履歴がすべて置き換わります。`);
+    setBackupPreview(`検査OK（${file.name}）\n取り込み問題：${data.questions.length}問\n学習履歴：${data.progress.length}件\n中断情報：${data.sessions.length}件\n回答記録：${data.answers.length}件\n獲得カード：${data.awards.length}枚\n学習用コイン：${availableCoins(data.coinEvents,data.reviewEvents,data.coinSpends,"student")}枚\nテスト用コイン：${availableCoins(data.coinEvents,data.reviewEvents,data.coinSpends,"test")}枚\nクレーン履歴：${data.arcadePlays.length}件\nぬいぐるみ獲得：${data.arcadePrizes.length}体\n非表示サンプル：${data.sampleSettings.length}問\n\n「復元する」を押すと、現在の問題と本番・テスト両方の学習履歴がすべて置き換わります。\n${data.questionFeedback?`v8：指摘${data.questionFeedback.length}件を復元し、現在の指摘${localFeedback}件も置き換えます。`:`旧バックアップ：現在の指摘${localFeedback}件は保持します。復元後に問題の内容・版が変わった指摘は要確認になります。`}`);
     $("backup-restore").classList.remove("hidden");
   } catch (error) {
     setBackupPreview("復元できません：" + error.message + "\n現在のデータは変更されていません。", "import-error");
@@ -2742,7 +3079,8 @@ async function updateResetPreview() {
     allStores: Object.fromEntries(BACKUP_STORES.map(name => [name, snapshot[name].length]))
   };
   const chosen = activeResetLabels(resetSelection(), resetCounts);
-  $("reset-preview").textContent = chosen.length ? `実行対象（現在の件数）：\n${chosen.join("\n")}\n\n選択していないデータは保持します。` : "初期化する項目を選択してください。";
+  const feedbackNote=`\n指摘：${snapshot.questionFeedback.length}件（履歴初期化・問題非表示では保持、完全初期化では消去）`;
+  $("reset-preview").textContent = chosen.length ? `実行対象（現在の件数）：\n${chosen.join("\n")}\n\n選択していないデータは保持します。${feedbackNote}` : "初期化する項目を選択してください。"+feedbackNote;
   $("reset-apply").disabled = !chosen.length || !$("reset-ack").checked || resetting;
 }
 // すべての操作を一つのトランザクションで実行する。途中の失敗では全処理が戻る。
@@ -2791,6 +3129,10 @@ function performReset(choice, complete=false) {
 }
 // DBの初期化・復元が確定した後だけ呼ぶ。古いタブ内選択と描画を引き継がない。
 function resetStudentViewAfterDataChange() {
+  closeFeedback();
+  feedbackPlan=null;++feedbackPreviewGeneration;feedbackSelected.clear();
+  $("feedback-file").value="";$("feedback-import").classList.add("hidden");
+  $("feedback-import-preview").textContent="ファイル選択はプレビューのみです。";
   ++viewGeneration;
   draftSelections.clear();
   stopCraneSweep();arcadePlay=null;arcadeBoard=null;arcadeResumeRequired=true;
@@ -2828,10 +3170,11 @@ async function resetFinished(complete) {
   for (const id of RESET_CHOICES) $(id).checked = false;
   $("reset-ack").checked = false;
   await refreshDashboardStay();
+  if (!$("feedback-panel").classList.contains("hidden"))await renderFeedback();
   if (!$("manage-panel").classList.contains("hidden")) renderManager();
 }
 async function applySelectedReset() {
-  if (saving || importing || backingUp || managing || resetting || updatingQuestions) return;
+  if (feedbackSaving || feedbackImporting || saving || importing || backingUp || managing || resetting || updatingQuestions) return;
   const choice = resetSelection();
   const selected = Object.values(choice).some(Boolean);
   if (!selected || !$("reset-ack").checked) return;
@@ -2859,10 +3202,10 @@ async function applySelectedReset() {
   }
 }
 async function applyFullReset() {
-  if (saving || importing || backingUp || managing || resetting || updatingQuestions) return;
+  if (feedbackSaving || feedbackImporting || saving || importing || backingUp || managing || resetting || updatingQuestions) return;
   const snapshot = await snapshotAllStores();
   const count = snapshot.questions.length;
-  if (!confirm(`【完全初期化】\n取り込み問題 ${count}問（削除済みを含む）と、娘さん用・テスト用のすべての学習データ・獲得カード・コイン・サンプル非表示設定を永久に消去します。\n内蔵サンプル9問が再表示されます。\n\n必要なバックアップは保存しましたか？`)) return;
+  if (!confirm(`【完全初期化】\n取り込み問題 ${count}問（削除済みを含む）と、指摘 ${snapshot.questionFeedback.length}件、娘さん用・テスト用のすべての学習データ・獲得カード・コイン・サンプル非表示設定を永久に消去します。\n内蔵サンプル9問が再表示されます。\n\n必要なバックアップは保存しましたか？`)) return;
   const typed = prompt("完全初期化するには『初期化』と入力してください。キャンセルや他の文字では実行しません。");
   if (typed !== "初期化") return;
   resetting = true;
@@ -2890,9 +3233,10 @@ function replaceAllStores(data) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(BACKUP_STORES, "readwrite");
     for (const name of BACKUP_STORES) {
+      if(name==="questionFeedback"&&!Object.hasOwn(data,name))continue; // v1〜v7では絶対にクリアしない。
       const store = tx.objectStore(name);
-      store.clear();
-      for (const entry of data[name]) store.put(entry);
+      try {store.clear();for (const entry of data[name]) store.put(entry);}
+      catch(error){tx.abort();reject(error);return;}
     }
     tx.oncomplete = resolve;
     tx.onerror = () => reject(tx.error || new Error("復元エラー"));
@@ -2900,13 +3244,15 @@ function replaceAllStores(data) {
   });
 }
 async function applyRestore() {
-  if (saving || importing || backingUp || updatingQuestions || !pendingRestore) return;
-  if (!confirm("現在の問題・学習履歴・カード・コイン・クレーン景品・景品配置とプレイ履歴を、バックアップの内容ですべて置き換えます。\n現在のデータのバックアップは作成しましたか？\n\n復元を実行しますか？")) return;
+  if (feedbackSaving || feedbackImporting || saving || importing || backingUp || updatingQuestions || !pendingRestore) return;
+  const feedbackNote=pendingRestore.questionFeedback?`v8：現在の指摘もバックアップの指摘${pendingRestore.questionFeedback.length}件で置き換えます。`:"旧バックアップ：現在の指摘は保持します。問題が変わった指摘は要確認になります。";
+  if (!confirm("現在の問題・学習履歴・カード・コイン・クレーン景品・景品配置とプレイ履歴を、バックアップの内容ですべて置き換えます。\n"+feedbackNote+"\n現在のデータのバックアップは作成しましたか？\n\n復元を実行しますか？")) return;
   backingUp = true;
   $("backup-restore").disabled = true;
   const data = pendingRestore;
   try {
-    validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:BACKUP_VERSION,data});
+    validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:data.questionFeedback?8:7,data});
+    if(data.questionFeedback)await verifyFeedbackHashes(data.questionFeedback);
     await replaceAllStores(data); // 1つのトランザクションで一括変更。途中失敗なら全変更がロールバックされる。
     resetStudentViewAfterDataChange();
     await loadImportedQuestions();
@@ -2924,6 +3270,7 @@ async function applyRestore() {
     setBackupPreview("復元が完了しました。問題と学習履歴を再読み込みしました。", "import-success");
     setImportPreview("ファイル選択後、内容を検査します。");
     await refreshDashboardStay();
+    if (!$("feedback-panel").classList.contains("hidden"))await renderFeedback();
     if (!$("manage-panel").classList.contains("hidden")) renderManager();
     notice("バックアップから復元しました。娘さん用とテスト用の履歴は分離されています。");
   } catch (error) {
@@ -2953,6 +3300,7 @@ function navigate(screen, who=profile, era=null) {
 // アプリ内ホームは必ず同じ文書内に追加。外部履歴へhistory.back()しない。
 function navigateHome(who=profile) { return navigate("home",who); }
 async function restoreRoute(target,{allowCreate=false}={}) {
+  closeFeedback();
   closePlushDetail(false);
   stopCraneSweep(true);
   arcadeResumeRequired=true;
@@ -2965,6 +3313,7 @@ async function restoreRoute(target,{allowCreate=false}={}) {
   $("quiz-coin-amount").textContent="確認中…";
   $("arcade-balance").textContent="確認中…";
   if(target.screen==="quiz") {
+    $("report-question").classList.add("hidden");
     $("result").classList.add("hidden");
     $("check").disabled=true;$("next").disabled=true;
     $("choices").querySelectorAll("button").forEach(b=>b.disabled=true);
@@ -3009,6 +3358,7 @@ window.addEventListener("focus",()=>{
   }
 });
 function show(sectionId) {
+  closeFeedback();
   closePlushDetail(false);
   // どの画面へ移っても、プレイ中のアーム位置を一度保存する。
   if(sectionId!=="arcade" && !$("arcade").classList.contains("hidden")) stopCraneSweep(true);
@@ -3112,7 +3462,7 @@ function pickQuestion(era, records, previousId, recentIds=[]) {
   return weighted[weighted.length-1].q;
 }
 async function startEra(era) {
-  if (saving || importing || backingUp || updatingQuestions) return;
+  if (feedbackSaving || feedbackImporting || saving || importing || backingUp || updatingQuestions) return;
   await navigate("quiz",profile,era);
 }
 function readQuizState(who,era) {
@@ -3161,6 +3511,8 @@ async function restoreQuiz(era,ctx=viewContext(),allowCreate=false) {
 }
 async function advance(era, previousId, ctx=viewContext()) {
   if(!viewCurrent(ctx))return;
+  closeFeedback();
+  $("report-question").classList.add("hidden");
   quizReady=false;
   $("next").disabled=true;
   const previousSession=await readOne("sessions",`${ctx.who}:${era}`);
@@ -3183,6 +3535,8 @@ async function advance(era, previousId, ctx=viewContext()) {
   return restoreQuiz(era,ctx,false);
 }
 function renderQuestion() {
+  closeFeedback();
+  $("report-question").classList.add("hidden");
   const q = currentQuestion;
   $("quiz-era").textContent = ERAS.find(e => e[0] === currentEra)[1];
   $("quiz-status").textContent = profile === "test" ? "🔧 テスト用" : "👧 学習用";
@@ -3363,6 +3717,7 @@ function showResult(newAward=null,coinAward=lastCoinAward) {
   result.classList.remove("hidden");
   $("check").classList.add("hidden");
   $("next").classList.remove("hidden");
+  $("report-question").classList.remove("hidden");
 }
 
 // 問題管理：削除は論理削除。回答履歴と問題データを保存したまま出題対象から外す。
@@ -3435,6 +3790,7 @@ function renderManager() {
     const actions=document.createElement("div");actions.className="manager-actions";
     if (!sample&&!hidden) actions.appendChild(makeAction("修正する","",()=>openQuestionEditor(q.id)));
     actions.appendChild(makeAction(hidden?"出題に戻す":sample?"サンプルを非表示":"削除する（復元可）",hidden?"":"danger",()=>changeQuestionVisibility(q.id,!hidden)));
+    actions.appendChild(makeAction("指摘する","",()=>openFeedback(q,"admin")));
     const stat=stats.get(q.id);
     const performance=document.createElement("div");performance.className="manager-performance";
     const caption=document.createElement("span");caption.className="manager-meta";
@@ -3610,7 +3966,7 @@ async function changeQuestionVisibility(id,hide) {
 }
 
 $("toggle-import").addEventListener("click", () => {
-  if (saving || importing || backingUp || updatingQuestions) return;
+  if (feedbackSaving || feedbackImporting || saving || importing || backingUp || updatingQuestions) return;
   const panel = $("import-panel");
   const opening = panel.classList.contains("hidden");
   panel.classList.toggle("hidden", !opening);
@@ -3648,7 +4004,7 @@ $("question-export").addEventListener("click",()=>exportQuestionMaster().catch(e
 $("question-update-file").addEventListener("change",()=>previewQuestionUpdate().catch(err));
 $("question-update-apply").addEventListener("click",()=>applyQuestionUpdate().catch(err));
 $("toggle-backup").addEventListener("click", () => {
-  if (saving || importing || backingUp || updatingQuestions) return;
+  if (feedbackSaving || feedbackImporting || saving || importing || backingUp || updatingQuestions) return;
   const panel = $("backup-panel");
   const opening = panel.classList.contains("hidden");
   panel.classList.toggle("hidden", !opening);
@@ -3659,7 +4015,7 @@ $("backup-export").addEventListener("click", () => exportBackup().catch(err));
 $("backup-file").addEventListener("change", () => previewRestore().catch(err));
 $("backup-restore").addEventListener("click", () => applyRestore().catch(err));
 $("toggle-reset").addEventListener("click", () => {
-  if (saving || importing || backingUp || managing || resetting || updatingQuestions) return;
+  if (feedbackSaving || feedbackImporting || saving || importing || backingUp || managing || resetting || updatingQuestions) return;
   const panel = $("reset-panel");
   const opening = panel.classList.contains("hidden");
   panel.classList.toggle("hidden", !opening);
@@ -3744,6 +4100,7 @@ $("plush-detail-dialog").addEventListener("click",event=>{
     appReady=true;
   } catch (error) {
     err(error);
+    notice("データベースの起動・移行に失敗しました："+error.message+"。データは削除していません。");
     $("home-subtitle").textContent = "保存機能を利用できません。通常のSafariでページを開き直してください。";
   }
 })();
