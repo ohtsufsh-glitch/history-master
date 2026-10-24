@@ -2745,6 +2745,11 @@ async function renderFeedback() {
     for(const [key,text] of Object.entries(FEEDBACK_STATUSES)){const opt=document.createElement("option");opt.value=key;opt.textContent=text;select.append(opt);}select.value=r.status;
     select.addEventListener("change",async()=>{select.disabled=true;try{await changeFeedbackStatus(r.reportId,select.value,r);await renderFeedback();}catch(error){notice(error.message);await renderFeedback();}});
     stateLabel.append(select);row.append(label,body,details,stateLabel);
+    if(isSample(r.questionId)) {
+      const note=document.createElement("p");note.className="small";
+      note.textContent="内蔵サンプルはアプリ本体の修正が必要です。問題マスターの一括更新では変更できません。";
+      row.append(note);
+    }
     if(mismatches.has(r.reportId)) {
       const current=currentRecords.get(r.questionId);
       const comparison=document.createElement("details"),comparisonTitle=document.createElement("summary");
@@ -2835,7 +2840,7 @@ async function buildImprovementRequest(reports,questions,exportedAt=new Date().t
     if(!groups.has(r.questionId))groups.set(r.questionId,[]);
     groups.get(r.questionId).push(r);
   }
-  if(groups.size>IMPROVEMENT_QUESTION_LIMIT)throw new Error("対象は1ファイル100問までです。時代・状態で絞るか、指摘を選択して分割してください。");
+  if(groups.size>IMPROVEMENT_QUESTION_LIMIT)throw new Error("対象は1ファイル100問までです。指摘一覧で対象を選び、「選択した指摘から改善依頼JSON」で分けて書き出してください。");
   const entries=[];
   for(const [id,items] of [...groups.entries()].sort(([a],[b])=>a.localeCompare(b))) {
     const q=current.get(id);
@@ -2860,20 +2865,33 @@ async function buildImprovementRequest(reports,questions,exportedAt=new Date().t
   return {improvementRequestFormat:IMPROVEMENT_REQUEST_FORMAT,formatVersion:IMPROVEMENT_REQUEST_VERSION,
     exportedAt,questionCount:entries.length,reportCount:reports.length,questions:entries};
 }
+function readImprovementSource() {
+  return new Promise((resolve,reject)=>{
+    // 他タブの復元・編集をまたいで指摘と問題が混ざらないよう、同じ時点の正本を読む。
+    const tx=db.transaction(["questionFeedback","questions"],"readonly");
+    const reports=tx.objectStore("questionFeedback").getAll(),questions=tx.objectStore("questions").getAll();
+    tx.oncomplete=()=>resolve({reports:reports.result,questions:questions.result});
+    tx.onerror=()=>reject(tx.error||new Error("改善依頼の読み込みに失敗しました。"));
+    tx.onabort=()=>reject(tx.error||new Error("改善依頼の読み込みを中止しました。"));
+  });
+}
 async function exportImprovementRequest(selectedOnly=false) {
   if(improvementExporting||feedbackImporting||feedbackSaving||backingUp||resetting||updatingQuestions||
      $("admin").classList.contains("hidden"))return;
   improvementExporting=true;
+  const ctx=viewContext(),selectedIds=new Set(feedbackSelected);
   const buttons=[$("feedback-improvement-pending"),$("feedback-improvement-selected")];
   buttons.forEach(button=>button.disabled=true);
   const status=$("feedback-improvement-status");
   try {
-    const reports=(await readAll("questionFeedback")).filter(r=>selectedOnly?
-      feedbackSelected.has(r.reportId):["unreviewed","reviewing"].includes(r.status));
+    const source=await readImprovementSource();
+    const reports=source.reports.filter(r=>selectedOnly?
+      selectedIds.has(r.reportId):["unreviewed","reviewing"].includes(r.status));
     if(!reports.length)throw new Error(selectedOnly?"指摘一覧のチェックボックスから対象を選んでください。":"未確認・確認中の指摘がありません。");
-    const questions=await readAll("questions");
-    const pack=await buildImprovementRequest(reports,questions);
-    const bytes=new Blob([JSON.stringify(pack,null,2)],{type:"application/json"}).size;
+    const pack=await buildImprovementRequest(reports,source.questions);
+    if(!viewCurrent(ctx)||$("admin").classList.contains("hidden"))return;
+    // downloadPrivateJSONと同じ末尾改行まで含めて、実ファイルの容量を検査する。
+    const bytes=new Blob([JSON.stringify(pack,null,2)+"\n"],{type:"application/json"}).size;
     if(bytes>IMPROVEMENT_FILE_LIMIT)throw new Error("JSONが8MiBを超えています。指摘を選択して分割してください。");
     // データは手動でChatGPTに添付する。自動送信や問題の自動修正をしない。
     const filename="history-master-improvement-"+pack.exportedAt.slice(0,10)+".json";
