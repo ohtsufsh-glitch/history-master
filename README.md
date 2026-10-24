@@ -1,6 +1,12 @@
 # history-master
 Japanese history learning game
 
+Issue #20 Phase 1（v1.6.13）のレビュー用資料：
+
+- [指摘入力・集約・バックアップ互換性と検証](docs/RELEASE_v1.6.13.md)
+- [指摘交換JSONの確定スキーマ](docs/QUESTION_FEEDBACK_FORMAT_v1.md)
+- [iPhone・iPad Safari実機テスト手順](docs/SAFARI_TEST_v1.6.13.md)
+
 Issue #21（v1.6.12）のレビュー用資料：
 
 - [保護者用管理画面の階層化・検証結果](docs/RELEASE_v1.6.12.md)
