@@ -249,7 +249,13 @@ class ArcadeBoardTest(unittest.TestCase):
                 self.assertEqual(next(b for b in before['arcadeBoards'] if b['profile'] == other), self.board(other))
         self.install([None] * 7)
         count = len(self.dialogs)
-        self.replace_prizes_and_wait()
+        # 通常景品を検証するこのケースでは、秘密の混入抽選を固定する。
+        # 無固定だと既存の通常IDのassertが抽選次第で失敗する。
+        self.page.evaluate('window.originalRandom=Math.random;Math.random=()=>.999;')
+        try:
+            self.replace_prizes_and_wait()
+        finally:
+            self.page.evaluate('Math.random=window.originalRandom')
         self.page.wait_for_function('!arcadeBusy')
         self.assertEqual(len(self.dialogs), count)
         self.assertTrue(all(p in plush_test.IDS for p in self.board()['slots']))
@@ -376,6 +382,8 @@ class ArcadeBoardTest(unittest.TestCase):
         }""")
         before = self.snapshot()
         self.page.locator('#open-admin').click()
+        if not self.page.locator('#admin-backup-group').evaluate('el=>el.open'):
+            self.page.locator('#admin-backup-group > summary').click()
         self.page.locator('#toggle-backup').click()
         with self.page.expect_download() as event:
             self.page.locator('#backup-export').click()
@@ -503,6 +511,8 @@ class ArcadeBoardTest(unittest.TestCase):
                 self.install()
                 before = self.snapshot()
                 self.page.locator('#open-admin').click()
+                if not self.page.locator('#admin-other-group').evaluate('el=>el.open'):
+                    self.page.locator('#admin-other-group > summary').click()
                 self.page.locator('#toggle-reset').click()
                 self.page.locator(f'#reset-{who}').check()
                 self.page.locator('#reset-ack').check()
@@ -524,6 +534,8 @@ class ArcadeBoardTest(unittest.TestCase):
                 self.assertEqual(len(self.board(who)['slots']), 7)
                 self.page.locator('#reset-panel').evaluate('el=>el.classList.add("hidden")')
         self.page.locator('#open-admin').click()
+        if not self.page.locator('#admin-other-group').evaluate('el=>el.open'):
+            self.page.locator('#admin-other-group > summary').click()
         self.page.locator('#toggle-reset').click()
         before = self.snapshot()
         self.cancel_dialog = True

@@ -22,6 +22,17 @@
     #app-version { margin:0 0 14px; }
     .admin-test-area { padding:16px; border-radius:14px; background:#edf6fa; border:1px solid #cbdfea; }
     .admin-test-area .primary { margin-top:12px; }
+    .admin-group { margin-top:16px; border:1px solid #b8cfdd; border-radius:14px; background:#fff; }
+    .admin-group > summary { padding:14px; min-height:44px; color:#245e80; cursor:pointer; overflow-wrap:anywhere; }
+    .admin-group > summary h3 { display:inline; }
+    .admin-group > summary .muted { display:block; margin:5px 0 0 1.4em; font-weight:400; }
+    .admin-group > summary:focus-visible, #card-preview-panel > summary:focus-visible { outline:3px solid #286f9a; outline-offset:3px; border-radius:10px; }
+    .admin-group-content { padding:0 10px 12px; min-width:0; }
+    .admin-group-content > .import-toggle:first-child { margin-top:0; }
+    #admin { overflow-wrap:anywhere; }
+    #admin h4, #admin h5 { margin:0; font-size:1rem; }
+    #admin button, #card-preview-panel > summary { min-height:44px; }
+    #admin input[type=file] { min-width:0; }
     .test-banner { background:#fff6e4; border:1px solid #e8cc8b; border-radius:13px; padding:14px; margin:12px 0; }
     .test-banner p { margin:4px 0 10px; }
     .test-banner .small-action { background:#fff; }
@@ -687,99 +698,114 @@
       <p class="muted small">テストモードで解いた結果・コイン・クレーン景品は娘さん用に反映されません。クレーンは残高0枚でも無料で何度でも遊べます。問題データ自体は共通です。</p>
       <button id="admin-start-test" class="primary" type="button">テストモードを開始（問題・クレーン）</button>
     </div>
-    <button id="toggle-import" class="import-toggle" type="button" aria-expanded="false">＋ 問題ファイルを取り込む</button>
-    <div id="import-panel" class="import-panel hidden">
-      <h3>問題データの取り込み（JSON）</h3>
-      <p class="muted small">iPhone・iPad内のJSONファイルを選択します。問題文・正解・解説は端末内で処理し、GitHub Pagesには送信しません。</p>
-      <label for="import-file"><strong>追加するJSONファイルを選択</strong></label>
-      <input id="import-file" type="file" accept=".json,application/json">
-      <div id="import-preview" class="small" role="status" aria-live="polite">ファイル選択後、内容を検査します。</div>
-      <button id="import-apply" type="button" class="primary hidden">検査した新規問題を追加する</button>
-      <p class="muted small">※ 同じ問題IDや内容が完全一致する問題は追加しません。問題を修正するときは「問題一覧・修正・削除」を使用してください。教材データは公開しないでください。</p>
-    </div>
-    <button id="toggle-manage" class="import-toggle" type="button" aria-expanded="false">＋ 問題一覧・修正・削除</button>
-    <div id="manage-panel" class="import-panel hidden">
-      <h3>登録問題の管理</h3>
-      <p class="muted small">問題文・正解・解説・問題ごとの正答率を確認できます。取り込み問題は修正・削除（復元可能）に対応。内蔵サンプルは表示・非表示の切り替えができます。正答率は選択したモードの現行問題版への回答から集計します。</p>
-      <div class="manager-controls">
-        <label>正答率の対象<select id="manage-profile"><option value="student">娘さん用</option><option value="test">テスト用</option></select></label>
-        <label>並び順<select id="manage-sort"><option value="era">時代・問題ID順</option><option value="accuracy-asc">正答率が低い順</option><option value="accuracy-desc">正答率が高い順</option><option value="attempts-desc">回答回数が多い順</option></select></label>
-        <label>時代<select id="manage-era"><option value="all">すべての時代</option></select></label>
-        <label>難易度<select id="manage-difficulty"><option value="all">すべて</option><option value="basic">基礎</option><option value="standard">標準</option><option value="advanced">応用</option><option value="unset">未設定</option></select></label>
-        <label>ジャンル<select id="manage-tag"><option value="all">すべて</option><option value="person">人物</option><option value="politics">政治・制度</option><option value="culture">文化・宗教</option><option value="society">社会・経済</option><option value="war_diplomacy">戦争・外交</option><option value="unset">未設定</option></select></label>
-        <label>状態<select id="manage-state"><option value="active">出題中</option><option value="deleted">削除・非表示</option><option value="all">すべて</option></select></label>
-        <label style="grid-column:1/-1">問題文・IDで検索<input id="manage-search" type="search" maxlength="200" placeholder="検索する言葉を入力"></label>
+    <details id="admin-questions-group" class="admin-group" open>
+      <summary aria-controls="admin-questions-content"><h3>📚 問題を管理する<span class="muted small">問題の追加・編集・一括更新</span></h3></summary>
+      <div id="admin-questions-content" class="admin-group-content">
+        <button id="toggle-import" class="import-toggle" type="button" aria-expanded="false" aria-controls="import-panel">＋ 新しい問題を取り込む</button>
+        <div id="import-panel" class="import-panel hidden">
+          <h4>問題データの取り込み（JSON）</h4>
+          <p class="muted small">iPhone・iPad内のJSONファイルを選択します。問題文・正解・解説は端末内で処理し、GitHub Pagesには送信しません。</p>
+          <label for="import-file"><strong>追加するJSONファイルを選択</strong></label>
+          <input id="import-file" type="file" accept=".json,application/json">
+          <div id="import-preview" class="small" role="status" aria-live="polite">ファイル選択後、内容を検査します。</div>
+          <button id="import-apply" type="button" class="primary hidden">検査した新規問題を追加する</button>
+          <p class="muted small">※ 同じ問題IDや内容が完全一致する問題は追加しません。問題を修正するときは「問題一覧・修正・削除」を使用してください。教材データは公開しないでください。</p>
+        </div>
+        <button id="toggle-manage" class="import-toggle" type="button" aria-expanded="false" aria-controls="manage-panel">＋ 問題一覧・修正・削除</button>
+        <div id="manage-panel" class="import-panel hidden">
+          <h4>登録問題の管理</h4>
+          <p class="muted small">問題文・正解・解説・問題ごとの正答率を確認できます。取り込み問題は修正・削除（復元可能）に対応。内蔵サンプルは表示・非表示の切り替えができます。正答率は選択したモードの現行問題版への回答から集計します。</p>
+          <div class="manager-controls">
+            <label>正答率の対象<select id="manage-profile"><option value="student">娘さん用</option><option value="test">テスト用</option></select></label>
+            <label>並び順<select id="manage-sort"><option value="era">時代・問題ID順</option><option value="accuracy-asc">正答率が低い順</option><option value="accuracy-desc">正答率が高い順</option><option value="attempts-desc">回答回数が多い順</option></select></label>
+            <label>時代<select id="manage-era"><option value="all">すべての時代</option></select></label>
+            <label>難易度<select id="manage-difficulty"><option value="all">すべて</option><option value="basic">基礎</option><option value="standard">標準</option><option value="advanced">応用</option><option value="unset">未設定</option></select></label>
+            <label>ジャンル<select id="manage-tag"><option value="all">すべて</option><option value="person">人物</option><option value="politics">政治・制度</option><option value="culture">文化・宗教</option><option value="society">社会・経済</option><option value="war_diplomacy">戦争・外交</option><option value="unset">未設定</option></select></label>
+            <label>状態<select id="manage-state"><option value="active">出題中</option><option value="deleted">削除・非表示</option><option value="all">すべて</option></select></label>
+            <label style="grid-column:1/-1">問題文・IDで検索<input id="manage-search" type="search" maxlength="200" placeholder="検索する言葉を入力"></label>
+          </div>
+          <div id="manage-summary" class="muted small" role="status" aria-live="polite"></div>
+          <div id="manage-list"></div>
+          <div id="manage-edit" class="hidden"></div>
+        </div>
+        <button id="toggle-question-update" class="import-toggle" type="button" aria-expanded="false" aria-controls="question-update-panel">＋ 問題マスターの書き出し・一括更新</button>
+        <div id="question-update-panel" class="import-panel hidden">
+          <h4>📁 問題マスターを管理する</h4>
+          <p class="muted small">問題文・選択肢・正解・解説・難易度・ジャンルだけをJSONに書き出します。<strong>娘さん・テスト用の回答履歴は含まれません。</strong> 公開GitHubには登録せず、iCloud Driveで保管してください。</p>
+          <div class="question-update-controls">
+            <label for="question-export-era">書き出す時代
+              <select id="question-export-era"><option value="all">全時代の取り込み問題</option></select>
+            </label>
+            <button id="question-export" type="button" class="primary">問題マスターJSONを書き出す</button>
+          </div>
+          <div id="question-export-status" class="question-update-status small" role="status" aria-live="polite">削除済みを除く取り込み問題を書き出します。内蔵サンプルは対象外です。</div>
+          <hr style="border:0;border-top:1px solid #dce6ed;margin:22px 0">
+          <h4>修正した問題JSONを一括更新</h4>
+          <p class="muted small">上で書き出したファイルを問題作成チャットでレビュー・修正し、<strong>元の <code>baseRevision</code> と <code>baseHash</code> を変更せず</strong>取り込んでください。通常の新規問題JSONや古い版・他端末の異なる問題版は更新できません。</p>
+          <div class="backup-warn">保存前に必ず完全バックアップを取得してください。問題文・選択肢・正解・時代が変わると、その問題の習得判定はリセットされます（過去の回答記録は保管）。解説・難易度・ジャンルなどだけの変更では維持します。<strong>ファイルに含まれない問題は削除しません。</strong></div>
+          <label for="question-update-file" style="display:block;margin-top:14px"><strong>修正版の問題マスターJSON</strong></label>
+          <input id="question-update-file" type="file" accept=".json,application/json">
+          <div id="question-update-preview" class="question-update-status small" role="status" aria-live="polite">ファイルを選ぶと、全問検証と更新前後の差分を表示します。選択しただけでは更新されません。</div>
+          <div id="question-update-diffs"></div>
+          <button id="question-update-apply" type="button" class="primary hidden">検査した変更を一括保存する</button>
+        </div>
+        <button id="toggle-tag-map" class="import-toggle" type="button" aria-expanded="false" aria-controls="tag-map-panel">＋ ジャンルタグの一括設定</button>
+        <div id="tag-map-panel" class="import-panel hidden">
+          <h4>既存問題のジャンルタグを一括更新</h4>
+          <p class="muted small">問題IDとタグの対応表JSONを取り込み、既に登録されている問題の<strong>タグだけ</strong>を更新します。回答履歴・連続正解・習得状況は変更しません。内蔵サンプルは対象外です。</p>
+          <label for="tag-map-file"><strong>タグ対応表（JSONファイル）</strong></label>
+          <input id="tag-map-file" class="tag-map-file" type="file" accept=".json,application/json">
+          <div id="tag-map-preview" class="tag-map-status small" role="status" aria-live="polite">ファイル選択後、IDとタグの対応を検査します。検査しただけでは更新されません。</div>
+          <button id="tag-map-apply" class="primary hidden" type="button">検査したタグの変更を保存する</button>
+          <p class="muted small">JSONの形式：<code>{"tagMapVersion":1,"assignments":[{"id":"HIST-E01-0001","tag":"society"}]}</code><br>タグを解除するときは <code>"tag":null</code> を指定してください。通常の問題JSON取り込みとは別の機能です。</p>
+        </div>
       </div>
-      <div id="manage-summary" class="muted small" role="status" aria-live="polite"></div>
-      <div id="manage-list"></div>
-      <div id="manage-edit" class="hidden"></div>
-    </div>
-    <button id="toggle-tag-map" class="import-toggle" type="button" aria-expanded="false">＋ ジャンルタグをまとめて設定</button>
-    <div id="tag-map-panel" class="import-panel hidden">
-      <h3>既存問題のジャンルタグを一括更新</h3>
-      <p class="muted small">問題IDとタグの対応表JSONを取り込み、既に登録されている問題の<strong>タグだけ</strong>を更新します。回答履歴・連続正解・習得状況は変更しません。内蔵サンプルは対象外です。</p>
-      <label for="tag-map-file"><strong>タグ対応表（JSONファイル）</strong></label>
-      <input id="tag-map-file" class="tag-map-file" type="file" accept=".json,application/json">
-      <div id="tag-map-preview" class="tag-map-status small" role="status" aria-live="polite">ファイル選択後、IDとタグの対応を検査します。検査しただけでは更新されません。</div>
-      <button id="tag-map-apply" class="primary hidden" type="button">検査したタグの変更を保存する</button>
-      <p class="muted small">JSONの形式：<code>{"tagMapVersion":1,"assignments":[{"id":"HIST-E01-0001","tag":"society"}]}</code><br>タグを解除するときは <code>"tag":null</code> を指定してください。通常の問題JSON取り込みとは別の機能です。</p>
-    </div>
-    <button id="toggle-question-update" class="import-toggle" type="button" aria-expanded="false">＋ 問題JSONの書き出し・一括更新</button>
-    <div id="question-update-panel" class="import-panel hidden">
-      <h3>📁 問題マスターを管理する</h3>
-      <p class="muted small">問題文・選択肢・正解・解説・難易度・ジャンルだけをJSONに書き出します。<strong>娘さん・テスト用の回答履歴は含まれません。</strong> 公開GitHubには登録せず、iCloud Driveで保管してください。</p>
-      <div class="question-update-controls">
-        <label for="question-export-era">書き出す時代
-          <select id="question-export-era"><option value="all">全時代の取り込み問題</option></select>
-        </label>
-        <button id="question-export" type="button" class="primary">問題マスターJSONを書き出す</button>
+    </details>
+    <details id="admin-backup-group" class="admin-group">
+      <summary aria-controls="admin-backup-content"><h3>💾 バックアップ・復元<span class="muted small">学習データの保護と復元</span></h3></summary>
+      <div id="admin-backup-content" class="admin-group-content">
+        <button id="toggle-backup" class="import-toggle" type="button" aria-expanded="false" aria-controls="backup-panel">＋ バックアップ・復元</button>
+        <div id="backup-panel" class="import-panel hidden">
+          <h4>学習データのバックアップ</h4>
+          <p class="muted small">取り込んだ問題（削除・非表示分を含む）・両モードの学習履歴・回答記録・中断状態・獲得カード・コイン残高／受取済み記録・サンプルの非表示設定をまとめてJSONに書き出します。ファイルは外部サーバーに送信しません。</p>
+          <button id="backup-export" class="primary" type="button">バックアップJSONを書き出す</button>
+          <p class="muted small">Safariのダウンロード先を確認し、必要に応じて「ファイル」アプリからiCloud Driveへ保存してください。書き出したJSONをGitHubにアップロードしないでください。</p>
+          <h4 style="margin-top:24px">バックアップから復元</h4>
+          <div class="backup-warn">注意：復元すると、現在の取り込み問題・両モードの学習履歴・途中状態・獲得カード・コインを、バックアップの内容で<strong>すべて置き換えます</strong>。復元する前に、現在のデータもバックアップしてください。</div>
+          <label for="backup-file" style="display:block;margin-top:14px"><strong>復元するJSONファイルを選択</strong></label>
+          <input id="backup-file" type="file" accept=".json,application/json">
+          <div id="backup-preview" class="backup-status small" role="status" aria-live="polite">ファイルを選択すると、復元前に内容を検査します。</div>
+          <button id="backup-restore" class="primary hidden" type="button">現在のデータを置き換えて復元する</button>
+        </div>
       </div>
-      <div id="question-export-status" class="question-update-status small" role="status" aria-live="polite">削除済みを除く取り込み問題を書き出します。内蔵サンプルは対象外です。</div>
-      <hr style="border:0;border-top:1px solid #dce6ed;margin:22px 0">
-      <h3>修正した問題JSONを一括更新</h3>
-      <p class="muted small">上で書き出したファイルを問題作成チャットでレビュー・修正し、<strong>元の <code>baseRevision</code> と <code>baseHash</code> を変更せず</strong>取り込んでください。通常の新規問題JSONや古い版・他端末の異なる問題版は更新できません。</p>
-      <div class="backup-warn">保存前に必ず完全バックアップを取得してください。問題文・選択肢・正解・時代が変わると、その問題の習得判定はリセットされます（過去の回答記録は保管）。解説・難易度・ジャンルなどだけの変更では維持します。<strong>ファイルに含まれない問題は削除しません。</strong></div>
-      <label for="question-update-file" style="display:block;margin-top:14px"><strong>修正版の問題マスターJSON</strong></label>
-      <input id="question-update-file" type="file" accept=".json,application/json">
-      <div id="question-update-preview" class="question-update-status small" role="status" aria-live="polite">ファイルを選ぶと、全問検証と更新前後の差分を表示します。選択しただけでは更新されません。</div>
-      <div id="question-update-diffs"></div>
-      <button id="question-update-apply" type="button" class="primary hidden">検査した変更を一括保存する</button>
-    </div>
-    <button id="toggle-backup" class="import-toggle" type="button" aria-expanded="false">＋ バックアップ・復元</button>
-    <div id="backup-panel" class="import-panel hidden">
-      <h3>学習データのバックアップ</h3>
-      <p class="muted small">取り込んだ問題（削除・非表示分を含む）・両モードの学習履歴・回答記録・中断状態・獲得カード・コイン残高／受取済み記録・サンプルの非表示設定をまとめてJSONに書き出します。ファイルは外部サーバーに送信しません。</p>
-      <button id="backup-export" class="primary" type="button">バックアップJSONを書き出す</button>
-      <p class="muted small">Safariのダウンロード先を確認し、必要に応じて「ファイル」アプリからiCloud Driveへ保存してください。書き出したJSONをGitHubにアップロードしないでください。</p>
-      <h3 style="margin-top:24px">バックアップから復元</h3>
-      <div class="backup-warn">注意：復元すると、現在の取り込み問題・両モードの学習履歴・途中状態・獲得カード・コインを、バックアップの内容で<strong>すべて置き換えます</strong>。復元する前に、現在のデータもバックアップしてください。</div>
-      <label for="backup-file" style="display:block;margin-top:14px"><strong>復元するJSONファイルを選択</strong></label>
-      <input id="backup-file" type="file" accept=".json,application/json">
-      <div id="backup-preview" class="backup-status small" role="status" aria-live="polite">ファイルを選択すると、復元前に内容を検査します。</div>
-      <button id="backup-restore" class="primary hidden" type="button">現在のデータを置き換えて復元する</button>
-    </div>
-    <button id="toggle-reset" class="import-toggle" type="button" aria-expanded="false">＋ データ初期化（保護者用）</button>
-    <div id="reset-panel" class="import-panel hidden">
-      <h3>🧹 サンプル・学習データの整理</h3>
-      <p class="muted small">初期化する対象を選んでください。<strong>チェックしなかった項目は変更しません。</strong> 実行前に、必要なバックアップJSONを保存してください。</p>
-      <div class="backup-warn">問題の一括削除は「復元可能な非表示」です。一方、学習履歴・コインの初期化および完全初期化は取り消せません。バックアップがあれば元に戻せます。</div>
-      <label class="reset-option"><input id="reset-hide-samples" type="checkbox"><span><strong>内蔵サンプルをすべて非表示にする</strong><span>内蔵の9問を出題対象から外します。いつでも個別に再表示できます。</span></span></label>
-      <label class="reset-option"><input id="reset-hide-imported" type="checkbox"><span><strong>取り込み問題をすべて出題対象から外す</strong><span>削除済みを除く取り込み問題を一括で論理削除します。問題と履歴は保持され、個別に復元可能です。</span></span></label>
-      <label class="reset-option"><input id="reset-student" type="checkbox"><span><strong>娘さん用の学習データを初期化する</strong><span>娘さん用の回答履歴・習得状況・途中状態・獲得カード・コイン・クレーン履歴・景品・景品配置を削除します。テスト用は保持します。</span></span></label>
-      <label class="reset-option"><input id="reset-test" type="checkbox"><span><strong>テスト用の学習データを初期化する</strong><span>テスト用の回答履歴・習得状況・途中状態・獲得カード・コイン・クレーン履歴・景品・景品配置を削除します。娘さん用は保持します。</span></span></label>
-      <div id="reset-preview" class="reset-status small" role="status" aria-live="polite">初期化する項目を選択すると、対象件数が表示されます。</div>
-      <label class="reset-ack"><input id="reset-ack" type="checkbox"><span>必要なバックアップを保存したか確認し、選択したデータが変更・削除されることを理解しました。</span></label>
-      <button id="reset-apply" class="primary" type="button" disabled>選択した項目を初期化する</button>
-      <div class="reset-danger">
-        <h3>⚠️ 完全初期化（すべての端末内データを消去）</h3>
-        <p class="muted small">取り込み問題（削除済みも含む）・両モードの学習履歴・途中状態・獲得カード・コイン・サンプル非表示設定を<strong>すべて完全削除</strong>します。内蔵サンプル9問は再表示されます。取り消し不可です。</p>
-        <button id="reset-all" class="reset-danger-button" type="button">すべてのデータを完全初期化する</button>
+    </details>
+    <details id="admin-other-group" class="admin-group">
+      <summary aria-controls="admin-other-content"><h3>⚙️ その他の管理<span class="muted small">カード画像の確認・データ初期化</span></h3></summary>
+      <div id="admin-other-content" class="admin-group-content">
+        <details id="card-preview-panel" class="genre-panel">
+          <summary>🖼️ 時代制覇カードの画像を確認する（保護者用）</summary>
+          <p class="muted small">10枚すべてをプレビューできます。ここで表示してもカードは獲得済みにならず、理解度・学習履歴も変わりません。</p>
+          <div id="admin-card-preview" class="trophy-grid"></div>
+        </details>
+        <button id="toggle-reset" class="import-toggle" type="button" aria-expanded="false" aria-controls="reset-panel">＋ データ初期化（保護者用）</button>
+        <div id="reset-panel" class="import-panel hidden">
+          <h4>🧹 サンプル・学習データの整理</h4>
+          <p class="muted small">初期化する対象を選んでください。<strong>チェックしなかった項目は変更しません。</strong> 実行前に、必要なバックアップJSONを保存してください。</p>
+          <div class="backup-warn">問題の一括削除は「復元可能な非表示」です。一方、学習履歴・コインの初期化および完全初期化は取り消せません。バックアップがあれば元に戻せます。</div>
+          <label class="reset-option"><input id="reset-hide-samples" type="checkbox"><span><strong>内蔵サンプルをすべて非表示にする</strong><span>内蔵の9問を出題対象から外します。いつでも個別に再表示できます。</span></span></label>
+          <label class="reset-option"><input id="reset-hide-imported" type="checkbox"><span><strong>取り込み問題をすべて出題対象から外す</strong><span>削除済みを除く取り込み問題を一括で論理削除します。問題と履歴は保持され、個別に復元可能です。</span></span></label>
+          <label class="reset-option"><input id="reset-student" type="checkbox"><span><strong>娘さん用の学習データを初期化する</strong><span>娘さん用の回答履歴・習得状況・途中状態・獲得カード・コイン・クレーン履歴・景品・景品配置を削除します。テスト用は保持します。</span></span></label>
+          <label class="reset-option"><input id="reset-test" type="checkbox"><span><strong>テスト用の学習データを初期化する</strong><span>テスト用の回答履歴・習得状況・途中状態・獲得カード・コイン・クレーン履歴・景品・景品配置を削除します。娘さん用は保持します。</span></span></label>
+          <div id="reset-preview" class="reset-status small" role="status" aria-live="polite">初期化する項目を選択すると、対象件数が表示されます。</div>
+          <label class="reset-ack"><input id="reset-ack" type="checkbox"><span>必要なバックアップを保存したか確認し、選択したデータが変更・削除されることを理解しました。</span></label>
+          <button id="reset-apply" class="primary" type="button" disabled>選択した項目を初期化する</button>
+          <div class="reset-danger">
+            <h5>⚠️ 完全初期化（すべての端末内データを消去）</h5>
+            <p class="muted small">取り込み問題（削除済みも含む）・両モードの学習履歴・途中状態・獲得カード・コイン・サンプル非表示設定を<strong>すべて完全削除</strong>します。内蔵サンプル9問は再表示されます。取り消し不可です。</p>
+            <button id="reset-all" class="reset-danger-button" type="button">すべてのデータを完全初期化する</button>
+          </div>
+        </div>
       </div>
-    </div>
-    <details id="card-preview-panel" class="genre-panel">
-      <summary>🖼️ 時代制覇カードの画像を確認する（保護者用）</summary>
-      <p class="muted small">10枚すべてをプレビューできます。ここで表示してもカードは獲得済みにならず、理解度・学習履歴も変わりません。</p>
-      <div id="admin-card-preview" class="trophy-grid"></div>
     </details>
     <p class="muted small" style="margin-top:18px">※ 内蔵問題は公開可能な自作サンプルです。外部から読み込んだ問題はこの端末のSafariにのみ保存されます。</p>
   </section>
@@ -823,7 +849,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.6.11";
+const APP_VERSION = "v1.6.12";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3428,7 +3454,7 @@ function openQuestionEditor(id) {
   editingId=id;
   const area=$("manage-edit");area.replaceChildren();area.classList.remove("hidden");
   const form=document.createElement("form");form.className="edit-form";
-  const heading=document.createElement("h3");heading.textContent="問題を修正："+id;form.appendChild(heading);
+  const heading=document.createElement("h4");heading.textContent="問題を修正："+id;form.appendChild(heading);
   function field(labelText,kind,value,rows=2,parent=form) {
     const label=document.createElement("label");label.textContent=labelText;
     const control=document.createElement(kind);control.value=value;
@@ -3589,7 +3615,7 @@ $("toggle-import").addEventListener("click", () => {
   const opening = panel.classList.contains("hidden");
   panel.classList.toggle("hidden", !opening);
   $("toggle-import").setAttribute("aria-expanded", String(opening));
-  $("toggle-import").textContent = opening ? "－ 問題ファイルの取り込みを閉じる" : "＋ 問題ファイルを取り込む";
+  $("toggle-import").textContent = opening ? "－ 新しい問題の取り込みを閉じる" : "＋ 新しい問題を取り込む";
 });
 $("toggle-manage").addEventListener("click",()=>{
   if (saving||importing||backingUp||managing||updatingQuestions) return;
@@ -3607,7 +3633,7 @@ $("toggle-tag-map").addEventListener("click", () => {
   const opening=panel.classList.contains("hidden");
   panel.classList.toggle("hidden",!opening);
   $("toggle-tag-map").setAttribute("aria-expanded",String(opening));
-  $("toggle-tag-map").textContent=opening?"－ ジャンルタグ一括設定を閉じる":"＋ ジャンルタグをまとめて設定";
+  $("toggle-tag-map").textContent=opening?"－ ジャンルタグ一括設定を閉じる":"＋ ジャンルタグの一括設定";
 });
 $("tag-map-file").addEventListener("change",()=>previewTagMap().catch(err));
 $("tag-map-apply").addEventListener("click",()=>applyTagMap().catch(err));
@@ -3616,7 +3642,7 @@ $("toggle-question-update").addEventListener("click", () => {
   const panel=$("question-update-panel");const opening=panel.classList.contains("hidden");
   panel.classList.toggle("hidden",!opening);
   $("toggle-question-update").setAttribute("aria-expanded",String(opening));
-  $("toggle-question-update").textContent=opening?"－ 問題JSONの書き出し・一括更新を閉じる":"＋ 問題JSONの書き出し・一括更新";
+  $("toggle-question-update").textContent=opening?"－ 問題マスターの書き出し・一括更新を閉じる":"＋ 問題マスターの書き出し・一括更新";
 });
 $("question-export").addEventListener("click",()=>exportQuestionMaster().catch(err));
 $("question-update-file").addEventListener("change",()=>previewQuestionUpdate().catch(err));

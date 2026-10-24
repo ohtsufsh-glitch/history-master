@@ -441,6 +441,8 @@ class SecretPlushTest(unittest.TestCase):
         self.page.wait_for_function("profile==='student'&&document.querySelector('#arcade-secret-collection-count').textContent.includes('0/3種類')")
         self.assertEqual(self.snapshot(), before)
         self.page.locator('#open-admin').click()
+        if not self.page.locator('#admin-backup-group').evaluate('el=>el.open'):
+            self.page.locator('#admin-backup-group > summary').click()
         self.page.locator('#toggle-backup').click()
         with self.page.expect_download() as event:
             self.page.locator('#backup-export').click()
@@ -500,6 +502,8 @@ class SecretPlushTest(unittest.TestCase):
         before = self.snapshot()
         self.assertEqual(len(before), 14)
         self.page.locator('#open-admin').click()
+        if not self.page.locator('#admin-backup-group').evaluate('el=>el.open'):
+            self.page.locator('#admin-backup-group > summary').click()
         self.page.locator('#toggle-backup').click()
         with self.page.expect_download() as event:
             self.page.locator('#backup-export').click()

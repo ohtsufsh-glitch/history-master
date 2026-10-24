@@ -647,6 +647,8 @@ class HistoryNavigationTest(unittest.TestCase):
         before=self.snapshot()
         self.enter_test_admin()
         length=self.page.evaluate('history.length')
+        if not self.page.locator('#admin-other-group').evaluate('el=>el.open'):
+            self.page.locator('#admin-other-group > summary').click()
         self.page.locator('#toggle-reset').click()
         self.page.locator('#reset-test').check()
         self.page.locator('#reset-ack').check()
@@ -663,6 +665,8 @@ class HistoryNavigationTest(unittest.TestCase):
         self.install(mastered=True)
         self.enter_test_admin()
         length=self.page.evaluate('history.length')
+        if not self.page.locator('#admin-other-group').evaluate('el=>el.open'):
+            self.page.locator('#admin-other-group > summary').click()
         self.page.locator('#toggle-reset').click()
         self.page.locator('#reset-all').click()
         self.page.wait_for_function("!resetting&&!backingUp&&document.querySelector('#reset-preview').textContent.startsWith('完全初期化しました')")
@@ -699,6 +703,8 @@ class HistoryNavigationTest(unittest.TestCase):
 
     def test_reset_clears_draft_even_when_identical_session_is_recreated(self):
         session=self.select_draft_and_open_admin()
+        if not self.page.locator('#admin-other-group').evaluate('el=>el.open'):
+            self.page.locator('#admin-other-group > summary').click()
         self.page.locator('#toggle-reset').click()
         self.page.locator('#reset-student').check()
         self.page.locator('#reset-ack').check()
