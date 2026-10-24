@@ -262,6 +262,8 @@ class PlushTest(unittest.TestCase):
         self.install(data)
         before = self.snapshot()
         self.page.locator('#open-admin').click()
+        if not self.page.locator('#admin-backup-group').evaluate('el=>el.open'):
+            self.page.locator('#admin-backup-group > summary').click()
         self.page.locator('#toggle-backup').click()
         with self.page.expect_download() as event:
             self.page.locator('#backup-export').click()

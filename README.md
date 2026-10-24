@@ -1,6 +1,11 @@
 # history-master
 Japanese history learning game
 
+Issue #21（v1.6.12）のレビュー用資料：
+
+- [保護者用管理画面の階層化・検証結果](docs/RELEASE_v1.6.12.md)
+- [iPhone・iPad Safari実機テスト手順](docs/SAFARI_TEST_v1.6.12.md)
+
 Issue #14（v1.6.11）のレビュー用資料：
 
 - [問題画面の所持コイン・ホームボタンと検証結果](docs/RELEASE_v1.6.11.md)
