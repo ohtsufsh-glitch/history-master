@@ -596,7 +596,10 @@ class QuestionFeedbackTest(unittest.TestCase):
         self.seed(5001); self.admin()
         downloads = []
         self.page.on('download', lambda d: downloads.append(d))
-        self.page.locator('#feedback-export-all').click()
+        # 案内文の更新とdownloadイベントの到着は非同期。両ファイルを待ってから件数を検証する。
+        with self.page.expect_download(predicate=lambda d: d.suggested_filename.endswith('-1.json')), \
+                self.page.expect_download(predicate=lambda d: d.suggested_filename.endswith('-2.json')):
+            self.page.locator('#feedback-export-all').click()
         self.page.wait_for_function('document.querySelector("#notice").textContent.includes("2ファイル")')
         self.assertEqual(len(downloads), 2)
         counts = []

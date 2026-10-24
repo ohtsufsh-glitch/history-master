@@ -773,6 +773,11 @@
           <div id="feedback-list"></div>
           <button id="feedback-more" class="hidden" type="button">さらに50件表示</button>
           <div class="manager-actions">
+            <button id="feedback-improvement-pending" type="button">未確認・確認中の指摘から改善依頼JSONを作る</button>
+            <button id="feedback-improvement-selected" type="button">選択した指摘から改善依頼JSONを作る</button>
+          </div>
+          <div id="feedback-improvement-status" class="feedback-text small" role="status" aria-live="polite">改善依頼JSONは、報告時と現在の問題、関連する指摘をまとめて問題作成チャットへ渡すためのファイルです。問題マスター更新JSONとは別形式です。選択・出力だけでは問題や対応状況を変更しません。</div>
+          <div class="manager-actions">
             <button id="feedback-export-selected" type="button">選択した指摘を書き出す</button>
             <button id="feedback-export-all" type="button">全指摘JSONを書き出す</button>
           </div>
@@ -895,7 +900,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.6.13";
+const APP_VERSION = "v1.6.14";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -2552,7 +2557,8 @@ async function applyQuestionUpdate() {
     closeQuestionEditor();
     await refreshDashboardStay();
     if(!$("manage-panel").classList.contains("hidden"))renderManager();
-    notice(`問題${plan.changes.length}問を更新しました。`);
+    if(!$("feedback-panel").classList.contains("hidden"))await renderFeedback().catch(err);
+    notice("問題"+plan.changes.length+"問を更新しました。指摘は保持されます。問題の指摘・改善管理で報告時との差分を確認してください。");
   } catch(e) {
     console.error(e);
     invalidateQuestionUpdatePreview();
@@ -2715,6 +2721,7 @@ async function renderFeedback() {
   const records=[...SAMPLE_QUESTIONS,...await readAll("questions")],mismatches=await feedbackMismatches(reports,records);
   if(gen!==feedbackRenderGeneration||$("admin").classList.contains("hidden"))return;
   const ids=new Set(reports.map(r=>r.reportId));for(const id of feedbackSelected)if(!ids.has(id))feedbackSelected.delete(id);
+  const currentRecords=new Map(records.map(q=>[q.id,q]));
   const counts=new Map();for(const r of reports)counts.set(r.questionId,(counts.get(r.questionId)||0)+1);
   const filtered=reports.filter(r=>($("feedback-era").value==="all"||r.questionSnapshot.eraId===$("feedback-era").value)&&
     ($("feedback-filter-category").value==="all"||r.category===$("feedback-filter-category").value)&&
@@ -2737,7 +2744,38 @@ async function renderFeedback() {
     const stateLabel=document.createElement("label");stateLabel.textContent="対応状況 ";const select=document.createElement("select");select.setAttribute("aria-label",`${r.questionId} ${r.reportId}の対応状況`);
     for(const [key,text] of Object.entries(FEEDBACK_STATUSES)){const opt=document.createElement("option");opt.value=key;opt.textContent=text;select.append(opt);}select.value=r.status;
     select.addEventListener("change",async()=>{select.disabled=true;try{await changeFeedbackStatus(r.reportId,select.value,r);await renderFeedback();}catch(error){notice(error.message);await renderFeedback();}});
-    stateLabel.append(select);row.append(label,body,details,stateLabel);$("feedback-list").append(row);
+    stateLabel.append(select);row.append(label,body,details,stateLabel);
+    if(isSample(r.questionId)) {
+      const note=document.createElement("p");note.className="small";
+      note.textContent="内蔵サンプルはアプリ本体の修正が必要です。問題マスターの一括更新では変更できません。";
+      row.append(note);
+    }
+    if(mismatches.has(r.reportId)) {
+      const current=currentRecords.get(r.questionId);
+      const comparison=document.createElement("details"),comparisonTitle=document.createElement("summary");
+      const comparisonText=document.createElement("p");comparisonText.className="feedback-text small";
+      comparisonTitle.textContent=current?"報告時と現在の問題を比較":"現在の問題はありません";
+      if(current) {
+        const before=feedbackQuestion(r.questionSnapshot,r.questionRevision);
+        const changed=updateDiffFields(before,current).map(field=>field.label);
+        const snapshot={...exportableQuestion(current),deleted:!!current.deleted};
+        comparisonText.textContent="違い："+(changed.length?changed.join("・"):"改訂番号または公開状態")+
+          (current.deleted?"（現在は非表示）":"")+"\n\n現在の問題：\n"+
+          feedbackSnapshotText({questionId:current.id,questionRevision:questionRevision(current),questionSnapshot:snapshot});
+      } else comparisonText.textContent="問題はこの端末に存在しません。報告時のスナップショットは保持しています。";
+      comparison.append(comparisonTitle,comparisonText);row.append(comparison);
+      if(current&&!["fix_pending","resolved","dismissed"].includes(r.status)) {
+        const suggest=document.createElement("button");suggest.type="button";
+        suggest.textContent="修正確認待ちにする（保護者確認）";
+        suggest.addEventListener("click",async()=>{
+          suggest.disabled=true;
+          try {await changeFeedbackStatus(r.reportId,"fix_pending",r);await renderFeedback();}
+          catch(error){notice(error.message);await renderFeedback();}
+        });
+        row.append(suggest);
+      }
+    }
+    $("feedback-list").append(row);
   }
   $("feedback-more").classList.toggle("hidden",filtered.length<=feedbackVisible);
 }
@@ -2789,6 +2827,81 @@ async function applyFeedbackImport() {
   } catch(error){$("feedback-import-preview").textContent="取り込み失敗（全件ロールバック）："+error.message+" 再プレビューしてください。";feedbackPlan=null;$("feedback-import").classList.add("hidden");}
   finally {feedbackImporting=false;$("feedback-import").disabled=false;$("feedback-file").disabled=false;}
 }
+// 改善依頼は問題マスター更新JSONと別形式。書き出しは現在のDBを読むだけで保存しない。
+const IMPROVEMENT_REQUEST_FORMAT="history-master-improvement-request", IMPROVEMENT_REQUEST_VERSION=1;
+const IMPROVEMENT_QUESTION_LIMIT=100, IMPROVEMENT_FILE_LIMIT=8*1024*1024;
+let improvementExporting=false;
+async function buildImprovementRequest(reports,questions,exportedAt=new Date().toISOString()) {
+  if(!Array.isArray(reports)||!reports.length)throw new Error("書き出す指摘がありません。");
+  const current=new Map([...SAMPLE_QUESTIONS,...questions].map(q=>[q.id,q]));
+  const groups=new Map();
+  for(const r of reports) {
+    validateFeedbackRecord(r,true);
+    if(!groups.has(r.questionId))groups.set(r.questionId,[]);
+    groups.get(r.questionId).push(r);
+  }
+  if(groups.size>IMPROVEMENT_QUESTION_LIMIT)throw new Error("対象は1ファイル100問までです。指摘一覧で対象を選び、「選択した指摘から改善依頼JSON」で分けて書き出してください。");
+  const entries=[];
+  for(const [id,items] of [...groups.entries()].sort(([a],[b])=>a.localeCompare(b))) {
+    const q=current.get(id);
+    const sample=isSample(id);
+    const active=!!q&&!sample&&!q.deleted;
+    const baseRevision=active?questionRevision(q):null;
+    const baseHash=active?await sha256Text(questionFingerprintSource(q)):null;
+    const currentHash=q?await sha256Text(questionFingerprintSource(q)):null;
+    entries.push({
+      questionId:id, sourceType:sample?"builtin-sample":q?"imported":"missing",
+      updateEligible:active, updateRestriction:active?null:sample?"内蔵サンプルはアプリ本体の修正が必要です。":q?"出題対象に復元してから問題マスターを更新してください。":"この端末に問題がありません。",
+      currentRevision:q?questionRevision(q):null,
+      currentQuestion:q?exportableQuestion(q):null,
+      baseRevision,baseHash,
+      reports:items.sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.reportId.localeCompare(b.reportId)).map(r=>({
+        ...feedbackContent(r),status:r.status,
+        versionMismatch:!q||questionRevision(q)!==r.questionRevision||currentHash!==r.questionHash,
+        changedFields:q?updateDiffFields(feedbackQuestion(r.questionSnapshot,r.questionRevision),q).map(field=>field.key):null
+      }))
+    });
+  }
+  return {improvementRequestFormat:IMPROVEMENT_REQUEST_FORMAT,formatVersion:IMPROVEMENT_REQUEST_VERSION,
+    exportedAt,questionCount:entries.length,reportCount:reports.length,questions:entries};
+}
+function readImprovementSource() {
+  return new Promise((resolve,reject)=>{
+    // 他タブの復元・編集をまたいで指摘と問題が混ざらないよう、同じ時点の正本を読む。
+    const tx=db.transaction(["questionFeedback","questions"],"readonly");
+    const reports=tx.objectStore("questionFeedback").getAll(),questions=tx.objectStore("questions").getAll();
+    tx.oncomplete=()=>resolve({reports:reports.result,questions:questions.result});
+    tx.onerror=()=>reject(tx.error||new Error("改善依頼の読み込みに失敗しました。"));
+    tx.onabort=()=>reject(tx.error||new Error("改善依頼の読み込みを中止しました。"));
+  });
+}
+async function exportImprovementRequest(selectedOnly=false) {
+  if(improvementExporting||feedbackImporting||feedbackSaving||backingUp||resetting||updatingQuestions||
+     $("admin").classList.contains("hidden"))return;
+  improvementExporting=true;
+  const ctx=viewContext(),selectedIds=new Set(feedbackSelected);
+  const buttons=[$("feedback-improvement-pending"),$("feedback-improvement-selected")];
+  buttons.forEach(button=>button.disabled=true);
+  const status=$("feedback-improvement-status");
+  try {
+    const source=await readImprovementSource();
+    const reports=source.reports.filter(r=>selectedOnly?
+      selectedIds.has(r.reportId):["unreviewed","reviewing"].includes(r.status));
+    if(!reports.length)throw new Error(selectedOnly?"指摘一覧のチェックボックスから対象を選んでください。":"未確認・確認中の指摘がありません。");
+    const pack=await buildImprovementRequest(reports,source.questions);
+    if(!viewCurrent(ctx)||$("admin").classList.contains("hidden"))return;
+    // downloadPrivateJSONと同じ末尾改行まで含めて、実ファイルの容量を検査する。
+    const bytes=new Blob([JSON.stringify(pack,null,2)+"\n"],{type:"application/json"}).size;
+    if(bytes>IMPROVEMENT_FILE_LIMIT)throw new Error("JSONが8MiBを超えています。指摘を選択して分割してください。");
+    // データは手動でChatGPTに添付する。自動送信や問題の自動修正をしない。
+    const filename="history-master-improvement-"+pack.exportedAt.slice(0,10)+".json";
+    downloadPrivateJSON(pack,filename);
+    status.textContent=pack.questionCount+"問・"+pack.reportCount+"件の改善依頼を書き出しました（"+filename+"）。"+
+      "教材と照合して修正案を作り、既存の『問題マスターの書き出し・一括更新』から反映してください。"+
+      "指摘や学習データは変更されていません。GitHubには公開しないでください。";
+  } catch(error) {status.textContent="書き出しできません："+error.message;}
+  finally {improvementExporting=false;buttons.forEach(button=>button.disabled=false);}
+}
 async function exportFeedback(all=false) {
   const reports=(await readAll("questionFeedback")).filter(r=>all||feedbackSelected.has(r.reportId)).map(feedbackContent);
   if(!reports.length){notice("書き出す指摘がありません。指摘を選択してください。");return;}
@@ -2825,6 +2938,8 @@ $("feedback-file").addEventListener("change",previewFeedbackImport);
 $("feedback-import").addEventListener("click",applyFeedbackImport);
 $("feedback-export-all").addEventListener("click",()=>exportFeedback(true).catch(err));
 $("feedback-export-selected").addEventListener("click",()=>exportFeedback(false).catch(err));
+$("feedback-improvement-pending").addEventListener("click",()=>exportImprovementRequest(false).catch(err));
+$("feedback-improvement-selected").addEventListener("click",()=>exportImprovementRequest(true).catch(err));
 window.addEventListener("focus",()=>{if(appReady&&!$("admin").classList.contains("hidden")&&!$("feedback-panel").classList.contains("hidden"))renderFeedback().catch(err);});
 
 const BACKUP_FORMAT = "history-master-backup";
