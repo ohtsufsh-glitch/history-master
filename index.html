@@ -26,7 +26,7 @@
     .test-banner p { margin:4px 0 10px; }
     .test-banner .small-action { background:#fff; }
     .mode-indicator { color:#527086; font-size:.85rem; font-weight:650; }
-    /* 王冠の金貨WebPをホーム・正解結果で共用。 */
+    /* 王冠の金貨WebPをホーム・問題画面・正解結果で共用。 */
     .gold-coin { display:block; width:27px; height:27px; object-fit:contain; flex:0 0 auto; filter:drop-shadow(0 2px 1px #9866173d); }
     .coin-home-line { display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fff9e8;border:1px solid #f0dfa9;padding:10px 13px;border-radius:12px;margin:4px 0 16px; }
     .coin-home-line strong { display:inline-flex;align-items:center;gap:6px;color:#79570c;white-space:nowrap; }
@@ -66,6 +66,13 @@
     .track { height: 7px; background: #e6edf4; border-radius: 99px; margin-top: 10px; overflow: hidden; }
     .fill { height: 100%; background: #3e9b84; border-radius: 99px; }
     .nav { background: transparent; border: 0; padding: 12px 4px; color: #286b94; font-weight: 600; }
+    .quiz-toolbar { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+    .quiz-home { flex:0 0 auto; min-width:44px; min-height:48px; padding:11px 14px; border:2px solid #8db8a3; border-radius:14px; background:#e9f6ee; color:#245b42; box-shadow:0 3px 0 #bfd7c9; font-weight:800; }
+    .quiz-home:active { transform:translateY(2px); box-shadow:0 1px 0 #bfd7c9; }
+    .quiz-home:focus-visible { outline:3px solid #286f9a; outline-offset:3px; }
+    .quiz-coins { display:flex; align-items:center; justify-content:flex-end; gap:6px; min-width:0; padding:9px 10px; border:1px solid #f0dfa9; border-radius:12px; background:#fff9e8; color:#79570c; font-size:.94rem; font-weight:700; }
+    #quiz-coin-amount { min-width:0; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+    @media(max-width:430px) { .quiz-toolbar { gap:8px; } .quiz-home { padding:11px 10px; } .quiz-coins { padding:9px 8px; font-size:.88rem; } .quiz-coins .gold-coin { width:24px; height:24px; } }
     .tag { border-radius: 99px; background: #e7eff6; color: #275a79; padding: 6px 10px; font-size: .78rem; }
     .testtag { background: #fef0d8; color: #7d5209; }
     /* 長文・会話文：JSONの改行を維持しつつ、狭い画面でも文字がはみ出さない */
@@ -778,7 +785,10 @@
   </section>
 
   <section id="quiz" class="hidden">
-    <button class="nav" id="back-home" type="button">← ホームに戻る</button>
+    <div class="quiz-toolbar">
+      <button class="quiz-home" id="back-home" type="button">🏠 ホームへ</button>
+      <div id="quiz-coins" class="quiz-coins" role="status" aria-live="polite" aria-atomic="true"><img class="gold-coin" src="assets/coins/crown-gold.webp" alt="" aria-hidden="true" width="27" height="27" decoding="async"><span id="quiz-coin-amount">確認中…</span></div>
+    </div>
     <div class="card">
       <div class="era-row"><h2 id="quiz-era" style="margin:0"></h2><span id="quiz-status" class="tag"></span></div>
       <p id="question-kind" class="muted small"></p>
@@ -813,7 +823,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.6.10";
+const APP_VERSION = "v1.6.11";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -906,13 +916,20 @@ async function getAvailableCoins(who=profile) {
 }
 async function refreshCoinDisplay() {
   const ctx=viewContext(),request=++coinRender;
+  // 保存済みの残高だけを表示する。再取得中は古い枚数や仮の0を見せない。
+  $("quiz-coin-amount").textContent="確認中…";
   try {
     const balance=await getAvailableCoins(ctx.who);
-    if(viewCurrent(ctx)&&request===coinRender) $("home-coin-amount").textContent=balance.toLocaleString("ja-JP");
+    if(viewCurrent(ctx)&&request===coinRender) {
+      const amount=balance.toLocaleString("ja-JP");
+      $("home-coin-amount").textContent=amount;
+      $("quiz-coin-amount").textContent=`所持 ${amount}枚`;
+    }
     return balance;
   } catch(error) {
     if(viewCurrent(ctx)&&request===coinRender) {
       $("home-coin-amount").textContent="確認できません";
+      $("quiz-coin-amount").textContent="確認できません";
       $("arcade-balance").textContent="確認できません";
       $("crane-start").disabled=true;
     }
@@ -2919,6 +2936,7 @@ async function restoreRoute(target,{allowCreate=false}={}) {
   const ctx=viewContext();
   notice("");
   $("home-coin-amount").textContent="確認中…";
+  $("quiz-coin-amount").textContent="確認中…";
   $("arcade-balance").textContent="確認中…";
   if(target.screen==="quiz") {
     $("result").classList.add("hidden");
@@ -2956,6 +2974,13 @@ window.addEventListener("popstate",()=>{reconcilePage().catch(err);});
 window.addEventListener("pageshow",event=>{
   // 初回/reloadは起動処理が復元。bfcacheだけここで再照合し、二重初期化しない。
   if(event.persisted)reconcilePage().catch(err);
+});
+// 別ウインドウで増減した場合も、問題画面へフォーカスが戻ったら保存残高を再取得。
+window.addEventListener("focus",()=>{
+  if(appReady&&!document.hidden&&!$("quiz").classList.contains("hidden")) {
+    const ctx=viewContext();
+    refreshCoinDisplay().catch(error=>{if(viewCurrent(ctx))err(error);});
+  }
 });
 function show(sectionId) {
   closePlushDetail(false);
