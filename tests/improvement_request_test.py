@@ -85,6 +85,7 @@ class ImprovementRequestTest(unittest.TestCase):
     def test_empty_pack_shows_message_without_download(self):
         self.admin()
         self.page.locator("#feedback-improvement-pending").click()
+        self.page.wait_for_function('document.querySelector("#feedback-improvement-status").textContent.includes("未確認・確認中の指摘がありません")')
         self.assertIn("未確認・確認中の指摘がありません",
                       self.page.locator("#feedback-improvement-status").inner_text())
 
