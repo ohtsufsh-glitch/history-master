@@ -85,6 +85,18 @@ class ArcadeBoardTest(unittest.TestCase):
     def board(self, who='test'):
         return self.page.evaluate("who=>readOne('arcadeBoards',who)", who)
 
+    def replace_prizes_and_wait(self):
+        # arcadeBusyはfinallyの再描画より先に解除されるため、操作全体を待つ。
+        self.page.evaluate("""()=>{
+          window.originalReplacement=replaceArcadePrizes;
+          replaceArcadePrizes=(...args)=>window.boardReplacement=originalReplacement(...args);
+        }""")
+        self.page.locator('#crane-replace').click()
+        self.page.evaluate("""async()=>{
+          try {await boardReplacement;}
+          finally {replaceArcadePrizes=originalReplacement;}
+        }""")
+
     def round(self, slot=0, outcome='win'):
         return self.page.evaluate("""async ({slot,outcome})=>{
           const play=await purchaseCranePlay(newArcadePlay(profile));
@@ -219,13 +231,13 @@ class ArcadeBoardTest(unittest.TestCase):
                 self.install([None, *SLOTS[1:]], who)
                 before = self.snapshot()
                 self.cancel_dialog = True
-                self.page.locator('#crane-replace').click()
+                self.replace_prizes_and_wait()
                 self.page.wait_for_function('!arcadeBusy')
                 self.assertEqual(self.snapshot(), before)
                 self.assertEqual(self.dialogs[-1], '今ある景品をすべて入れ替えますか？（無料）')
                 self.cancel_dialog = False
                 self.page.evaluate('window.originalRandom=Math.random;Math.random=()=>.999;')
-                self.page.locator('#crane-replace').click()
+                self.replace_prizes_and_wait()
                 self.page.wait_for_function('!arcadeBusy')
                 self.page.evaluate('Math.random=window.originalRandom')
                 after = self.snapshot()
@@ -237,7 +249,7 @@ class ArcadeBoardTest(unittest.TestCase):
                 self.assertEqual(next(b for b in before['arcadeBoards'] if b['profile'] == other), self.board(other))
         self.install([None] * 7)
         count = len(self.dialogs)
-        self.page.locator('#crane-replace').click()
+        self.replace_prizes_and_wait()
         self.page.wait_for_function('!arcadeBusy')
         self.assertEqual(len(self.dialogs), count)
         self.assertTrue(all(p in plush_test.IDS for p in self.board()['slots']))
@@ -537,7 +549,7 @@ class ArcadeBoardTest(unittest.TestCase):
                     return r.width>0&&r.left>=0&&r.right<=innerWidth&&
                       (el.tagName!=='BUTTON'||r.height>=44);
                   })'''))
-        self.page.locator('#crane-replace').click()
+        self.replace_prizes_and_wait()
         self.page.wait_for_function('!arcadeBusy')
         self.assertEqual(self.page.locator('.crane-toy').count(), 7)
 

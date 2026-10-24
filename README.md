@@ -1,6 +1,11 @@
 # history-master
 Japanese history learning game
 
+Issue #14（v1.6.11）のレビュー用資料：
+
+- [問題画面の所持コイン・ホームボタンと検証結果](docs/RELEASE_v1.6.11.md)
+- [iPhone・iPad Safari実機テスト手順](docs/SAFARI_TEST_v1.6.11.md)
+
 Issue #15（v1.6.10）のレビュー用資料：
 
 - [ぬいぐるみ拡大表示・検証結果](docs/RELEASE_v1.6.10.md)
