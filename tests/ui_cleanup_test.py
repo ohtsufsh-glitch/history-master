@@ -63,21 +63,32 @@ class UiCleanupTest(unittest.TestCase):
         self.assertEqual(self.page.locator('#header-coins, #header-coin-amount').count(), 0)
         label = self.page.locator('#header-mode')
         self.assertEqual(label.count(), 1)
-        # 430px以下ではラベルを隠す既存のレスポンシブ仕様を維持する。
-        self.assertEqual(label.is_visible(), self.page.viewport_size['width'] > 430)
+        self.assertTrue(label.is_visible())
         self.assertEqual(label.text_content(), mode)
-        if label.is_visible():
-            self.assertTrue(label.evaluate("""el=>{
-              const r=el.getBoundingClientRect(), css=getComputedStyle(el);
-              const range=document.createRange();range.selectNodeContents(el);
-              const text=range.getBoundingClientRect();
-              const heading=document.querySelector('header h1');
-              const title=heading.getBoundingClientRect();
-              return r.left>=title.right&&r.right<=innerWidth&&r.width>0&&
-                title.height<2*parseFloat(getComputedStyle(heading).fontSize)&&
-                el.scrollWidth<=el.clientWidth&&text.height<2*parseFloat(css.fontSize);
-            }"""))
         self.assertEqual(self.page.locator('#open-admin').count(), 1)
+        # 管理画面では管理ボタン自体を隠す既存の切替仕様を維持する。
+        self.assertEqual(self.page.locator('#open-admin').is_visible(), mode != '🔧 保護者用')
+        self.assertTrue(self.page.evaluate("""()=>{
+          const elements=['header h1','#header-mode','#open-admin'].map(s=>document.querySelector(s));
+          const [title,mode,admin]=elements.map(el=>el.getBoundingClientRect());
+          const adminVisible=!elements[2].classList.contains('hidden');
+          const fits=elements.filter(el=>!el.classList.contains('hidden')).every(el=>{
+            const r=el.getBoundingClientRect(), range=document.createRange();
+            range.selectNodeContents(el);
+            const text=range.getBoundingClientRect();
+            return r.width>0&&r.left>=0&&r.right<=innerWidth&&el.scrollWidth<=el.clientWidth&&
+              text.left>=r.left&&text.right<=r.right&&text.top>=r.top&&text.bottom<=r.bottom&&
+              text.height<2*parseFloat(getComputedStyle(el).fontSize);
+          });
+          const firstRow=!adminVisible||(title.left<admin.left&&title.right<=admin.left&&
+            title.top<admin.bottom&&admin.top<title.bottom);
+          const modeRow=innerWidth<=430
+            ? mode.top>=Math.max(title.bottom,admin.bottom)&&Math.abs(mode.left-title.left)<1
+            : mode.left>=title.right&&mode.top<title.bottom&&title.top<mode.bottom&&
+              (!adminVisible||(mode.right<=admin.left&&mode.top<admin.bottom&&admin.top<mode.bottom));
+          return fits&&firstRow&&modeRow&&(!adminVisible||(admin.width>=44&&admin.height>=44))&&
+            document.documentElement.scrollWidth<=innerWidth;
+        }"""))
 
     def assert_student_note_removed(self):
         note = self.page.locator('#arcade-profile-note')
@@ -93,7 +104,7 @@ class UiCleanupTest(unittest.TestCase):
         self.page.locator('#open-admin').click()
         version = self.page.locator('#app-version')
         self.assertTrue(version.is_visible())
-        self.assertEqual(version.inner_text(), 'アプリバージョン：v1.6.15')
+        self.assertEqual(version.inner_text(), 'アプリバージョン：v1.6.16')
         self.assertEqual(version.inner_text(), 'アプリバージョン：' + self.page.evaluate('APP_VERSION'))
         self.assertEqual(version.evaluate('el=>el.previousElementSibling.textContent'), '⚙️ 保護者用管理画面')
         self.assertEqual(self.page.evaluate('[DB_NAME,DB_VERSION,BACKUP_VERSION]'),
@@ -179,8 +190,7 @@ class UiCleanupTest(unittest.TestCase):
                 self.page.wait_for_function("!document.querySelector('#arcade-profile-note').classList.contains('hidden')")
                 self.assertEqual(self.page.locator('#arcade-profile-note').inner_text(), TEST_NOTE)
                 self.assertTrue(self.page.evaluate("""()=>{
-                  const selectors=['#open-admin','#arcade-profile-note','#arcade-balance','#arcade-hint'];
-                  if(innerWidth>430)selectors.push('#header-mode');
+                  const selectors=['#open-admin','#arcade-profile-note','#arcade-balance','#arcade-hint','#header-mode'];
                   return document.documentElement.scrollWidth<=innerWidth&&selectors.every(selector=>{
                     const r=document.querySelector(selector)?.getBoundingClientRect();
                     return r&&r.width>0&&r.left>=0&&r.right<=innerWidth;
@@ -198,17 +208,14 @@ class UiCleanupTest(unittest.TestCase):
                 self.assert_header('📖 学習用')
                 self.page.locator('#open-admin').click()
                 self.assert_header('🔧 保護者用')
-                if width > 430:
-                    self.assert_mode_badge_legible()
+                self.assert_mode_badge_legible()
                 self.page.locator('#admin-start-test').click()
                 self.page.wait_for_function("profile==='test'&&!document.querySelector('#home').classList.contains('hidden')")
                 self.assert_header('🔧 テスト中')
-                if width > 430:
-                    self.assert_mode_badge_legible()
+                self.assert_mode_badge_legible()
                 self.page.locator('#open-admin').click()
                 self.assert_header('🔧 保護者用')
-                if width > 430:
-                    self.assert_mode_badge_legible()
+                self.assert_mode_badge_legible()
                 self.page.locator('#admin-back').click()
                 self.page.wait_for_function("profile==='student'&&!document.querySelector('#home').classList.contains('hidden')")
                 self.assert_header('📖 学習用')
