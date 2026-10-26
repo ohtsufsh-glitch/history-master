@@ -82,7 +82,7 @@ class UiCleanupTest(unittest.TestCase):
         self.page.locator('#open-admin').click()
         version = self.page.locator('#app-version')
         self.assertTrue(version.is_visible())
-        self.assertEqual(version.inner_text(), 'アプリバージョン：v1.6.14')
+        self.assertEqual(version.inner_text(), 'アプリバージョン：v1.6.15')
         self.assertEqual(version.inner_text(), 'アプリバージョン：' + self.page.evaluate('APP_VERSION'))
         self.assertEqual(version.evaluate('el=>el.previousElementSibling.textContent'), '⚙️ 保護者用管理画面')
         self.assertEqual(self.page.evaluate('[DB_NAME,DB_VERSION,BACKUP_VERSION]'),
@@ -104,13 +104,13 @@ class UiCleanupTest(unittest.TestCase):
     def test_coin_displays_and_notes_follow_profile_and_screen_changes(self):
         self.page.evaluate(FIXTURE_HELPERS)
         self.page.evaluate('async()=>{await plushInstall(plushFixture());await renderHome();}')
-        self.assert_header('👧 学習用')
+        self.assert_header('📖 学習用')
         self.assertTrue(self.page.locator('#open-admin').is_visible())
         self.assertTrue(self.page.locator('#home-coins').is_visible())
         self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '805')
         self.page.locator('#open-arcade').click()
         self.page.wait_for_function("document.querySelector('#arcade-balance').textContent==='805'")
-        self.assert_header('👧 学習用')
+        self.assert_header('📖 学習用')
         self.assert_student_note_removed()
         self.assertEqual(self.page.locator('#arcade-hint').inner_text(), '途中で閉じても続きから再開できます。')
         self.page.locator('#crane-start').click()
@@ -137,7 +137,7 @@ class UiCleanupTest(unittest.TestCase):
         self.assert_header('🔧 保護者用')
         self.page.locator('#admin-back').click()
         self.page.wait_for_function("profile==='student'&&!document.querySelector('#home').classList.contains('hidden')")
-        self.assert_header('👧 学習用')
+        self.assert_header('📖 学習用')
         self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '705')
         self.page.locator('#open-arcade').click()
         self.page.wait_for_function("document.querySelector('#arcade-balance').textContent==='705'")
@@ -153,7 +153,7 @@ class UiCleanupTest(unittest.TestCase):
             with self.subTest(width=width):
                 self.page.set_viewport_size({'width': width, 'height': height})
                 self.page.evaluate('returnToStudentHome()')
-                self.assert_header('👧 学習用')
+                self.assert_header('📖 学習用')
                 self.page.locator('#open-admin').click()
                 version = self.page.locator('#app-version')
                 self.assertTrue(version.is_visible())
@@ -174,6 +174,66 @@ class UiCleanupTest(unittest.TestCase):
                     return r&&r.width>0&&r.left>=0&&r.right<=innerWidth;
                   });
                 }"""))
+
+
+    def test_mode_indicator_badges_have_aa_contrast_and_fit_header(self):
+        """Issue #25: 管理・テストのハイライトが淡色文字に上書きされない。"""
+        for width, height in [(431, 920), (768, 1024), (1024, 768), (1180, 820)]:
+            with self.subTest(width=width):
+                self.page.set_viewport_size({'width': width, 'height': height})
+                self.page.evaluate('returnToStudentHome()')
+                self.assert_header('📖 学習用')
+                self.page.locator('#open-admin').click()
+                self.assert_header('🔧 保護者用')
+                self.assert_mode_badge_legible()
+                self.page.locator('#admin-start-test').click()
+                self.page.wait_for_function("profile==='test'&&!document.querySelector('#home').classList.contains('hidden')")
+                self.assert_header('🔧 テスト中')
+                self.assert_mode_badge_legible()
+                self.page.locator('#open-admin').click()
+                self.assert_header('🔧 保護者用')
+                self.assert_mode_badge_legible()
+                self.assertTrue(self.page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+
+    def assert_mode_badge_legible(self):
+        badge = self.page.locator('#header-mode')
+        self.assertTrue(badge.is_visible())
+        result = badge.evaluate("""el=>{
+          const css=getComputedStyle(el),parse=val=>(val.match(/[0-9.]+/g)||[]).slice(0,3).map(Number);
+          const luminosity=rgb=>rgb.map(v=>{
+            v/=255;return v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4;
+          }).reduce((sum,value,i)=>sum+value*[0.2126,0.7152,0.0722][i],0);
+          const l1=luminosity(parse(css.color)),l2=luminosity(parse(css.backgroundColor));
+          const ratio=(Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05);
+          const r=el.getBoundingClientRect();
+          return {ratio,color:css.color,background:css.backgroundColor,
+            fits:r.left>=0&&r.right<=innerWidth&&r.width>0,nowrap:css.whiteSpace==='nowrap'};
+        }""")
+        self.assertGreaterEqual(result['ratio'], 4.5, result)
+        self.assertTrue(result['fits'], result)
+        self.assertTrue(result['nowrap'], result)
+
+    def test_learning_mode_icon_consistent_in_quiz_and_reloads(self):
+        """Issue #25: 初期HTMLと動的表示で性別のない学習アイコンに統一。"""
+        self.assert_header('📖 学習用')
+        self.page.evaluate("startEra('E01')")
+        self.page.wait_for_function("quizReady&&!document.querySelector('#quiz').classList.contains('hidden')")
+        self.assert_header('📖 学習用')
+        self.assertEqual(self.page.locator('#quiz-status').text_content(), '📖 学習用')
+        self.assertNotIn('👧', self.page.locator('#header-mode').text_content())
+        self.page.reload()
+        self.ready()
+        self.assert_header('📖 学習用')
+        self.assertEqual(self.page.locator('#quiz-status').text_content(), '📖 学習用')
+        self.page.locator('#open-admin').click()
+        self.assert_header('🔧 保護者用')
+        self.page.locator('#admin-start-test').click()
+        self.page.wait_for_function("profile==='test'")
+        self.assert_header('🔧 テスト中')
+        self.page.locator('#open-admin').click()
+        self.assert_header('🔧 保護者用')
+        self.page.locator('#admin-back').click()
+        self.assert_header('📖 学習用')
 
 
 if __name__ == '__main__':
