@@ -1,6 +1,11 @@
 # history-master
 Japanese history learning game
 
+Issue #25（v1.6.15）のレビュー用資料：
+
+- [画面上部のモード表示・コントラスト改善](docs/RELEASE_v1.6.15.md)
+- [iPhone・iPad Safari実機確認手順](docs/SAFARI_TEST_v1.6.15.md)
+
 Issue #20 Phase 2（v1.6.14）のレビュー用資料：
 
 - [改善依頼JSON書き出し・修正後の指摘確認](docs/RELEASE_v1.6.14.md)
