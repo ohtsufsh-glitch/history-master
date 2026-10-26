@@ -557,7 +557,7 @@ class SecretPlushTest(unittest.TestCase):
         for width, height in [(375, 812), (390, 844), (1024, 768), (1180, 820)]:
             with self.subTest(width=width):
                 self.page.set_viewport_size({'width': width, 'height': height})
-                self.page.evaluate('paintSecretPrizeResult(arcadePlay,true,true)')
+                self.page.evaluate('paintCranePrizeResult(arcadePlay,true,true)')
                 for img in self.page.locator('#crane-secret-reveal img, #arcade-secret-collection-list img').all():
                     img.scroll_into_view_if_needed()
                     img.evaluate('img=>img.decode()')
@@ -568,6 +568,47 @@ class SecretPlushTest(unittest.TestCase):
         self.page.emulate_media(reduced_motion='reduce')
         self.assertEqual(self.page.locator('#crane-secret-reveal img').evaluate('img=>getComputedStyle(img).animationName'), 'none')
         self.assertEqual(self.page.evaluate('SECRET_REVEAL_MS.hidden+SECRET_REVEAL_MS.revealed'), 2400)
+
+
+    def test_normal_win_shows_image_after_saved_result_and_not_on_failure(self):
+        """通常景品も獲得後に画像と名前を表示。失敗・プロフィール違いでは非表示。"""
+        play_id = self.prepare('resolving', secret='shiba')
+        self.assertFalse(self.page.locator('#crane-secret-reveal').is_visible())
+        self.page.evaluate('id=>finishCranePlay(id)', play_id)
+        saved = self.snapshot()
+        self.page.evaluate('renderArcade()')
+        self.assertEqual(self.page.locator('#arcade-message').text_content(), '🎉 しば犬をゲット！')
+        panel = self.page.locator('#crane-secret-reveal')
+        self.assertTrue(panel.is_visible())
+        self.assertEqual(panel.locator('img').get_attribute('src'), 'assets/plush/shiba.webp')
+        self.assertEqual(panel.locator('img').get_attribute('alt'), 'しば犬')
+        self.assertEqual(panel.locator('strong').all_text_contents(), ['しば犬'])
+        panel.locator('img').evaluate('img=>img.decode()')
+        for width, height in [(375, 812), (390, 844), (768, 1024), (1024, 768)]:
+            with self.subTest(width=width):
+                self.page.set_viewport_size({'width': width, 'height': height})
+                self.assertTrue(self.page.evaluate("""()=>{
+                  const msg=document.querySelector('#arcade-message').getBoundingClientRect();
+                  const img=document.querySelector('#crane-secret-reveal img').getBoundingClientRect();
+                  return img.top>=msg.bottom&&img.width>0&&img.right<=innerWidth&&
+                    document.documentElement.scrollWidth<=innerWidth;
+                }"""))
+        self.assertEqual(self.snapshot(), saved)
+        self.page.reload()
+        self.ready()
+        self.page.evaluate("async()=>{profile='test';await openArcade();}")
+        self.assertEqual(self.page.locator('#crane-secret-reveal img').get_attribute('src'), 'assets/plush/shiba.webp')
+        self.assertEqual(self.page.locator('#crane-secret-reveal img').evaluate('img=>getComputedStyle(img).animationName'), 'none')
+        self.assertEqual(self.snapshot(), saved)
+        self.page.evaluate("async()=>{profile='student';await renderArcade();}")
+        self.assertFalse(panel.is_visible())
+        self.page.evaluate("async()=>{profile='test';await renderArcade();}")
+        self.assertEqual(panel.locator('img').get_attribute('src'), 'assets/plush/shiba.webp')
+
+        self.prepare('resolving', outcome='miss', secret='shiba')
+        self.page.evaluate('id=>finishCranePlay(id)', self.page.evaluate('arcadePlay.id'))
+        self.page.evaluate('renderArcade()')
+        self.assertFalse(panel.is_visible())
 
 
 if __name__ == '__main__':
