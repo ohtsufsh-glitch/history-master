@@ -902,7 +902,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.6.16";
+const APP_VERSION = "v1.6.17";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -1374,15 +1374,20 @@ async function renderArcadeCollection(ctx=viewContext(),request=arcadeRender) {
     $(listId).replaceChildren(...ids.map(id=>plushCollectionItem(id,counts.get(id)||0)));
   }
 }
-function paintSecretPrizeResult(play,revealed=true,animate=false) {
+// 獲得確定後の表示だけを共通化。既存の結果欄IDはシークレットの演出・テストとの互換性のため維持する。
+function paintCranePrizeResult(play,revealed=true,animate=false) {
   const host=$("crane-secret-reveal");host.replaceChildren();host.className="secret-reveal hidden";
   const id=play?.prizes[play.result?.targetIndex];
-  if(play?.status!=="finished"||!play.result?.won||play.profile!==profile||!isSecretPlush(id))return;
+  if(play?.status!=="finished"||!play.result?.won||play.profile!==profile||!validPlushId(id))return;
+  const secret=isSecretPlush(id);
   const shown=plushPresentation(id,revealed);
-  const title=document.createElement("strong");title.textContent="🎉 シークレットゲット！";
   const img=document.createElement("img");img.src=shown.path;img.alt=shown.name;img.decoding="async";
   const name=document.createElement("strong");name.textContent=shown.name;
-  host.append(title,img,name);host.classList.remove("hidden");host.classList.toggle("revealed",animate);
+  if(secret) {
+    const title=document.createElement("strong");title.textContent="🎉 シークレットゲット！";
+    host.append(title);
+  }
+  host.append(img,name);host.classList.remove("hidden");host.classList.toggle("revealed",animate);
 }
 // finishCranePlayのtx.oncomplete後だけ呼ぶ。再表示は保存済み結果を静的に表示する。
 async function revealSecretPrize(play) {
@@ -1391,11 +1396,11 @@ async function revealSecretPrize(play) {
   const visible=()=>viewCurrent(ctx)&&!arcadeResumeRequired&&profile===play.profile&&arcadePlay?.id===play.id&&!document.hidden&&!$("arcade").classList.contains("hidden");
   if(!visible())return;
   $("arcade-message").textContent="🎉 シークレットゲット！";
-  paintSecretPrizeResult(play,false);
+  paintCranePrizeResult(play,false);
   $("crane-secret-reveal").scrollIntoView({block:"center",behavior:"auto"});
   await craneSleep(SECRET_REVEAL_MS.hidden);
   if(!visible())return;
-  paintSecretPrizeResult(play,true,true);
+  paintCranePrizeResult(play,true,true);
   $("arcade-message").textContent=`🎉 ${plushName(play.prizes[play.result.targetIndex])}をゲット！`;
   await craneSleep(SECRET_REVEAL_MS.revealed);
 }
@@ -1448,7 +1453,7 @@ async function renderArcade() {
   arcadeDirection=arcadePlay?.direction===-1?-1:1;
   const stage=$("crane-stage");stage.className="crane-stage";
   paintArcadeArm();paintArcadePrizes();
-  paintSecretPrizeResult(arcadePlay);
+  paintCranePrizeResult(arcadePlay);
   const aiming=arcadePlay?.status==="aiming";
   const resolving=arcadePlay?.status==="resolving";
   const waitingForResume=arcadeResumeRequired && (aiming || resolving);
