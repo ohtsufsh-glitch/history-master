@@ -269,6 +269,8 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
     }
     .mode-indicator { color: rgba(255,255,255,.82); }
+    /* 管理・テストの薄黄色バッジは背景に合わせた濃色文字を優先する。 */
+    .mode-indicator.testtag { background:#fef0d8; color:#704400; border-radius:9px; padding:5px 8px; white-space:nowrap; }
     #notice { padding:0 6px 8px; }
     .home-screen {
       border: 1px solid rgba(208,190,152,.75);
@@ -600,7 +602,7 @@
   <header>
     <h1>📚 歴史マスター</h1>
     <div class="header-actions">
-      <span id="header-mode" class="mode-indicator" aria-live="polite">👧 学習用</span>
+      <span id="header-mode" class="mode-indicator" aria-live="polite">📖 学習用</span>
       <button id="open-admin" class="icon-button" type="button" aria-label="保護者用の管理画面を開く">⚙️ 管理</button>
     </div>
   </header>
@@ -900,7 +902,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.6.14";
+const APP_VERSION = "v1.6.15";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3479,7 +3481,7 @@ function show(sectionId) {
   if(sectionId!=="arcade" && !$("arcade").classList.contains("hidden")) stopCraneSweep(true);
   for (const id of ["home", "admin", "quiz", "finished", "arcade"]) $(id).classList.toggle("hidden", id !== sectionId);
   const inAdmin = sectionId === "admin";
-  $("header-mode").textContent = inAdmin ? "🔧 保護者用" : profile === "test" ? "🔧 テスト中" : "👧 学習用";
+  $("header-mode").textContent = inAdmin ? "🔧 保護者用" : profile === "test" ? "🔧 テスト中" : "📖 学習用";
   $("header-mode").classList.toggle("testtag", inAdmin || profile === "test");
   if(db) {const ctx=viewContext();refreshCoinDisplay().catch(error=>{if(viewCurrent(ctx))err(error);});}
   $("open-admin").classList.toggle("hidden", inAdmin);
