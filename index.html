@@ -3656,7 +3656,7 @@ function renderQuestion() {
   $("report-question").classList.add("hidden");
   const q = currentQuestion;
   $("quiz-era").textContent = ERAS.find(e => e[0] === currentEra)[1];
-  $("quiz-status").textContent = profile === "test" ? "🔧 テスト用" : "👧 学習用";
+  $("quiz-status").textContent = profile === "test" ? "🔧 テスト用" : "📖 学習用";
   $("quiz-status").classList.toggle("testtag", profile === "test");
   $("question-kind").textContent = `${q.answers.length > 1 ? "当てはまるものをすべて選んでください" : "正解を1つ選んでください"}　｜　難易度：${difficultyLabel(q)}`;
   $("question-text").textContent = q.q;
