@@ -541,17 +541,20 @@
     .crane-arm { transition:left .075s linear; }
     .crane-stage.sweeping .crane-arm { transition:none; }
     .crane-stage.transporting .crane-arm { transition:left 1.35s linear; }
-    /* 前版の固定px下降位置をステージの縦幅に追従させる */
-    .crane-stage.dropping .crane-cable { height:calc(398px - 172px); }
-    .crane-stage.dropping .crane-head { top:calc(398px - 170px); }
-    .crane-stage.dropping .claw { top:calc(398px - 153px); }
+    /* 下降量は演出開始時に景品の実寸から計算。ケーブル・ヘッド・ツメを同じ距離だけ動かす。 */
+    .crane-stage.dropping .crane-cable { height:calc(66px + var(--crane-drop-distance)); }
+    .crane-stage.dropping .crane-head { top:calc(59px + var(--crane-drop-distance)); }
+    .crane-stage.dropping .claw { top:calc(78px + var(--crane-drop-distance)); }
+    .crane-stage.holding .claw-left { transform:rotate(-7deg); }
+    .crane-stage.holding .claw-right { transform:rotate(7deg); }
     .crane-prizes { z-index:3; }
     .crane-toy {
       width:11.8%; max-width:102px; min-width:0; bottom:34px;
-      transition: left 1.35s linear, bottom .63s ease, opacity .35s ease, transform .4s ease;
+      transition: left 1.35s linear, bottom .55s ease, opacity .35s ease, transform .4s ease;
       will-change:transform;
     }
-    .crane-toy.grabbed { bottom:calc(100% - 210px); transform:translateX(-50%) scale(.86); z-index:6; }
+    /* 景品を縮小せず、ツメが景品の上から60%の位置に触れたまま一緒に上昇する。 */
+    .crane-toy.grabbed { bottom:calc(100% - var(--crane-grip-y) - var(--crane-toy-size) * .4); transform:translateX(-50%); z-index:6; }
     .crane-toy.fallen { bottom:34px; transform:translateX(-50%) rotate(20deg) scale(.92); }
     .crane-toy.delivered { bottom:0; opacity:0; transform:translateX(-50%) scale(.60); }
     .crane-toy.collected { display:none; }
@@ -575,11 +578,7 @@
     @media(max-width:640px) {
       .arcade-screen { padding:14px; }
       .crane-stage { height:310px; }
-      .crane-stage.dropping .crane-cable { height:calc(310px - 172px); }
-      .crane-stage.dropping .crane-head { top:calc(310px - 170px); }
-      .crane-stage.dropping .claw { top:calc(310px - 153px); }
       .crane-toy { width:12.4%; }
-      .crane-toy.grabbed { bottom:calc(100% - 176px); }
       .crane-chute { font-size:.60rem; padding-top:12px; }
     }
     @media(prefers-reduced-motion:reduce) {
@@ -902,7 +901,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.6.17";
+const APP_VERSION = "v1.6.18";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -1616,17 +1615,26 @@ async function animateCraneOutcome(play) {
   }
   const stage=$("crane-stage"),arm=$("crane-arm"),result=play.result;
   const toy=$("crane-prizes").querySelector(`[data-slot="${result.targetIndex}"]`);
+  // 保存済み判定には触れず、画面内の景品サイズ・位置にだけ演出を合わせる。
+  const target=toy||$("crane-prizes").querySelector(".crane-toy");
+  const claw=arm.querySelector(".claw");
+  const gripY=arm.offsetTop+claw.offsetTop+claw.offsetHeight;
+  const size=target?.offsetHeight||0;
+  stage.style.setProperty("--crane-grip-y",`${gripY}px`);
+  stage.style.setProperty("--crane-toy-size",`${size}px`);
+  stage.style.setProperty("--crane-drop-distance",`${Math.max(0,(target?.offsetTop??stage.clientHeight-34)+size*.6-gripY)}px`);
+  if(result.grabbed&&toy)arm.style.left=toy.style.left;
   $("arcade-message").textContent="アームが下降中…つかめるかな？";
   stage.classList.add("dropping");
   await craneSleep(CRANE_CONFIG.dropMs);
   checkView();
-  if(result.grabbed&&toy){toy.classList.add("grabbed");$("arcade-message").textContent="つかんだ！ 出口まで落とさず運ぼう！";}
+  if(result.grabbed&&toy){stage.classList.add("holding");toy.classList.add("grabbed");$("arcade-message").textContent="つかんだ！ 出口まで落とさず運ぼう！";}
   else $("arcade-message").textContent="あっ、つかめなかった！";
   stage.classList.remove("dropping");
   await craneSleep(CRANE_CONFIG.liftMs);
   checkView();
   if(result.grabbed&&toy) {
-    const fromX=play.armX;
+    const fromX=Number.parseFloat(arm.style.left);
     const toX=CRANE_CONFIG.exitX;
     const travelMs=CRANE_CONFIG.transportMs;
     const dropAt=result.won?1:Math.min(.95,Math.max(.1,result.fallAt??.5));
@@ -1636,7 +1644,7 @@ async function animateCraneOutcome(play) {
     // 通過点の位置と所要時間を一致させる。
     const armDuration=result.won?travelMs:Math.max(280,Math.round(travelMs*dropAt));
     arm.style.transitionDuration=`${armDuration}ms`;
-    toy.style.transitionDuration=`${armDuration}ms, .63s, .35s, .4s`;
+    toy.style.transitionDuration=`${armDuration}ms, .55s, .35s, .4s`;
     await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
     checkView();
     arm.style.left=`${result.won?toX:travelEnd}%`;
@@ -1645,6 +1653,7 @@ async function animateCraneOutcome(play) {
     checkView();
     if(result.won) {
       $("arcade-message").textContent="取り出し口に到着！ 景品をおろすよ！";
+      stage.classList.remove("holding");
       toy.classList.add("delivered");
       await craneSleep(CRANE_CONFIG.releaseMs);
       checkView();
@@ -1652,6 +1661,7 @@ async function animateCraneOutcome(play) {
       $("arcade-message").textContent=isSecretPlush(id)?"景品を保存しています…":`🎉 ${plushName(id)}をゲット！`;
     } else {
       $("arcade-message").textContent="あっ！ 運ぶ途中で落としてしまった…";
+      stage.classList.remove("holding");
       toy.classList.remove("grabbed");toy.classList.add("fallen");
       await craneSleep(720);
       checkView();

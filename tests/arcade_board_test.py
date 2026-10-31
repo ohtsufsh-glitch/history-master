@@ -565,6 +565,97 @@ class ArcadeBoardTest(unittest.TestCase):
         self.page.wait_for_function('!arcadeBusy')
         self.assertEqual(self.page.locator('.crane-toy').count(), 7)
 
+    def sample_crane_animation(self, outcome):
+        # 実時間のアニメーションを毎フレーム計測。判定は既存関数へ固定乱数を渡す。
+        return self.page.evaluate("""async outcome=>{
+          const play=await purchaseCranePlay(newArcadePlay(profile));
+          play.armX=52; // 成功範囲内の中心ずれも、表示だけで補正する。
+          const values=outcome==='drop'?[0,.999,.5]:outcome==='miss'?[.999]:[0,0];
+          arcadePlay=await commitCraneOutcome(play,chooseCraneOutcome(play,()=>values.shift()??0));
+          await renderArcade();arcadeResumeRequired=false;
+          const saved=JSON.stringify(await snapshotAllStores());
+          const stage=$('crane-stage'),toy=stage.querySelector('[data-slot="3"]');
+          await toy.querySelector('img').decode();
+          const frames=[];let frame;
+          const measure=()=>{
+            const base=stage.getBoundingClientRect(),t=toy.getBoundingClientRect();
+            const claws=[...stage.querySelectorAll('.claw')].map(el=>el.getBoundingClientRect());
+            const arm=$('crane-arm').getBoundingClientRect();
+            return {y:t.top-base.top,size:t.height,x:t.x+t.width/2-base.x,
+              armX:arm.x+arm.width/2-base.x,
+              tips:claws.map(c=>c.bottom-base.top),
+              dropping:stage.classList.contains('dropping'),holding:stage.classList.contains('holding'),
+              transporting:stage.classList.contains('transporting'),
+              toyClass:toy.className,src:toy.querySelector('img').getAttribute('src')};
+          };
+          const sample=()=>{frames.push(measure());frame=requestAnimationFrame(sample);};
+          const start=measure();sample();
+          try{await animateCraneOutcome(arcadePlay);}
+          finally{cancelAnimationFrame(frame);}
+          const stops={drop:frames.findLast(f=>f.dropping),
+            lift:frames.findLast(f=>!f.dropping&&!f.transporting&&f.holding)};
+          return {start,stops,frames,end:measure(),
+            bottom:getComputedStyle(toy).bottom,opacity:getComputedStyle(toy).opacity,
+            unchanged:saved===JSON.stringify(await snapshotAllStores())};
+        }""", outcome)
+
+    def test_crane_grip_and_lift_stay_together_across_widths_and_prize_sizes(self):
+        for width, height in [(375, 812), (390, 844), (430, 932), (640, 900),
+                              (641, 900), (759, 1000), (760, 1000), (768, 1024), (1024, 768)]:
+            for prize in ['star', 'secret_koryun']:
+                with self.subTest(width=width, prize=prize):
+                    self.page.set_viewport_size({'width': width, 'height': height})
+                    slots = SLOTS[:]
+                    slots[3] = prize
+                    self.install(slots)
+                    animation = self.sample_crane_animation('win')
+                    drop, lift = animation['stops']['drop'], animation['stops']['lift']
+                    self.assertAlmostEqual(drop['y'], animation['start']['y'], delta=1)
+                    self.assertAlmostEqual(drop['size'], animation['start']['size'], delta=1)
+                    for tip in drop['tips']:
+                        self.assertAlmostEqual(tip, drop['y'] + drop['size'] * .6, delta=1.5)
+                    holding = [f for f in animation['frames'] if f['holding']]
+                    self.assertGreater(len(holding), 10)
+                    self.assertTrue(any(f['transporting'] for f in holding))
+                    for f in holding:
+                        for tip in f['tips']:
+                            self.assertAlmostEqual(tip, f['y'] + f['size'] * .6, delta=1.5)
+                        self.assertAlmostEqual(f['x'], f['armX'], delta=1)
+                    self.assertGreater(drop['y'] - lift['y'], 80)
+                    self.assertGreater(animation['end']['x'] - lift['x'], 50)
+                    self.assertIn('delivered', animation['end']['toyClass'])
+                    self.assertEqual(animation['opacity'], '0')
+                    self.assertTrue(animation['unchanged'])
+                    if prize.startswith('secret_'):
+                        self.assertTrue(all(f['src'] == 'assets/plush/secret_unknown.webp'
+                                            for f in animation['frames']))
+
+    def test_crane_miss_and_transport_fall_keep_normal_and_secret_animation(self):
+        for width, height in [(375, 812), (1024, 768)]:
+            for prize in ['star', 'secret_koryun']:
+                for outcome in ['miss', 'drop']:
+                    with self.subTest(width=width, prize=prize, outcome=outcome):
+                        self.page.set_viewport_size({'width': width, 'height': height})
+                        slots = SLOTS[:]
+                        slots[3] = prize
+                        self.install(slots)
+                        animation = self.sample_crane_animation(outcome)
+                        self.assertTrue(animation['unchanged'])
+                        self.assertFalse(animation['end']['holding'])
+                        self.assertNotIn('delivered', animation['end']['toyClass'])
+                        self.assertEqual(animation['bottom'], '34px')
+                        if outcome == 'miss':
+                            self.assertFalse(any(f['holding'] or f['transporting']
+                                                 for f in animation['frames']))
+                        else:
+                            self.assertTrue(any(f['holding'] and f['transporting']
+                                                for f in animation['frames']))
+                            self.assertIn('fallen', animation['end']['toyClass'])
+                            self.assertGreater(animation['end']['y'] - animation['stops']['lift']['y'], 80)
+                        if prize.startswith('secret_'):
+                            self.assertTrue(all(f['src'] == 'assets/plush/secret_unknown.webp'
+                                                for f in animation['frames']))
+
     def test_atomic_completion_rolls_back_all_on_error_and_retries_once(self):
         self.install()
         play_id = self.page.evaluate("""async()=>{
