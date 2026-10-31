@@ -579,6 +579,10 @@
       .crane-stage.dropping .crane-head { top:calc(310px - 170px); }
       .crane-stage.dropping .claw { top:calc(310px - 153px); }
       .crane-toy { width:12.4%; }
+      /* 景品サイズに合わせてツメの下降量を補正。景品・判定・保存位置は変更しない。 */
+      .crane-stage.dropping .crane-cable { height:calc(310px - 172px + var(--crane-grip-offset, 0px)); }
+      .crane-stage.dropping .crane-head { top:calc(310px - 170px + var(--crane-grip-offset, 0px)); }
+      .crane-stage.dropping .claw { top:calc(310px - 153px + var(--crane-grip-offset, 0px)); }
       .crane-toy.grabbed { bottom:calc(100% - 176px); }
       .crane-chute { font-size:.60rem; padding-top:12px; }
     }
@@ -902,7 +906,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.6.17";
+const APP_VERSION = "v1.6.18";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -1616,6 +1620,11 @@ async function animateCraneOutcome(play) {
   }
   const stage=$("crane-stage"),arm=$("crane-arm"),result=play.result;
   const toy=$("crane-prizes").querySelector(`[data-slot="${result.targetIndex}"]`);
+  // 狭い画面で景品が縮小した分だけツメの下降先を調整する。
+  const compact=matchMedia("(max-width:640px)").matches;
+  const toyHeight=toy?.getBoundingClientRect().height||0;
+  const gripOffset=compact&&toyHeight?Math.max(0,Math.min(55,102-toyHeight)):0;
+  stage.style.setProperty("--crane-grip-offset",`${gripOffset}px`);
   $("arcade-message").textContent="アームが下降中…つかめるかな？";
   stage.classList.add("dropping");
   await craneSleep(CRANE_CONFIG.dropMs);
