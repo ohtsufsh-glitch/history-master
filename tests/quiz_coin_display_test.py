@@ -448,6 +448,7 @@ class QuizCoinDisplayTest(unittest.TestCase):
             questionHash:await sha256Text(questionFingerprintSource(q)),questionSnapshot:{...exportableQuestion(q),deleted:false},
             reporterRole:'learner',sourceProfile:'student',category:'other',comment:'架空の指摘',createdAt:at,status:'unreviewed',statusUpdatedAt:at}];
           await plushInstall(data);await navigateHome('student');
+          await startStudy('genre','culture');await navigateHome('student');
         }""")
         self.quiz()
         self.balance(705)
