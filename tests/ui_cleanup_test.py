@@ -104,7 +104,7 @@ class UiCleanupTest(unittest.TestCase):
         self.page.locator('#open-admin').click()
         version = self.page.locator('#app-version')
         self.assertTrue(version.is_visible())
-        self.assertEqual(version.inner_text(), 'アプリバージョン：v1.7.0')
+        self.assertEqual(version.inner_text(), 'アプリバージョン：v1.7.1')
         self.assertEqual(version.inner_text(), 'アプリバージョン：' + self.page.evaluate('APP_VERSION'))
         self.assertEqual(version.evaluate('el=>el.previousElementSibling.textContent'), '⚙️ 保護者用管理画面')
         self.assertEqual(self.page.evaluate('[DB_NAME,DB_VERSION,BACKUP_VERSION]'),
@@ -169,6 +169,35 @@ class UiCleanupTest(unittest.TestCase):
         for store in student:
             self.assertEqual([r for r in after[store] if r.get('profile') == 'student'],
                              [r for r in student[store] if r.get('profile') == 'student'], store)
+
+    def test_dashboard_overall_above_radar_without_stretching_on_ipad(self):
+        """The overall summary sits above the radar, while genres remain to the right on iPad."""
+        before = self.page.evaluate('snapshotAllStores()')
+        for width, height in [(390, 844), (740, 1024), (768, 1024), (1024, 768), (1180, 820)]:
+            with self.subTest(width=width):
+                self.page.set_viewport_size({'width': width, 'height': height})
+                result = self.page.evaluate("""() => {
+                  const grid=document.querySelector('.dashboard-grid');
+                  const left=document.querySelector('.radar-column');
+                  const overall=document.querySelector('#overall-mastery');
+                  const radar=document.querySelector('.radar-shell');
+                  const genre=document.querySelector('#genre-dashboard');
+                  const svg=document.querySelector('#radar-chart svg');
+                  const rect=el=>el.getBoundingClientRect();
+                  const l=rect(left),a=rect(overall),b=rect(radar),c=rect(genre),d=rect(svg);
+                  return {
+                    correctParents:overall.parentElement===left&&radar.parentElement===left&&genre.parentElement===grid,
+                    above:a.bottom<=b.top,
+                    layout:innerWidth>740
+                      ? c.left>=l.right&&Math.abs(c.top-l.top)<2
+                      : c.top>=b.bottom,
+                    naturalHeight:getComputedStyle(grid).alignItems==='start',
+                    radarProportions:Math.abs(d.width/d.height-520/480)<0.04,
+                    noOverflow:document.documentElement.scrollWidth<=innerWidth
+                  };
+                }""")
+                self.assertTrue(all(result.values()), (width, result))
+        self.assertEqual(self.page.evaluate('snapshotAllStores()'), before)
 
     def test_layout_at_iphone_and_ipad_sizes(self):
         for width, height in [(375, 812), (390, 844), (430, 932), (431, 920),
