@@ -389,8 +389,8 @@ class QuestionFeedbackTest(unittest.TestCase):
           await performReset({},true);await replaceAllStores(savedBackup);
         }''')
         self.assertEqual(self.snapshot(), before)
-        self.assertEqual(len(before), 15)
-        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION]'), [8, 8])
+        self.assertEqual(len(before), 16)
+        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION]'), [9, 9])
 
     def test_v8_backup_rejects_bad_reports(self):
         self.seed()
@@ -465,9 +465,11 @@ class QuestionFeedbackTest(unittest.TestCase):
         context = self.browser.new_context()
         page = context.new_page()
         source = (Path(__file__).resolve().parents[1] / 'index.html').read_text()
-        old = source.replace('const DB_VERSION = 8;', 'const DB_VERSION = 7;')
+        old = source.replace('const DB_VERSION = 9;', 'const DB_VERSION = 7;')
         old = old.replace('      if (!database.objectStoreNames.contains("questionFeedback")) database.createObjectStore("questionFeedback", {keyPath:"reportId"});', '')
-        old = old.replace(', "questionFeedback"];', '];')
+        old = old.replace(', "questionFeedback", "studySets"];', '];')
+        old = old.replace('      if (!database.objectStoreNames.contains("studySets")) database.createObjectStore("studySets", {keyPath:"key"});', '')
+        old = old.replace('  const sets=await readAll("studySets");', '  const sets=[];')
         page.route(self.url, lambda route: route.fulfill(body=old, content_type='text/html'))
         page.goto(self.url); self.ready(page)
         from plush_test import FIXTURE_HELPERS
@@ -478,7 +480,7 @@ class QuestionFeedbackTest(unittest.TestCase):
         page.unroute(self.url)
         page.reload(); self.ready(page)
         after = self.snapshot(page)
-        self.assertEqual(page.evaluate('[db.version,db.objectStoreNames.length]'), [8, 15])
+        self.assertEqual(page.evaluate('[db.version,db.objectStoreNames.length]'), [9, 16])
         for name in before:
             self.assertEqual(after[name], before[name], name)
         self.assertEqual(after['questionFeedback'], [])
@@ -501,9 +503,11 @@ class QuestionFeedbackTest(unittest.TestCase):
         context = self.browser.new_context()
         page = context.new_page()
         source = (Path(__file__).resolve().parents[1] / 'index.html').read_text()
-        old = source.replace('const DB_VERSION = 8;', 'const DB_VERSION = 7;')
+        old = source.replace('const DB_VERSION = 9;', 'const DB_VERSION = 7;')
         old = old.replace('      if (!database.objectStoreNames.contains("questionFeedback")) database.createObjectStore("questionFeedback", {keyPath:"reportId"});', '')
-        old = old.replace(', "questionFeedback"];', '];')
+        old = old.replace(', "questionFeedback", "studySets"];', '];')
+        old = old.replace('      if (!database.objectStoreNames.contains("studySets")) database.createObjectStore("studySets", {keyPath:"key"});', '')
+        old = old.replace('  const sets=await readAll("studySets");', '  const sets=[];')
         page.route(self.url, lambda route: route.fulfill(body=old, content_type='text/html'))
         page.goto(self.url); self.ready(page)
         from plush_test import FIXTURE_HELPERS

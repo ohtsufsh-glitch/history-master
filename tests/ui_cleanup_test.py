@@ -104,11 +104,11 @@ class UiCleanupTest(unittest.TestCase):
         self.page.locator('#open-admin').click()
         version = self.page.locator('#app-version')
         self.assertTrue(version.is_visible())
-        self.assertEqual(version.inner_text(), 'アプリバージョン：v1.6.16')
+        self.assertEqual(version.inner_text(), 'アプリバージョン：v1.7.0')
         self.assertEqual(version.inner_text(), 'アプリバージョン：' + self.page.evaluate('APP_VERSION'))
         self.assertEqual(version.evaluate('el=>el.previousElementSibling.textContent'), '⚙️ 保護者用管理画面')
         self.assertEqual(self.page.evaluate('[DB_NAME,DB_VERSION,BACKUP_VERSION]'),
-                         ['history-master-sample-v1', 8, 8])
+                         ['history-master-sample-v1', 9, 9])
         self.assertEqual(self.page.evaluate('snapshotAllStores()'), before)
         # 定数だけを変えた将来のリリースでも、表示に追従することを確認。
         source, count = re.subn(r'(const APP_VERSION\s*=\s*)["\'][^"\']+["\']',

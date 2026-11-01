@@ -447,7 +447,7 @@ class SecretPlushTest(unittest.TestCase):
         with self.page.expect_download() as event:
             self.page.locator('#backup-export').click()
         backup = json.loads(Path(event.value.path()).read_text())
-        self.assertEqual(backup['backupVersion'], 8)
+        self.assertEqual(backup['backupVersion'], 9)
         self.assertEqual(backup['data'], before)
         self.page.evaluate('async()=>{await plushInstall(plushFixture());}')
         self.page.locator('#backup-file').set_input_files({
@@ -500,7 +500,7 @@ class SecretPlushTest(unittest.TestCase):
           await commitCraneOutcome(p,chooseCraneOutcome(p,()=>0));
         }""")
         before = self.snapshot()
-        self.assertEqual(len(before), 15)
+        self.assertEqual(len(before), 16)
         self.page.locator('#open-admin').click()
         if not self.page.locator('#admin-backup-group').evaluate('el=>el.open'):
             self.page.locator('#admin-backup-group > summary').click()
@@ -508,7 +508,7 @@ class SecretPlushTest(unittest.TestCase):
         with self.page.expect_download() as event:
             self.page.locator('#backup-export').click()
         backup = json.loads(Path(event.value.path()).read_text())
-        self.assertEqual((backup['backupVersion'], self.page.evaluate('DB_VERSION')), (8, 8))
+        self.assertEqual((backup['backupVersion'], self.page.evaluate('DB_VERSION')), (9, 9))
         self.assertEqual(backup['data'], before)
         self.assertNotIn('secret_unknown', json.dumps(backup))
         self.page.evaluate('async()=>{await plushInstall(plushFixture());}')

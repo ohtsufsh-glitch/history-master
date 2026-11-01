@@ -218,7 +218,7 @@
     /* 管理画面でも取り込んだ問題文・選択肢・解説の改行を保持する。 */
     .manager-item p, .manager-item li { white-space:pre-wrap; overflow-wrap:anywhere; }
     .manager-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-    .manager-actions button, .small-action { width:auto; margin:0; padding:9px 12px; border:1px solid #88a9c0; border-radius:10px; background:white; color:#235d80; font-size:.9rem; }
+    .manager-actions button, .small-action { min-height:44px; width:auto; margin:0; padding:9px 12px; border:1px solid #88a9c0; border-radius:10px; background:white; color:#235d80; font-size:.9rem; }
     .manager-actions button.danger { border-color:#db9c91; color:#a0392d; }
     .manager-actions button:disabled { opacity:.48; }
     .manager-meta { font-size:.8rem; color:#607086; }
@@ -369,6 +369,7 @@
     .home-genre-heading h3 { color:#254e65; font-size:.95rem; margin:0; }
     .genre-count { font-size:.69rem; font-weight:750; color:#547185; white-space:nowrap; }
     .home-genre-intro { font-size:.73rem; color:#687c89; line-height:1.45; margin:6px 0 2px; }
+    .home-genre .genre-row .small-action { display:block; margin-top:8px; }
     .home-genre .genre-row { padding:8px 0 7px; }
     .home-genre .genre-row-head { gap:8px; font-size:.87rem; }
     .home-genre .genre-row .track { height:7px; margin-top:6px; }
@@ -643,6 +644,13 @@
       </div>
     </div>
 
+    <section class="home-panel" aria-label="苦手克服モード">
+      <h2>🎯 苦手克服</h2>
+      <p id="weak-count"></p>
+      <button id="start-weak" class="primary" type="button">苦手問題に挑戦</button>
+      <p class="muted small">間違えた問題を最大10問ずつ復習。未挑戦の問題は時代別・ジャンル別で学ぼう。</p>
+    </section>
+
     <div class="home-panel eras-panel">
       <div class="panel-head"><div><span class="section-kicker">STUDY</span><h2 class="era-select-heading">学習する時代を選ぼう</h2></div><p class="panel-note">好きな時代から学べます。理解度と正答率を見ながら進めましょう。</p></div>
       <div id="era-list"></div>
@@ -856,6 +864,8 @@
     </div>
     <div class="card">
       <div class="era-row"><h2 id="quiz-era" style="margin:0"></h2><span id="quiz-status" class="tag"></span></div>
+      <p id="study-progress" class="hidden" role="status"></p>
+      <button id="restart-study" class="small-action hidden" type="button">このセットをやり直す</button>
       <p id="question-kind" class="muted small"></p>
       <p id="question-text" class="question"></p>
       <div id="choices"></div>
@@ -864,6 +874,16 @@
       <button id="next" class="primary hidden" type="button">次の問題へ →</button>
       <button id="report-question" class="feedback-link hidden" type="button">⚑ この問題について報告する</button>
     </div>
+  </section>
+
+  <section id="study-finished" class="card hidden" aria-labelledby="study-result-title">
+    <h2 id="study-result-title"></h2>
+    <p id="study-result-summary"></p>
+    <p id="study-result-remaining"></p>
+    <div id="study-last-result" class="result hidden" aria-live="polite"></div>
+    <button id="study-report-question" class="feedback-link hidden" type="button">⚑ この問題について報告する</button>
+    <button id="study-again" class="primary" type="button">もう1セット挑戦</button>
+    <button id="study-home" class="small-action" type="button">学習ホームへ戻る</button>
   </section>
 
   <section id="finished" class="card hidden">
@@ -901,7 +921,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.6.18";
+const APP_VERSION = "v1.7.0";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -929,7 +949,7 @@ const SAMPLE_QUESTIONS = [
 
 // データベース名は以前と同じ（回答履歴を引き継ぐため変更しない）。
 const DB_NAME = "history-master-sample-v1";
-const DB_VERSION = 8; // questionFeedbackを追加。既存14ストアは保持。
+const DB_VERSION = 9; // studySetsを追加。既存15ストアは保持。
 let QUESTIONS = [...SAMPLE_QUESTIONS]; // 出題対象（削除・非表示を除く）
 let importedQuestions = []; // 削除済みも含めて保管
 let hiddenSampleIds = new Set();
@@ -937,6 +957,7 @@ let pendingImport = null;
 let importing = false;
 let backingUp = false;
 let pendingRestore = null;
+const backupSourceVersions = new WeakMap();
 let pendingTagMap = null;
 let updatingTags = false;
 let pendingQuestionUpdate = null;
@@ -959,6 +980,8 @@ let currentSession = null;
 let currentProgress = null;
 let quizReady = false;
 let pendingAnswer = null;
+let pendingSelection = Promise.resolve();
+let studyStarting = false;
 let homeRender = 0, arcadeRender = 0, coinRender = 0;
 // 未確定の選択だけをタブ内に保持。保存状態が変わったら再利用しない。
 const draftSelections = new Map();
@@ -1866,7 +1889,9 @@ function renderGenreDashboard(progressByQuestion) {
     fill.style.width=stats.count?`${stats.percentage}%`:"0%";track.appendChild(fill);
     const detail=document.createElement("span");detail.className="muted";
     detail.textContent=stats.count ? `習得済み ${stats.mastered} / ${stats.count}問｜未挑戦 ${stats.unseen}問・学習中 ${stats.learning}問・習得済み ${stats.mastered}問` : "問題未登録（タグ付きの出題中問題がありません）";
-    row.append(head,track,detail);host.appendChild(row);
+    const start=makeAction("このジャンルを学ぶ →","small-action",()=>startStudy("genre",tag));
+    start.dataset.studyGenre=tag;start.disabled=stats.count===0;
+    row.append(head,track,detail,start);host.appendChild(row);
   }
 }
 function titleForMastery(stats) {
@@ -1986,6 +2011,7 @@ function openDatabase() {
     request.onupgradeneeded = () => {
       const database = request.result;
       if (!database.objectStoreNames.contains("progress")) database.createObjectStore("progress", {keyPath:"key"});
+      if (!database.objectStoreNames.contains("studySets")) database.createObjectStore("studySets", {keyPath:"key"});
       if (!database.objectStoreNames.contains("sessions")) database.createObjectStore("sessions", {keyPath:"key"});
       if (!database.objectStoreNames.contains("answers")) database.createObjectStore("answers", {keyPath:"id", autoIncrement:true});
       if (!database.objectStoreNames.contains("questions")) database.createObjectStore("questions", {keyPath:"id"});
@@ -2048,60 +2074,74 @@ function writeSession(session, expected) {
 // 同一セッションの二重回答を同時トランザクションで拒否し、コインの重複付与を防ぐ。
 function saveAnswer(progress, session, answerEvent, award=null, question=null, wasMastered=false, expected=null) {
   return new Promise((resolve,reject)=>{
-    const tx=db.transaction(["progress","sessions","answers","awards","coinClaims","coinEvents","reviewEvents"],"readwrite");
-    const claimStore=tx.objectStore("coinClaims");
-    const eventStore=tx.objectStore("coinEvents");
-    const granted={amount:0,stages:[]};
-    const eligible=answerEvent.correct && question && !wasMastered ? ["first",...(progress.mastered?["master"]:[])] : [];
+    const sessionStore=session.mode?"studySets":"sessions";
+    const tx=db.transaction(["progress",sessionStore,"answers","awards","coinClaims","coinEvents","reviewEvents","questions","sampleSettings"],"readwrite");
+    const claimStore=tx.objectStore("coinClaims"),eventStore=tx.objectStore("coinEvents");
+    const granted={amount:0,stages:[],award:null};
+    const eligible=answerEvent.correct&&question&&!wasMastered?["first",...(progress.mastered?["master"]:[])]:[];
     const keys=eligible.map(stage=>[stage,coinClaimKey(progress.profile,progress.questionId,stage)]);
     const existing=new Map();
-    const sessionReq=tx.objectStore("sessions").get(session.key);
-    sessionReq.onsuccess=()=>{
+    const sessionReq=tx.objectStore(sessionStore).get(session.key);
+    const progressReq=tx.objectStore("progress").get(progress.key);
+    const questionsReq=tx.objectStore("questions").getAll();
+    const settingsReq=tx.objectStore("sampleSettings").getAll();
+    const allProgressReq=tx.objectStore("progress").getAll();
+    let remaining=5;
+    for(const req of [sessionReq,progressReq,questionsReq,settingsReq,allProgressReq])req.onsuccess=()=>{
+      if(--remaining)return;
       const onDisk=sessionReq.result;
-      if (!onDisk || onDisk.phase!=="question" || onDisk.questionId!==session.questionId || (onDisk.revision||1)!==(session.revision||1) || (expected&&!sameRecord(onDisk,expected.session))) {
-        tx.abort(); return;
+      const questions=availableQuestions(questionsReq.result,settingsReq.result);
+      const live=questions.find(q=>q.id===question?.id);
+      // 編集・非表示・他モードでの習得を回答確定と同じトランザクションで検証。
+      if(!onDisk||onDisk.phase!=="question"||onDisk.questionId!==question?.id||
+        (onDisk.revision||1)!==(session.revision||1)||
+        (expected&&(!sameRecord(onDisk,expected.session)||!sameRecord(progressReq.result,expected.progress)))||
+        !live||!sameRecord(live,question)||
+        (session.mode&&!studyCandidates(session.mode,session.genre,[live],new Map([[live.id,progressReq.result]])).length)) {
+        tx.abort();return;
       }
-      const progressReq=tx.objectStore("progress").get(progress.key);
-      progressReq.onsuccess=()=>{
-        if(expected&&!sameRecord(progressReq.result,expected.progress)){tx.abort();return;}
-        if(!keys.length) commitAnswer();
+      const eraQuestions=questions.filter(q=>q.era===question.era);
+      if(progress.mastered&&eraQuestions.length>=CARD_MIN_QUESTIONS) {
+        const byId=new Map(allProgressReq.result.filter(p=>p.profile===progress.profile).map(p=>[p.questionId,p]));
+        byId.set(progress.questionId,progress);
+        if(eraQuestions.every(q=>activeProgress(q,byId.get(q.id))?.mastered)) {
+          award={key:`${progress.profile}:${question.era}`,profile:progress.profile,era:question.era,earnedAt:answerEvent.at,questionCountAtEarn:eraQuestions.length};
+        }else award=null;
+      }else award=null;
+      const req=tx.objectStore("awards").get(`${progress.profile}:${question.era}`);
+      req.onsuccess=()=>{
+        if(req.result)award=null; // 獲得日時を上書きしない。
+        if(!keys.length)commitAnswer();
         else {
-          let remaining=keys.length;
+          let count=keys.length;
           for(const [stage,key] of keys) {
             const req=claimStore.get(key);
-            req.onsuccess=()=>{
-              existing.set(key,!!req.result);
-              if(--remaining===0) commitAnswer();
-            };
+            req.onsuccess=()=>{existing.set(key,!!req.result);if(--count===0)commitAnswer();};
           }
         }
       };
     };
     function commitAnswer() {
-      for(const [stage,key] of keys) if(!existing.get(key)) {
+      for(const [stage,key] of keys)if(!existing.get(key)) {
         const amount=coinReward(question,stage);
         claimStore.add({key,profile:progress.profile,questionId:progress.questionId,stage,source:"reward",claimedAt:answerEvent.at});
         eventStore.add({key,profile:progress.profile,questionId:progress.questionId,stage,amount,at:answerEvent.at,difficulty:question.difficulty||"basic"});
-        granted.amount+=amount;
-        granted.stages.push(stage);
+        granted.amount+=amount;granted.stages.push(stage);
       }
-      if(answerEvent.correct && question && wasMastered) {
-        const amount=coinReward(question,"first");
-        const key=`review:${progress.profile}:${answerEvent.token}`;
+      if(answerEvent.correct&&question&&wasMastered) {
+        const amount=coinReward(question,"first"),key=`review:${progress.profile}:${answerEvent.token}`;
         tx.objectStore("reviewEvents").add({key,profile:progress.profile,questionId:progress.questionId,amount,difficulty:question.difficulty||"basic",at:answerEvent.at});
-        granted.amount+=amount;
-        granted.stages.push("review");
+        granted.amount+=amount;granted.stages.push("review");
       }
-      session.coinAward=granted.amount;
-      session.coinStages=[...granted.stages];
+      session.coinAward=granted.amount;session.coinStages=[...granted.stages];
       tx.objectStore("progress").put(progress);
-      tx.objectStore("sessions").put(session);
+      tx.objectStore(sessionStore).put(session);
       tx.objectStore("answers").add(answerEvent);
-      if(award) tx.objectStore("awards").put(award);
+      if(award){tx.objectStore("awards").add(award);granted.award=award;}
     }
     tx.oncomplete=()=>resolve(granted);
     tx.onerror=()=>reject(tx.error||new Error("回答・コインの保存に失敗しました"));
-    tx.onabort=()=>reject(tx.error||new Error("回答は保存されませんでした（ほかのタブで回答済みの可能性があります）"));
+    tx.onabort=()=>reject(tx.error||new Error("問題や保存状態が変わりました。回答は保存されていません。"));
   });
 }
 // 公開プログラムには問題データを含めない。選択したJSONだけを端末内で取り込む。
@@ -2639,10 +2679,14 @@ function closeFeedback() {
   feedbackDraft=null;
   if($("feedback-dialog").open)$("feedback-dialog").close();
 }
+function learnerResultVisible() {
+  return !$("quiz").classList.contains("hidden")&&quizReady&&phase==="result" ||
+    !$("study-finished").classList.contains("hidden")&&phase==="complete"&&!!currentQuestion;
+}
 function feedbackContextValid(draft) {
   return feedbackDraft===draft&&viewCurrent(draft.ctx)&&!document.hidden&&
     (draft.role==="admin"?!$("admin").classList.contains("hidden"):
-      !$("quiz").classList.contains("hidden")&&quizReady&&phase==="result"&&currentQuestion?.id===draft.question.id&&sameRecord(currentSession,draft.session));
+      learnerResultVisible()&&currentQuestion?.id===draft.question.id&&sameRecord(currentSession,draft.session));
 }
 function feedbackSnapshotText(r) {
   const q=r.questionSnapshot;
@@ -2650,7 +2694,7 @@ function feedbackSnapshotText(r) {
 }
 function openFeedback(q,role="learner") {
   if(feedbackSaving||backingUp||resetting||saving||!appReady||document.hidden)return;
-  if(role==="learner"&&(!quizReady||phase!=="result"||$("quiz").classList.contains("hidden")))return;
+  if(role==="learner"&&!learnerResultVisible())return;
   if(role==="admin"&&$("admin").classList.contains("hidden"))return;
   closeFeedback();
   const question=structuredClone(q),createdAt=new Date().toISOString();
@@ -2667,7 +2711,7 @@ function openFeedback(q,role="learner") {
 // 問題・中断情報は照合のために読むだけ。指摘以外のストアには書かない。
 function saveFeedbackRecord(report,draft) {
   return new Promise((resolve,reject)=>{
-    const tx=db.transaction(["questionFeedback","questions","sessions"],"readwrite");
+    const tx=db.transaction(["questionFeedback","questions","sessions","studySets"],"readwrite");
     let failure;
     const fail=message=>{failure=new Error(message);tx.abort();};
     const qreq=tx.objectStore("questions").get(report.questionId);
@@ -2685,7 +2729,7 @@ function saveFeedbackRecord(report,draft) {
         };
       };
       if(draft.role==="learner") {
-        const req=tx.objectStore("sessions").get(draft.session.key);
+        const req=tx.objectStore(draft.session.mode?"studySets":"sessions").get(draft.session.key);
         req.onsuccess=()=>{if(!sameRecord(req.result,draft.session))fail("別タブで問題が変わりました。開き直してください。");else check();};
       } else check();
     };
@@ -2936,6 +2980,7 @@ async function exportFeedback(all=false) {
   notice(`${reports.length}件の指摘の書き出しを開始しました（${chunks.length}ファイル）。Safariのダウンロード先を確認してください。元の指摘は保持しています。`);
 }
 $("report-question").addEventListener("click",()=>openFeedback(currentQuestion));
+$("study-report-question").addEventListener("click",()=>openFeedback(currentQuestion));
 $("feedback-form").addEventListener("submit",submitFeedback);
 $("feedback-cancel").addEventListener("click",closeFeedback);
 $("feedback-dialog").addEventListener("cancel",event=>{event.preventDefault();closeFeedback();});
@@ -2960,8 +3005,8 @@ $("feedback-improvement-selected").addEventListener("click",()=>exportImprovemen
 window.addEventListener("focus",()=>{if(appReady&&!$("admin").classList.contains("hidden")&&!$("feedback-panel").classList.contains("hidden"))renderFeedback().catch(err);});
 
 const BACKUP_FORMAT = "history-master-backup";
-const BACKUP_VERSION = 8;
-const BACKUP_STORES = ["questions", "progress", "sessions", "answers", "awards", "sampleSettings", "coinClaims", "coinEvents", "coinMeta", "reviewEvents", "coinSpends", "arcadePlays", "arcadePrizes", "arcadeBoards", "questionFeedback"];
+const BACKUP_VERSION = 9;
+const BACKUP_STORES = ["questions", "progress", "sessions", "answers", "awards", "sampleSettings", "coinClaims", "coinEvents", "coinMeta", "reviewEvents", "coinSpends", "arcadePlays", "arcadePrizes", "arcadeBoards", "questionFeedback", "studySets"];
 function snapshotAllStores() {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(BACKUP_STORES, "readonly");
@@ -3010,8 +3055,8 @@ function validIndexList(values, max) {
   return Array.isArray(values) && new Set(values).size === values.length && values.every(i => Number.isInteger(i) && i >= 0 && i < max);
 }
 function validateBackup(obj) {
-  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.backupFormat !== BACKUP_FORMAT || ![1, 2, 3, 4, 5, 6, 7, BACKUP_VERSION].includes(obj.backupVersion) || !obj.data || typeof obj.data !== "object") {
-    throw new Error("このアプリのバックアップ形式ではありません（バージョン1〜8が必要です）。");
+  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.backupFormat !== BACKUP_FORMAT || ![1, 2, 3, 4, 5, 6, 7, 8, BACKUP_VERSION].includes(obj.backupVersion) || !obj.data || typeof obj.data !== "object") {
+    throw new Error("このアプリのバックアップ形式ではありません（バージョン1〜9が必要です）。");
   }
   // v1〜v3からの復元では旧履歴の報酬済み情報のみ作成し、コイン残高は0枚。
   const legacy=obj.backupVersion<4;
@@ -3031,7 +3076,8 @@ function validateBackup(obj) {
   // 旧形式に紛れた盤面も引き継がず、復元データだけから後で作る。
   if(obj.backupVersion<7)data.arcadeBoards=[];
   if(obj.backupVersion<8)delete data.questionFeedback; // 旧形式はローカル指摘を保持する。混入した値も採用しない。
-  const maxSizes = {questionFeedback:100000,questions:20000, progress:100000, sessions:100, answers:300000, awards:20, sampleSettings:9, coinClaims:100000, coinEvents:100000, coinMeta:2, reviewEvents:300000, coinSpends:100000, arcadePlays:100000, arcadePrizes:100000, arcadeBoards:2};
+  if(obj.backupVersion<9)data.studySets=[]; // 旧形式に混入したセットも採用しない。
+  const maxSizes = {studySets:12,questionFeedback:100000,questions:20000, progress:100000, sessions:100, answers:300000, awards:20, sampleSettings:9, coinClaims:100000, coinEvents:100000, coinMeta:2, reviewEvents:300000, coinSpends:100000, arcadePlays:100000, arcadePrizes:100000, arcadeBoards:2};
   for (const name of BACKUP_STORES) {
     if(name==="questionFeedback"&&obj.backupVersion<8)continue;
     if (!Array.isArray(data[name]) || data[name].length > maxSizes[name]) throw new Error(`${name} のデータ件数が不正です。`);
@@ -3075,6 +3121,7 @@ function validateBackup(obj) {
     if (ss.phase === "result" && !ss.selected.length) throw new Error("回答済み状態の選択情報がありません。");
     seenSessions.add(ss.key);
   }
+  validateStudySets(data.studySets,allQuestions);
   const seenAnswers = new Set();
   for (const ev of data.answers) {
     const q = allQuestions.get(ev?.questionId);
@@ -3141,6 +3188,7 @@ function validateBackup(obj) {
     if(pending.length>1)throw new Error("同じプロフィールに複数の中断プレイがあります。");
     if(pending[0]?.prizes.length===7&&!sameArcadeSlots(boards.get(who)?.slots,pending[0].prizes))throw new Error("中断プレイと景品配置が一致しません。");
   }
+  backupSourceVersions.set(data,obj.backupVersion);
   return data;
 }
 function setBackupPreview(message, cssClass="") {
@@ -3164,7 +3212,8 @@ async function previewRestore() {
     const localFeedback=(await readAll("questionFeedback")).length;
     if($("backup-file").files?.[0]!==file)return;
     pendingRestore = data;
-    setBackupPreview(`検査OK（${file.name}）\n取り込み問題：${data.questions.length}問\n学習履歴：${data.progress.length}件\n中断情報：${data.sessions.length}件\n回答記録：${data.answers.length}件\n獲得カード：${data.awards.length}枚\n学習用コイン：${availableCoins(data.coinEvents,data.reviewEvents,data.coinSpends,"student")}枚\nテスト用コイン：${availableCoins(data.coinEvents,data.reviewEvents,data.coinSpends,"test")}枚\nクレーン履歴：${data.arcadePlays.length}件\nぬいぐるみ獲得：${data.arcadePrizes.length}体\n非表示サンプル：${data.sampleSettings.length}問\n\n「復元する」を押すと、現在の問題と本番・テスト両方の学習履歴がすべて置き換わります。\n${data.questionFeedback?`v8：指摘${data.questionFeedback.length}件を復元し、現在の指摘${localFeedback}件も置き換えます。`:`旧バックアップ：現在の指摘${localFeedback}件は保持します。復元後に問題の内容・版が変わった指摘は要確認になります。`}`);
+    setBackupPreview(`検査OK（${file.name}）\n取り込み問題：${data.questions.length}問\n学習履歴：${data.progress.length}件\n時代別中断情報：${data.sessions.length}件\n新モードのセット：${data.studySets.length}件\n回答記録：${data.answers.length}件\n獲得カード：${data.awards.length}枚\n学習用コイン：${availableCoins(data.coinEvents,data.reviewEvents,data.coinSpends,"student")}枚\nテスト用コイン：${availableCoins(data.coinEvents,data.reviewEvents,data.coinSpends,"test")}枚\nクレーン履歴：${data.arcadePlays.length}件\nぬいぐるみ獲得：${data.arcadePrizes.length}体\n非表示サンプル：${data.sampleSettings.length}問\n\n「復元する」を押すと、現在の問題と本番・テスト両方の学習履歴がすべて置き換わります。\n${data.questionFeedback?`指摘${data.questionFeedback.length}件を復元し、現在の指摘${localFeedback}件も置き換えます。`:`旧バックアップ：現在の指摘${localFeedback}件は保持します。復元後に問題の内容・版が変わった指摘は要確認になります。`}`);
+    $("backup-preview").textContent += (backupSourceVersions.get(pendingRestore)||9)<9 ? "\n旧バックアップには新モードの途中状態がありません。復元すると現在の新モードの途中セットを破棄します。問題・回答履歴・習得状況はバックアップから復元します。" : "\nv9：新モードの途中状態も復元します。";
     $("backup-restore").classList.remove("hidden");
   } catch (error) {
     setBackupPreview("復元できません：" + error.message + "\n現在のデータは変更されていません。", "import-error");
@@ -3195,7 +3244,7 @@ async function updateResetPreview() {
   const snapshot = await snapshotAllStores();
   const countProfile = who => ({
     progress: snapshot.progress.filter(x => x.profile === who).length,
-    sessions: snapshot.sessions.filter(x => x.profile === who).length,
+    sessions: snapshot.sessions.filter(x => x.profile === who).length + snapshot.studySets.filter(x => x.profile === who).length,
     answers: snapshot.answers.filter(x => x.profile === who).length,
     awards: snapshot.awards.filter(x => x.profile === who).length,
     coins:availableCoins(snapshot.coinEvents,snapshot.reviewEvents,snapshot.coinSpends,who),
@@ -3237,7 +3286,7 @@ function performReset(choice, complete=false) {
         };
       }
       if (choice.student || choice.test) {
-        for (const name of ["progress", "sessions", "answers", "awards", "coinClaims", "coinEvents", "reviewEvents", "coinSpends", "arcadePlays", "arcadePrizes", "arcadeBoards"]) {
+        for (const name of ["progress", "sessions", "studySets", "answers", "awards", "coinClaims", "coinEvents", "reviewEvents", "coinSpends", "arcadePlays", "arcadePrizes", "arcadeBoards"]) {
           const store = tx.objectStore(name);
           if (choice.student && choice.test) {
             store.clear();
@@ -3377,13 +3426,13 @@ function replaceAllStores(data) {
 }
 async function applyRestore() {
   if (feedbackSaving || feedbackImporting || saving || importing || backingUp || updatingQuestions || !pendingRestore) return;
-  const feedbackNote=pendingRestore.questionFeedback?`v8：現在の指摘もバックアップの指摘${pendingRestore.questionFeedback.length}件で置き換えます。`:"旧バックアップ：現在の指摘は保持します。問題が変わった指摘は要確認になります。";
-  if (!confirm("現在の問題・学習履歴・カード・コイン・クレーン景品・景品配置とプレイ履歴を、バックアップの内容ですべて置き換えます。\n"+feedbackNote+"\n現在のデータのバックアップは作成しましたか？\n\n復元を実行しますか？")) return;
+  const feedbackNote=pendingRestore.questionFeedback?`現在の指摘もバックアップの指摘${pendingRestore.questionFeedback.length}件で置き換えます。`:"旧バックアップ：現在の指摘は保持します。問題が変わった指摘は要確認になります。";
+  if (!confirm("現在の問題・学習履歴・カード・コイン・クレーン景品・景品配置とプレイ履歴を、バックアップの内容ですべて置き換えます。\n"+feedbackNote+((backupSourceVersions.get(pendingRestore)||9)<9?"\n新モードの途中セットは破棄します。":"\n新モードの途中状態も置き換えます。")+"\n現在のデータのバックアップは作成しましたか？\n\n復元を実行しますか？")) return;
   backingUp = true;
   $("backup-restore").disabled = true;
   const data = pendingRestore;
   try {
-    validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:data.questionFeedback?8:7,data});
+    validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:backupSourceVersions.get(data)||(data.questionFeedback?BACKUP_VERSION:7),data});
     if(data.questionFeedback)await verifyFeedbackHashes(data.questionFeedback);
     await replaceAllStores(data); // 1つのトランザクションで一括変更。途中失敗なら全変更がロールバックされる。
     resetStudentViewAfterDataChange();
@@ -3414,13 +3463,14 @@ async function applyRestore() {
   }
 }
 
-// 履歴は画面の入口だけ。問題の進行・選択肢・報酬の正本はsessions。
+// 履歴は画面の入口だけ。進行・選択肢・報酬の正本はsessions / studySets。
 function historyRoute(state) {
   if(state?.app!=="history-master" || state.version!==1 ||
-    !["home","quiz","admin","arcade"].includes(state.screen) ||
+    !["home","quiz","study","admin","arcade"].includes(state.screen) ||
     !["student","test"].includes(state.profile) ||
-    (state.screen==="quiz"&&!ERAS.some(([id])=>id===state.era))) return null;
-  return {screen:state.screen,profile:state.profile,era:state.screen==="quiz"?state.era:null};
+    (state.screen==="quiz"&&!ERAS.some(([id])=>id===state.era)) ||
+    (state.screen==="study"&&!validStudyMode(state.mode,state.genre))) return null;
+  return {screen:state.screen,profile:state.profile,era:state.screen==="quiz"?state.era:null,...(state.screen==="study"?{mode:state.mode,genre:state.genre||null}:{})};
 }
 function navigate(screen, who=profile, era=null) {
   const target={screen,profile:who,era:screen==="quiz"?era:null};
@@ -3444,14 +3494,15 @@ async function restoreRoute(target,{allowCreate=false}={}) {
   $("home-coin-amount").textContent="確認中…";
   $("quiz-coin-amount").textContent="確認中…";
   $("arcade-balance").textContent="確認中…";
-  if(target.screen==="quiz") {
+  if(target.screen==="quiz"||target.screen==="study") {
     $("report-question").classList.add("hidden");
     $("result").classList.add("hidden");
     $("check").disabled=true;$("next").disabled=true;
     $("choices").querySelectorAll("button").forEach(b=>b.disabled=true);
   }
-  show(target.screen);
+  show(target.screen==="study"?"quiz":target.screen);
   // 保存中に戻る→進むをした場合も、確定/中断を待ってから正本を読む。
+  await pendingSelection.catch(()=>{});
   if(pendingAnswer) await pendingAnswer.catch(()=>{});
   if(!viewCurrent(ctx))return;
   await loadImportedQuestions(ctx);
@@ -3459,8 +3510,8 @@ async function restoreRoute(target,{allowCreate=false}={}) {
   const events=await readAll("answers");
   if(!viewCurrent(ctx))return;
   answerEvents=events;
-  if(target.screen==="quiz") {
-    const restored=await restoreQuiz(target.era,ctx,allowCreate);
+  if(target.screen==="quiz"||target.screen==="study") {
+    const restored=target.screen==="study" ? await restoreStudy(target.mode,target.genre,ctx) : await restoreQuiz(target.era,ctx,allowCreate);
     if(!viewCurrent(ctx))return;
     if(!restored) {
       // 削除・復元等で対応するセッションがない履歴からは、新規出題しない。
@@ -3483,7 +3534,13 @@ window.addEventListener("pageshow",event=>{
   if(event.persisted)reconcilePage().catch(err);
 });
 // 別ウインドウで増減した場合も、問題画面へフォーカスが戻ったら保存残高を再取得。
+window.addEventListener("visibilitychange",()=>{
+  if(appReady&&!document.hidden&&!saving&&historyRoute(history.state)?.screen==="study")reconcilePage().catch(err);
+});
 window.addEventListener("focus",()=>{
+  if(appReady&&!document.hidden&&!saving&&historyRoute(history.state)?.screen==="study") {
+    reconcilePage().catch(err);return;
+  }
   if(appReady&&!document.hidden&&!$("quiz").classList.contains("hidden")) {
     const ctx=viewContext();
     refreshCoinDisplay().catch(error=>{if(viewCurrent(ctx))err(error);});
@@ -3494,7 +3551,7 @@ function show(sectionId) {
   closePlushDetail(false);
   // どの画面へ移っても、プレイ中のアーム位置を一度保存する。
   if(sectionId!=="arcade" && !$("arcade").classList.contains("hidden")) stopCraneSweep(true);
-  for (const id of ["home", "admin", "quiz", "finished", "arcade"]) $(id).classList.toggle("hidden", id !== sectionId);
+  for (const id of ["home", "admin", "quiz", "finished", "study-finished", "arcade"]) $(id).classList.toggle("hidden", id !== sectionId);
   const inAdmin = sectionId === "admin";
   $("header-mode").textContent = inAdmin ? "🔧 保護者用" : profile === "test" ? "🔧 テスト中" : "📖 学習用";
   $("header-mode").classList.toggle("testtag", inAdmin || profile === "test");
@@ -3565,6 +3622,13 @@ async function renderHome({stay=false}={}) {
   }
   renderRadar(allStats);
   renderOverallMastery(allStats);
+  const weak=studyCandidates("weak",null,QUESTIONS,records).length;
+  const sets=await readAll("studySets");
+  if(!viewCurrent(ctx)||request!==homeRender)return;
+  const unfinished=sets.find(s=>s.key===studySetKey(ctx.who,"weak")&&s.phase!=="complete");
+  $("weak-count").textContent=weak ? `苦手問題は${weak}問` : "苦手問題はありません";
+  $("start-weak").textContent=unfinished ? `苦手セットを再開（苦手${weak}問）` : weak ? `🎯 苦手問題に挑戦（${weak}問）` : "🎉 苦手問題をすべて克服したよ！";
+  $("start-weak").disabled=!weak&&!unfinished;
   renderGenreDashboard(records);
   renderCollection(allStats,awards);
   await refreshArcadeHome(ctx);
@@ -3572,6 +3636,198 @@ async function renderHome({stay=false}={}) {
   $("dashboard").classList.remove("hidden");
   if(!stay)show("home");
 }
+// 新モードの正本。時代別sessionsとは独立し、プロフィール×モード×ジャンルで保持する。
+function validStudyMode(mode,genre) { return mode==="weak"&&!genre || mode==="genre"&&validGenreTag(genre); }
+function studySetKey(who,mode,genre=null) { return `${who}:${mode}${mode==="genre"?":"+genre:""}`; }
+function studyLabel(mode,genre) { return mode==="weak"?"苦手克服":GENRE_TAGS[genre]; }
+function studyCandidates(mode,genre,questions,records) {
+  return questions.filter(q=>mode==="genre" ? q.tag===genre :
+    activeProgress(q,records.get(q.id))?.everWrong===true&&activeProgress(q,records.get(q.id))?.mastered===false);
+}
+function availableQuestions(questions,settings) {
+  const hidden=new Set(settings.filter(x=>x.hidden).map(x=>x.id));
+  return [...SAMPLE_QUESTIONS.filter(q=>!hidden.has(q.id)),...questions.filter(q=>!q.deleted)];
+}
+function sampleStudyEntries(candidates,events,who) {
+  const stats=new Map(),byId=new Map(candidates.map(q=>[q.id,q]));
+  for(const ev of events) {
+    if(ev.profile!==who)continue;
+    const q=byId.get(ev.questionId);
+    if(!q||(ev.revision||1)!==questionRevision(q))continue;
+    const stat=stats.get(q.id)||{attempts:0,correct:0};
+    stat.attempts++;if(ev.correct)stat.correct++;stats.set(q.id,stat);
+  }
+  const pool=[...candidates],entries=[];
+  while(pool.length&&entries.length<10) {
+    const weights=pool.map(q=>questionWeight(stats.get(q.id)));
+    let roll=Math.random()*weights.reduce((a,b)=>a+b,0),index=pool.length-1;
+    for(let i=0;i<pool.length;i++){roll-=weights[i];if(roll<0){index=i;break;}}
+    const q=pool.splice(index,1)[0];entries.push({questionId:q.id,revision:questionRevision(q)});
+  }
+  // 抽選の重みと表示順は分離。時代や登録順には固定しない。
+  for(let i=entries.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[entries[i],entries[j]]=[entries[j],entries[i]];}
+  return entries;
+}
+// 候補・問題の有効性・状態の更新を同じトランザクションで照合する。
+function changeStudySet(key,change) {
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(["studySets","questions","sampleSettings","progress","answers"],"readwrite");
+    const names=["questions","sampleSettings","progress","answers"];
+    const requests=names.map(name=>tx.objectStore(name).getAll());
+    const req=tx.objectStore("studySets").get(key);
+    let remaining=requests.length+1,output,failure;
+    const ready=()=>{
+      if(--remaining)return;
+      try {
+        const questions=availableQuestions(requests[0].result,requests[1].result);
+        output=change(structuredClone(req.result),questions,requests[2].result,requests[3].result);
+        if(output&&!sameRecord(output,req.result))tx.objectStore("studySets").put(output);
+      }catch(error){failure=error;tx.abort();}
+    };
+    [...requests,req].forEach(r=>r.onsuccess=ready);
+    tx.oncomplete=()=>resolve(output);
+    tx.onerror=tx.onabort=()=>reject(failure||tx.error||new Error("セットの保存に失敗しました。"));
+  });
+}
+function prepareStudyQuestion(set,questions,records) {
+  if(set.phase==="complete")return set;
+  while(set.position<set.entries.length) {
+    const entry=set.entries[set.position];
+    const q=questions.find(q=>q.id===entry.questionId&&questionRevision(q)===entry.revision);
+    // 自分が回答して習得した結果は保持。未回答だけ現在の苦手条件を再検証する。
+    const eligible=q&&(set.mode!=="genre"||q.tag===set.genre)&&
+      (set.phase==="result"||studyCandidates(set.mode,set.genre,[q],records).length);
+    if(eligible) {
+      if(set.questionId!==q.id||!validOrder(set.optionOrder,q.options.length)) {
+        set.questionId=q.id;set.revision=entry.revision;set.optionOrder=shuffledOrder(q);set.selected=[];
+        set.updatedAt=new Date().toISOString();
+      }
+      return set;
+    }
+    set.position++;set.phase="question";set.questionId=null;set.selected=[];set.optionOrder=[];
+    set.coinAward=0;set.coinStages=[];set.updatedAt=new Date().toISOString();
+  }
+  if(set.phase!=="complete") {
+    set.phase="complete";set.questionId=null;set.selected=[];set.optionOrder=[];
+    set.updatedAt=new Date().toISOString();
+  }
+  return set;
+}
+async function startStudy(mode,genre=null,restart=false) {
+  if(studyStarting||saving||importing||backingUp||resetting||updatingQuestions||feedbackSaving||feedbackImporting||!validStudyMode(mode,genre))return;
+  studyStarting=true;
+  const ctx=viewContext(),key=studySetKey(ctx.who,mode,genre);
+  try {
+    await pendingSelection;
+    const previous=await readOne("studySets",key);
+    if(!viewCurrent(ctx))return;
+    if(restart&&previous?.phase!=="complete"&&!confirm("このセットを最初から作り直しますか？\n回答履歴・コイン・習得状況は取り消しません。"))return;
+    await changeStudySet(key,(old,questions,progress,events)=>{
+      if(old&&old.phase!=="complete"&&!restart)return old;
+      if(!sameRecord(old,previous))throw new Error("別タブでセットが変わりました。もう一度開いてください。");
+      const records=new Map(progress.filter(p=>p.profile===ctx.who).map(p=>[p.questionId,p]));
+      const entries=sampleStudyEntries(studyCandidates(mode,genre,questions,records),events,ctx.who);
+      const now=new Date().toISOString();
+      return prepareStudyQuestion({key,profile:ctx.who,mode,genre:genre||null,setId:crypto.randomUUID(),entries,
+        position:0,phase:"question",questionId:null,selected:[],optionOrder:[],results:[],startedAt:now,updatedAt:now},questions,records);
+    });
+    if(!viewCurrent(ctx))return;
+    const target={screen:"study",profile:ctx.who,era:null,mode,genre:genre||null};
+    if(!sameRecord(target,historyRoute(history.state)))history.pushState({app:"history-master",version:1,...target},"");
+    await restoreRoute(target);
+  }finally{studyStarting=false;}
+}
+async function restoreStudy(mode,genre,ctx=viewContext()) {
+  let activeQuestions,activeProgressRecords;
+  const set=await changeStudySet(studySetKey(ctx.who,mode,genre),(old,questions,progress)=>{
+    activeQuestions=questions;
+    activeProgressRecords=new Map(progress.filter(p=>p.profile===ctx.who).map(p=>[p.questionId,p]));
+    return old?prepareStudyQuestion(old,questions,activeProgressRecords):null;
+  });
+  if(!viewCurrent(ctx))return;
+  if(!set)return false; // history/reloadから新規セットを作らない。
+  currentSession=structuredClone(set);phase=set.phase;
+  if(set.phase==="complete") {
+    quizReady=false;currentQuestion=null;currentProgress=null;
+    $("study-result-title").textContent=`${studyLabel(mode,genre)} セット結果`;
+    const count=set.results.length,correct=set.results.filter(r=>r.correct).length;
+    $("study-result-summary").textContent=`回答数 ${count}問 ｜ 正解数 ${correct}問 ｜ 正答率 ${count?Math.round(correct/count*100):0}%`;
+    const remaining=studyCandidates(mode,genre,activeQuestions,activeProgressRecords).length;
+    $("study-result-remaining").textContent=mode==="weak" ? remaining?`現在残っている苦手問題：${remaining}問`:"🎉 苦手問題をすべて克服したよ！ 未挑戦の問題は時代別・ジャンル別で学ぼう。" : remaining?"全時代の問題に挑戦できたね！":"このジャンルの出題できる問題はありません。";
+    $("study-again").disabled=!remaining;
+    const last=set.results.find(r=>r.position===set.entries.length-1);
+    const q=last&&activeQuestions.find(q=>q.id===last.questionId&&questionRevision(q)===last.revision);
+    $("study-last-result").classList.add("hidden");
+    $("study-report-question").classList.toggle("hidden",!q);
+    if(q) {
+      currentQuestion=q;currentEra=q.era;selected=[...last.selected];
+      lastCoinAward={amount:set.coinAward||0,stages:set.coinStages||[]};
+      showResult(null,lastCoinAward,$("study-last-result"));
+    }
+    show("study-finished");return true;
+  }
+  currentQuestion=activeQuestions.find(q=>q.id===set.questionId);
+  currentEra=currentQuestion.era;
+  currentProgress=activeProgressRecords.get(set.questionId)||null;
+  selected=[...set.selected];optionOrder=[...set.optionOrder];
+  lastCoinAward=set.phase==="result"?{amount:set.coinAward||0,stages:set.coinStages||[]}:null;
+  quizReady=true;$("next").disabled=false;renderQuestion();
+  return true;
+}
+function persistStudySelection(values) {
+  const expected=structuredClone(currentSession),ctx=viewContext();
+  pendingSelection=pendingSelection.then(()=>changeStudySet(expected.key,(old,questions,progress)=>{
+    if(!old||old.setId!==expected.setId||old.position!==expected.position||old.phase!=="question")throw new Error("別タブで問題が変わりました。");
+    const records=new Map(progress.filter(p=>p.profile===ctx.who).map(p=>[p.questionId,p]));
+    const checked=prepareStudyQuestion(old,questions,records);
+    if(checked.phase!=="question"||checked.questionId!==expected.questionId)return checked;
+    return {...checked,selected:values,updatedAt:new Date().toISOString()};
+  })).then(set=>{
+    if(viewCurrent(ctx)&&currentSession?.setId===set.setId&&currentSession.position===set.position&&set.phase==="question")currentSession=structuredClone(set);
+    else if(viewCurrent(ctx))setTimeout(()=>reconcilePage().catch(err),0);
+  }).catch(error=>{if(viewCurrent(ctx))setTimeout(()=>reconcilePage().then(()=>notice(error.message)).catch(err),0);});
+}
+async function nextStudy() {
+  if(currentSession?.phase!=="result")return;
+  const ctx=viewContext(),expected=structuredClone(currentSession);
+  quizReady=false;$("next").disabled=true;
+  try {
+    await changeStudySet(expected.key,(old,questions,progress)=>{
+      if(!sameRecord(old,expected))return old; // 他タブの進行を上書きしない。
+      const records=new Map(progress.filter(p=>p.profile===ctx.who).map(p=>[p.questionId,p]));
+      return prepareStudyQuestion({...old,position:old.position+1,phase:"question",questionId:null,selected:[],optionOrder:[],coinAward:0,coinStages:[],updatedAt:new Date().toISOString()},questions,records);
+    });
+  }finally{if(viewCurrent(ctx))await restoreStudy(expected.mode,expected.genre,ctx);}
+}
+function validateStudySets(sets,questions) {
+  const keys=new Set(),validRevision=r=>Number.isSafeInteger(r)&&r>=1;
+  for(const s of sets) {
+    const fail=()=>{throw new Error("新モードのセット情報に不整合があります。");};
+    if(!s||!isProfile(s.profile)||!validStudyMode(s.mode,s.genre)||s.key!==studySetKey(s.profile,s.mode,s.genre)||keys.has(s.key)||
+      !isNonemptyString(s.setId,100)||!isNonemptyString(s.startedAt,64)||!isNonemptyString(s.updatedAt,64)||
+      !Array.isArray(s.entries)||s.entries.length>10||!Number.isInteger(s.position)||s.position<0||s.position>s.entries.length||
+      !["question","result","complete"].includes(s.phase)||!Array.isArray(s.results)||s.results.length>s.entries.length)fail();
+    keys.add(s.key);
+    const ids=new Set(),positions=new Set();
+    for(const e of s.entries){if(!e||!isNonemptyString(e.questionId,64)||!validRevision(e.revision)||ids.has(e.questionId))fail();ids.add(e.questionId);}
+    for(const r of s.results) {
+      const e=s.entries[r?.position];
+      if(!e||!Number.isInteger(r.position)||positions.has(r.position)||r.position>s.position||r.questionId!==e.questionId||r.revision!==e.revision||typeof r.correct!=="boolean"||
+        !validIndexList(r.selected,6)||!r.selected.length||!isNonemptyString(r.at,64))fail();
+      positions.add(r.position);
+    }
+    if(s.phase==="complete") {if(s.position!==s.entries.length||s.questionId!==null||s.selected?.length||s.optionOrder?.length)fail();}
+    else {
+      const e=s.entries[s.position],q=questions.get(e?.questionId);
+      // 途中で削除/改訂された参照も受け入れ、再開時にスキップする。
+      if(!e||s.questionId!==e.questionId||s.revision!==e.revision||!validIndexList(s.selected,6)||
+        !Array.isArray(s.optionOrder)||s.optionOrder.length<2||!validOrder(s.optionOrder,s.optionOrder.length)||s.optionOrder.length>6||
+        (q&&questionRevision(q)===e.revision&&(!validOrder(s.optionOrder,q.options.length)||!validIndexList(s.selected,q.options.length)))||
+        (s.phase==="result"?(!s.selected.length||!positions.has(s.position)):positions.has(s.position)))fail();
+    }
+  }
+}
+
 function pickQuestion(era, records, previousId, recentIds=[]) {
   let candidates=QUESTIONS.filter(q=>q.era===era); // 習得済みも含めて再出題する
   if (!candidates.length) return null;
@@ -3673,6 +3929,11 @@ function renderQuestion() {
   $("quiz-era").textContent = ERAS.find(e => e[0] === currentEra)[1];
   $("quiz-status").textContent = profile === "test" ? "🔧 テスト用" : "📖 学習用";
   $("quiz-status").classList.toggle("testtag", profile === "test");
+  const inSet=!!currentSession?.mode;
+  $("study-progress").classList.toggle("hidden",!inSet);
+  $("restart-study").classList.toggle("hidden",!inSet);
+  $("study-progress").textContent=inSet ? `${studyLabel(currentSession.mode,currentSession.genre)} ｜ ${currentSession.position+1} / ${currentSession.entries.length}問` : "";
+  $("next").textContent=inSet&&currentSession.position===currentSession.entries.length-1 ? "セット結果を見る →" : "次の問題へ →";
   $("question-kind").textContent = `${q.answers.length > 1 ? "当てはまるものをすべて選んでください" : "正解を1つ選んでください"}　｜　難易度：${difficultyLabel(q)}`;
   $("question-text").textContent = q.q;
   // 80文字以上や改行を含む設問は読解向けの文章表示にする（JSONの構造変更は不要）。
@@ -3700,7 +3961,8 @@ function renderQuestion() {
     btn.addEventListener("click", () => {
       if (phase !== "question" || saving || !quizReady) return;
       selected = q.answers.length === 1 ? [i] : selected.includes(i) ? selected.filter(x => x !== i) : [...selected, i];
-      draftSelections.set(currentSession.key,{session:structuredClone(currentSession),selected:[...selected]});
+      if(currentSession.mode) persistStudySelection([...selected]);
+      else draftSelections.set(currentSession.key,{session:structuredClone(currentSession),selected:[...selected]});
       updateChoices();
     });
     choices.append(btn);
@@ -3724,6 +3986,7 @@ function isCorrect(q, answer) {
   return answer.length === q.answers.length && answer.every(i => q.answers.includes(i));
 }
 async function grade() {
+  await pendingSelection.catch(()=>{});
   if (saving || importing || backingUp || updatingQuestions || !quizReady || phase !== "question" || !selected.length) return;
   saving = true;
   updateChoices();
@@ -3735,7 +3998,6 @@ async function grade() {
   const profileAtSubmit = profile;
   const eraAtSubmit = currentEra;
   const answerAtSubmit = [...selected];
-  const eraQuestionsAtSubmit=QUESTIONS.filter(item=>item.era===eraAtSubmit).map(item=>structuredClone(item));
   const correct = isCorrect(q, answerAtSubmit);
   const task=(async()=>{
   try {
@@ -3750,23 +4012,14 @@ async function grade() {
       streak, everWrong:!!before?.everWrong || !correct,
       mastered:streak >= 2, lastAnsweredAt:now
     };
-    const session = { key:`${profileAtSubmit}:${eraAtSubmit}`, profile:profileAtSubmit, era:eraAtSubmit, questionId:q.id, revision:questionRevision(q), phase:"result", selected:answerAtSubmit,
+    let session = { key:`${profileAtSubmit}:${eraAtSubmit}`, profile:profileAtSubmit, era:eraAtSubmit, questionId:q.id, revision:questionRevision(q), phase:"result", selected:answerAtSubmit,
       optionOrder:orderAtSubmit, recentIds:sessionAtSubmit.recentIds||[q.id] };
+    if(sessionAtSubmit.mode) session={...sessionAtSubmit,phase:"result",selected:answerAtSubmit,updatedAt:now,
+      results:[...sessionAtSubmit.results,{position:sessionAtSubmit.position,questionId:q.id,revision:questionRevision(q),correct,selected:answerAtSubmit,at:now}]};
+    if(session.mode&&session.position===session.entries.length-1)session={...session,phase:"complete",position:session.entries.length,questionId:null,selected:[],optionOrder:[]};
     const event = { profile:profileAtSubmit, questionId:q.id, revision:questionRevision(q), correct, selected:answerAtSubmit, at:now, token:crypto.randomUUID() };
-    let award=null;
-    const eraQuestions=eraQuestionsAtSubmit;
-    if (progress.mastered && eraQuestions.length>=CARD_MIN_QUESTIONS) {
-      const allProgress=await readAll("progress");
-      const byId=new Map(allProgress.filter(item=>item.profile===profileAtSubmit).map(item=>[item.questionId,item]));
-      byId.set(q.id,progress);
-      if (eraQuestions.every(item=>activeProgress(item,byId.get(item.id))?.mastered)) {
-        const cardKey=`${profileAtSubmit}:${eraAtSubmit}`;
-        if (!await readOne("awards",cardKey)) {
-          award={key:cardKey,profile:profileAtSubmit,era:eraAtSubmit,earnedAt:now,questionCountAtEarn:eraQuestions.length};
-        }
-      }
-    }
-    const granted=await saveAnswer(progress, session, event, award, q, !!before?.mastered,{session:sessionAtSubmit,progress:progressAtSubmit});
+    const granted=await saveAnswer(progress, session, event, null, q, !!before?.mastered,{session:sessionAtSubmit,progress:progressAtSubmit});
+    const award=granted.award;
     return {award,session};
   } catch (error) {
     if(viewCurrent(ctx))err(error);
@@ -3784,10 +4037,11 @@ async function grade() {
       const events=await readAll("answers");
       if(!viewCurrent(ctx))return;
       answerEvents=events;
-      await restoreQuiz(eraAtSubmit,ctx,false);
+      if(sessionAtSubmit.mode)await restoreStudy(sessionAtSubmit.mode,sessionAtSubmit.genre,ctx);
+      else await restoreQuiz(eraAtSubmit,ctx,false);
       await refreshCoinDisplay();
       if(viewCurrent(ctx)&&saved&&sameRecord(currentSession,saved.session)) {
-        showResult(saved.award);
+        if(saved.award)showResult(saved.award,lastCoinAward,currentSession.phase==="complete"?$("study-last-result"):$("result"));
         notice("回答を保存しました。");
       }
     }catch(error){if(viewCurrent(ctx))err(error);}
@@ -3804,10 +4058,9 @@ function createCoinIcon() {
   icon.decoding="async";
   return icon;
 }
-function showResult(newAward=null,coinAward=lastCoinAward) {
+function showResult(newAward=null,coinAward=lastCoinAward,result=$("result")) {
   const q = currentQuestion;
   const correct = isCorrect(q, selected);
-  const result = $("result");
   result.replaceChildren();
   result.classList.toggle("wrong", !correct);
   const heading = document.createElement("strong");
@@ -3847,6 +4100,7 @@ function showResult(newAward=null,coinAward=lastCoinAward) {
     result.appendChild(banner);
   }
   result.classList.remove("hidden");
+  if(result!==$("result"))return;
   $("check").classList.add("hidden");
   $("next").classList.remove("hidden");
   $("report-question").classList.remove("hidden");
@@ -4173,7 +4427,11 @@ $("test-return-admin").addEventListener("click", openAdmin);
 $("back-home").addEventListener("click", () => { if (!importing && !backingUp) navigateHome().catch(err); });
 $("finish-home").addEventListener("click", () => navigateHome().catch(err));
 $("check").addEventListener("click", grade);
-$("next").addEventListener("click", () => {if(quizReady&&phase==="result"&&!saving)advance(currentEra,currentQuestion.id).catch(err);});
+$("next").addEventListener("click", () => {if(quizReady&&phase==="result"&&!saving)(currentSession?.mode?nextStudy():advance(currentEra,currentQuestion.id)).catch(err);});
+$("start-weak").addEventListener("click",()=>startStudy("weak").catch(err));
+$("study-home").addEventListener("click",()=>navigateHome().catch(err));
+$("study-again").addEventListener("click",()=>startStudy(currentSession.mode,currentSession.genre,true).catch(err));
+$("restart-study").addEventListener("click",()=>startStudy(currentSession.mode,currentSession.genre,true).catch(err));
 $("card-preview-panel").addEventListener("toggle",event=>{
   if(event.target.open) renderAdminCardPreview();
 });

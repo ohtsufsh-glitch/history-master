@@ -285,14 +285,14 @@ class AdminMenuHierarchyTest(unittest.TestCase):
 
     def test_menu_toggles_leave_all_fourteen_stores_unchanged(self):
         before = self.snapshot()
-        self.assertEqual(len(before), 15)
+        self.assertEqual(len(before), 16)
         for name in PANELS:
             self.panel(name)
         for _ in range(2):
             for group in GROUPS:
                 self.cycle(group)
         self.assertEqual(self.snapshot(), before)
-        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION]'), [8, 8])
+        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION]'), [9, 9])
 
     def test_menu_toggles_do_not_add_browser_history(self):
         before = self.page.evaluate('({length:history.length,state:history.state,url:location.href})')

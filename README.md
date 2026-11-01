@@ -1,6 +1,11 @@
 # history-master
 Japanese history learning game
 
+Issue #33・#34（v1.7.0）のレビュー用資料：
+
+- [新学習モード・保存互換性・Issue #32との統合箇所](docs/RELEASE_v1.7.0.md)
+- [iPhone・iPad Safari実機確認手順](docs/SAFARI_TEST_v1.7.0.md)
+
 Issue #25（v1.6.15）のレビュー用資料：
 
 - [画面上部のモード表示・コントラスト改善](docs/RELEASE_v1.6.15.md)

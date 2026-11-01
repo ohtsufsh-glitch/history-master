@@ -452,9 +452,9 @@ class QuizCoinDisplayTest(unittest.TestCase):
         self.quiz()
         self.balance(705)
         before = self.snapshot()
-        self.assertEqual(len(before), 15)
+        self.assertEqual(len(before), 16)
         self.assertTrue(all(before.values()))
-        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [8, 8, 15])
+        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [9, 9, 16])
         for _ in range(3):
             self.page.evaluate('refreshCoinDisplay()')
             self.return_event()
