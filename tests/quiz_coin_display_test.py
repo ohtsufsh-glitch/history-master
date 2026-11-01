@@ -448,13 +448,14 @@ class QuizCoinDisplayTest(unittest.TestCase):
             questionHash:await sha256Text(questionFingerprintSource(q)),questionSnapshot:{...exportableQuestion(q),deleted:false},
             reporterRole:'learner',sourceProfile:'student',category:'other',comment:'架空の指摘',createdAt:at,status:'unreviewed',statusUpdatedAt:at}];
           await plushInstall(data);await navigateHome('student');
+          await startStudy('genre','culture');await navigateHome('student');
         }""")
         self.quiz()
         self.balance(705)
         before = self.snapshot()
-        self.assertEqual(len(before), 15)
+        self.assertEqual(len(before), 16)
         self.assertTrue(all(before.values()))
-        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [8, 8, 15])
+        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [9, 9, 16])
         for _ in range(3):
             self.page.evaluate('refreshCoinDisplay()')
             self.return_event()

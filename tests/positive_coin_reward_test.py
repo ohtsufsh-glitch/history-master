@@ -1,4 +1,4 @@
-"""Issue #32: 正解時の最低報酬・原子的保存・v8互換を架空データで検証。
+"""Issue #32: 正解時の最低報酬・原子的保存・v9保存／v8互換を架空データで検証。
 
 実行: PYTHONPATH=tests python -m unittest positive_coin_reward_test -v
 Chromiumでの検証であり、Safari実機の複数タブ・タッチ操作は別途確認する。
@@ -192,7 +192,7 @@ class PositiveCoinRewardTest(unittest.TestCase):
             self.assertEqual(len([r for r in saved['coinClaims'] if r['profile'] == who]), 1)
         self.assertEqual(len({r['key'] for r in saved['reviewEvents']}), 2)
 
-    def test_v8_export_validate_preview_restore_preserves_fallback_and_existing_data(self):
+    def test_v9_export_validate_preview_restore_preserves_fallback_and_existing_data(self):
         # 既存のカード・景品・消費・復習履歴を残した状態で新報酬を獲得。
         self.page.evaluate("""async()=>{
           const data=plushFixture(['shiba'],'student');
@@ -212,7 +212,7 @@ class PositiveCoinRewardTest(unittest.TestCase):
         with self.page.expect_download() as event:
             self.page.locator('#backup-export').click()
         backup = json.loads(Path(event.value.path()).read_text())
-        self.assertEqual(backup['backupVersion'], 8)
+        self.assertEqual(backup['backupVersion'], 9)
         self.assertEqual(backup['data'], before)
         # 補完報酬でも既存の検証（額・キー・重複・プロフィール）を緩めない。
         self.assertTrue(self.page.evaluate("""data=>[
@@ -237,7 +237,7 @@ class PositiveCoinRewardTest(unittest.TestCase):
         changed = self.snapshot()
         self.assertNotEqual(changed, before)
         self.page.locator('#backup-file').set_input_files({
-            'name': 'synthetic-issue32-v8.json', 'mimeType': 'application/json',
+            'name': 'synthetic-issue32-v9.json', 'mimeType': 'application/json',
             'buffer': json.dumps(backup).encode()})
         self.page.wait_for_function('document.querySelector("#backup-preview").textContent.startsWith("検査OK")')
         self.assertEqual(self.snapshot(), changed, 'プレビューは読み取りだけ')
@@ -250,7 +250,7 @@ class PositiveCoinRewardTest(unittest.TestCase):
         self.balance(707)
         self.assertEqual(self.page.locator('#result').inner_text(), result)
         self.assertEqual(self.snapshot(), before)
-        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [8, 8, 15])
+        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [9, 9, 16])
 
     def test_old_zero_result_is_read_without_retroactive_payment(self):
         self.fallback_question()

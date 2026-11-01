@@ -101,7 +101,7 @@ class ImprovementRequestTest(unittest.TestCase):
             self.page.locator("#feedback-improvement-pending").click()
         self.assertEqual(self.snapshot(),before)
         self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'),
-                         [8,8,15])
+                         [9,9,16])
 
     def test_missing_problem_keeps_snapshot_and_is_not_update_eligible(self):
         self.seed()

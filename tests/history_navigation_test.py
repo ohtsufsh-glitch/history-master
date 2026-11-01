@@ -497,7 +497,7 @@ class HistoryNavigationTest(unittest.TestCase):
         self.assertEqual(len(before['coinClaims']), 2)
         self.assertEqual(len(before['coinEvents']), 2)
         self.assertEqual(len(before['reviewEvents']), 4)
-        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [8, 8, 15])
+        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [9, 9, 16])
         self.page.evaluate("""async data=>{
           const checked=validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:7,data});
           await replaceAllStores(checked);
@@ -640,7 +640,7 @@ class HistoryNavigationTest(unittest.TestCase):
         self.forward('admin')
         self.page.wait_for_function("profile==='student'&&history.state.profile==='student'")
         self.assertEqual(self.page.evaluate('history.length'),length)
-        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [8,8,15])
+        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [9,9,16])
 
     def test_test_admin_selected_reset_replaces_current_history_profile(self):
         self.install(mastered=True)
