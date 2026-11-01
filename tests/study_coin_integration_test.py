@@ -296,7 +296,7 @@ class StudyCoinIntegrationTest(unittest.TestCase):
             legacy={'backupFormat':'history-master-backup','backupVersion':8,'data':before}
             page.unroute(self.url)
             page.reload();self.ready(page)
-            self.assertEqual(page.evaluate('[APP_VERSION,DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'),['v1.7.0',9,9,16])
+            self.assertEqual(page.evaluate('[APP_VERSION,DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'),['v1.7.1',9,9,16])
             after=self.snapshot(page)
             for name in before:self.assertEqual(after[name],before[name],name)
             self.assertEqual(after['studySets'],[])
