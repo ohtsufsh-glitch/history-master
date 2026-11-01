@@ -162,9 +162,9 @@ class QuizCoinDisplayTest(unittest.TestCase):
         self.assertNotIn('所持', self.page.locator('#result').inner_text())
         self.assertNotIn('+', self.page.locator('#quiz-coins').inner_text())
 
-    def test_correct_wrong_zero_and_mastery_review_rewards_match_saved_balance(self):
+    def test_correct_wrong_fallback_and_mastery_review_rewards_match_saved_balance(self):
         self.quiz()
-        expected = [2, 5, 7, 7, 7, 7, 9]
+        expected = [2, 5, 7, 7, 9, 11, 13]
         for i, amount in enumerate(expected):
             if i:
                 self.next_question()
@@ -182,7 +182,7 @@ class QuizCoinDisplayTest(unittest.TestCase):
         self.assertEqual(len(after['answers']), 7)
         self.assertEqual(len(after['coinClaims']), 2)
         self.assertEqual(len(after['coinEvents']), 2)
-        self.assertEqual(len(after['reviewEvents']), 2)
+        self.assertEqual(len(after['reviewEvents']), 4)
 
     def test_first_correct_standard_reward_is_separate_from_owned_amount(self):
         self.page.evaluate("""async()=>{
