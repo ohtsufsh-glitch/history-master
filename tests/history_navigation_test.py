@@ -485,7 +485,7 @@ class HistoryNavigationTest(unittest.TestCase):
 
     def test_reward_rules_and_v7_result_backup_roundtrip_preserve_fourteen_stores(self):
         self.quiz()
-        expected = [2, 5, 7, 7, 7, 7, 9]
+        expected = [2, 5, 7, 7, 9, 11, 13]
         for i, balance in enumerate(expected):
             if i:
                 self.page.locator('#next').click()
@@ -496,7 +496,7 @@ class HistoryNavigationTest(unittest.TestCase):
         self.assertEqual(len(before['answers']), 7)
         self.assertEqual(len(before['coinClaims']), 2)
         self.assertEqual(len(before['coinEvents']), 2)
-        self.assertEqual(len(before['reviewEvents']), 2)
+        self.assertEqual(len(before['reviewEvents']), 4)
         self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [8, 8, 15])
         self.page.evaluate("""async data=>{
           const checked=validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:7,data});

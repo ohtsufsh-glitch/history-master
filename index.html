@@ -2044,7 +2044,7 @@ function writeSession(session, expected) {
 }
 // 回答・セッション・獲得カード・コインを同一トランザクションで確定。
 // claimの存在確認から書き込みまで単一のreadwriteトランザクション内で行う。
-// 通常報酬は従来どおり1問1回。既習得問題の正解には、回答ごとに独立した復習報酬。
+// 初正解・初習得は従来どおり各1回。既習得の復習と0枚時の補完は回答単位で記録する。
 // 同一セッションの二重回答を同時トランザクションで拒否し、コインの重複付与を防ぐ。
 function saveAnswer(progress, session, answerEvent, award=null, question=null, wasMastered=false, expected=null) {
   return new Promise((resolve,reject)=>{
@@ -2085,12 +2085,14 @@ function saveAnswer(progress, session, answerEvent, award=null, question=null, w
         granted.amount+=amount;
         granted.stages.push(stage);
       }
-      if(answerEvent.correct && question && wasMastered) {
+      // 全学習モード共通：既存報酬がない正解だけ最低額で補完（上乗せしない）。
+      // reviewEventsの既存形式・UUIDキーを共用し、表示種別はsession.coinStagesに保存。
+      if(answerEvent.correct && question && (wasMastered || granted.amount===0)) {
         const amount=coinReward(question,"first");
         const key=`review:${progress.profile}:${answerEvent.token}`;
         tx.objectStore("reviewEvents").add({key,profile:progress.profile,questionId:progress.questionId,amount,difficulty:question.difficulty||"basic",at:answerEvent.at});
         granted.amount+=amount;
-        granted.stages.push("review");
+        granted.stages.push(wasMastered ? "review" : "correct");
       }
       session.coinAward=granted.amount;
       session.coinStages=[...granted.stages];
@@ -3821,7 +3823,7 @@ function showResult(newAward=null,coinAward=lastCoinAward) {
     const coin=document.createElement("div");coin.className="coin-reward";
     if(coinAward?.amount>0) {
       coin.classList.add("earned");
-      const detail=coinAward.stages.includes("review") ? "習得済み問題の復習ボーナス" : coinAward.stages.includes("master") && coinAward.stages.includes("first") ? "初正解＆初習得ボーナス" : coinAward.stages.includes("master") ? "初習得ボーナス" : "初正解ボーナス";
+      const detail=coinAward.stages.includes("review") ? "復習ボーナス" : coinAward.stages.includes("correct") ? "正解ボーナス" : coinAward.stages.includes("master") && coinAward.stages.includes("first") ? "初正解＆初習得ボーナス" : coinAward.stages.includes("master") ? "初習得ボーナス" : "初正解ボーナス";
       const head=document.createElement("span");head.className="coin-reward-title";
       const amount=document.createElement("span");amount.textContent=`+${coinAward.amount} コイン獲得！`;
       head.append(createCoinIcon(),amount);
@@ -3829,7 +3831,8 @@ function showResult(newAward=null,coinAward=lastCoinAward) {
       coin.append(head,note);
     } else {
       const head=document.createElement("span");head.className="coin-reward-title";
-      const caption=document.createElement("span");caption.textContent="今回の追加コインは0枚（習得まであと少し！）";
+      // 旧結果に遡及付与せず、保存された報酬記録がないことを伝える。
+      const caption=document.createElement("span");caption.textContent="この回答にはコイン報酬の記録がありません。";
       head.append(createCoinIcon(),caption);
       coin.append(head);
     }
