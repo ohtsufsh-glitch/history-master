@@ -63,6 +63,81 @@ class StudyModesTest(unittest.TestCase):
     def next(self):
         self.page.evaluate('nextStudy()')
 
+    def test_home_panel_order_and_dom_references_across_profiles_and_sizes(self):
+        before = self.snapshot()
+        for profile in ['student', 'test']:
+            self.page.evaluate('profile=>navigateHome(profile)', profile)
+            for width, height in [(390, 844), (844, 390), (740, 1024), (741, 1024),
+                                  (768, 1024), (1024, 768)]:
+                with self.subTest(profile=profile, width=width):
+                    self.page.set_viewport_size({'width': width, 'height': height})
+                    result = self.page.evaluate(r"""() => {
+                      const selectors=['#dashboard','.eras-panel','section[aria-label="苦手克服モード"]',
+                        '#game-center-home','#collection'];
+                      const panels=[...document.querySelectorAll('#home > .home-panel')];
+                      const ids=[...document.querySelectorAll('[id]')].map(el=>el.id);
+                      const refs=[...document.querySelectorAll('[aria-labelledby],[aria-describedby],[aria-controls],[for]')]
+                        .flatMap(el=>['aria-labelledby','aria-describedby','aria-controls','for']
+                          .flatMap(attr=>(el.getAttribute(attr)||'').split(/\s+/).filter(Boolean)));
+                      for(const script of document.scripts)
+                        for(const match of script.textContent.matchAll(/\$\(["']([^"']+)["']\)/g))refs.push(match[1]);
+                      return {
+                        order:panels.length===5&&panels.every((el,i)=>el.matches(selectors[i])),
+                        adjacent:document.querySelector('.eras-panel').nextElementSibling===panels[2],
+                        vertical:panels.every((el,i)=>el.getBoundingClientRect().height>0&&
+                          (!i||panels[i-1].getBoundingClientRect().bottom<=el.getBoundingClientRect().top)),
+                        uniqueIds:ids.length===new Set(ids).size,
+                        missingRefs:refs.filter(id=>!document.getElementById(id)),
+                        noOverflow:document.documentElement.scrollWidth<=innerWidth
+                      };
+                    }""")
+                    self.assertEqual(result, dict(order=True, adjacent=True, vertical=True,
+                                                  uniqueIds=True, missingRefs=[], noOverflow=True))
+                    for element_id in ['weak-count', 'start-weak', 'era-list']:
+                        self.assertEqual(self.page.locator('#' + element_id).count(), 1)
+        self.assertEqual(self.snapshot(), before)
+
+    def test_home_era_and_weak_buttons_counts_and_return(self):
+        # テスト用にも異なる苦手件数を用意し、プロフィール別の表示を確認する。
+        self.page.evaluate("""async()=>{
+          const progress=await readAll('progress');
+          const tx=db.transaction('progress','readwrite');
+          for(const p of progress.slice(0,3))
+            tx.objectStore('progress').put({...p,key:`test:${p.questionId}`,profile:'test'});
+          await new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=reject;});
+        }""")
+        for profile, count in [('student', 12), ('test', 3)]:
+            if profile == 'test':
+                self.page.locator('#open-admin').click()
+                self.page.locator('#admin-start-test').click()
+                self.page.wait_for_function("profile==='test'&&!document.querySelector('#home').classList.contains('hidden')")
+            before = self.snapshot()
+            for width, height in [(390, 844), (844, 390), (768, 1024), (1024, 768)]:
+                with self.subTest(profile=profile, width=width):
+                    self.page.set_viewport_size({'width': width, 'height': height})
+                    self.assertEqual(self.page.locator('#weak-count').inner_text(), f'苦手問題は{count}問')
+                    self.page.locator('#era-list button').first.tap()
+                    self.screen('quiz')
+                    self.page.wait_for_function('quizReady')
+                    self.assertEqual(self.page.evaluate('[profile,currentEra,currentQuestion.era]'),
+                                     [profile, 'E01', 'E01'])
+                    self.page.locator('#back-home').tap()
+                    self.screen('home')
+                    self.page.locator('#start-weak').tap()
+                    self.screen('quiz')
+                    self.page.wait_for_function('quizReady')
+                    self.assertEqual(self.page.evaluate('[profile,currentSession.mode,currentSession.entries.length]'),
+                                     [profile, 'weak', min(count, 10)])
+                    self.page.locator('#back-home').tap()
+                    self.screen('home')
+                    self.assertEqual(self.page.locator('#weak-count').inner_text(), f'苦手問題は{count}問')
+                    self.assertTrue(self.page.locator('.eras-panel').evaluate(
+                        'el=>el.nextElementSibling.contains(document.getElementById("start-weak"))'))
+            after = self.snapshot()
+            for store in before:
+                if store not in ['sessions', 'studySets']:
+                    self.assertEqual(after[store], before[store], store)
+
     def test_weak_current_revision_and_state_filter(self):
         self.page.evaluate("""async()=>{
           const p=await readAll('progress');
