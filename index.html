@@ -174,9 +174,6 @@
     .card-art-top, .card-art-bottom { position:absolute; left:7%; width:86%; display:flex; align-items:center; justify-content:center; text-align:center; color:#5b3b22; font-weight:800; line-height:1.16; overflow-wrap:anywhere; text-shadow:0 1px 1px #fff8e4; pointer-events:none; }
     .card-art-top { top:4.5%; height:9%; font-size:clamp(9px,2.8vw,13px); }
     .card-art-bottom { bottom:5%; height:9%; font-size:clamp(10px,3.4vw,16px); }
-    .card-art.is-locked img { filter:grayscale(1) brightness(.38) blur(4px); transform:scale(1.04); opacity:.57; }
-    .card-art.is-locked::after { content:'🔒'; position:absolute; z-index:2; inset:0; display:grid; place-items:center; font-size:clamp(28px,7vw,52px); pointer-events:none; text-shadow:0 2px 8px #fff; }
-    .card-art.is-locked .card-art-top, .card-art.is-locked .card-art-bottom { color:#657080; text-shadow:0 1px 1px #fff; }
     .card-art-fallback { display:none; position:absolute; inset:15%; align-items:center; justify-content:center; text-align:center; font-size:1.1rem; font-weight:700; color:#5b3b22; line-height:1.5; }
     .card-art.art-load-failed img { display:none; }
     .card-art.art-load-failed .card-art-fallback { display:flex; }
@@ -1730,7 +1727,8 @@ function cardArt(era,locked=false) {
   const frame=document.createElement("div");
   frame.className="card-art"+(locked?" is-locked":"");
   const img=document.createElement("img");
-  img.src=`${CARD_IMAGES_DIR}${era}.webp`;
+  // 未獲得時は表面画像を読み込まない。Safariの長押しでも裏面だけを表示する。
+  img.src=`${CARD_IMAGES_DIR}${locked?"card-back":era}.webp`;
   img.width=720; img.height=960;
   img.loading="lazy";
   img.decoding="async";
@@ -1739,13 +1737,15 @@ function cardArt(era,locked=false) {
   const fallback=document.createElement("div");
   fallback.className="card-art-fallback";
   fallback.textContent=locked?"🔒":CARDS[era].icon;
+  frame.append(img,fallback);
+  if(locked) return frame;
   const top=document.createElement("div");
   top.className="card-art-top";
   top.textContent=ERAS.find(([id])=>id===era)?.[1]||era;
   const bottom=document.createElement("div");
   bottom.className="card-art-bottom";
-  bottom.textContent=locked?"？？？":CARD_SUBJECTS[era];
-  frame.append(img,fallback,top,bottom);
+  bottom.textContent=CARD_SUBJECTS[era];
+  frame.append(top,bottom);
   return frame;
 }
 function openCardDetail(era,preview=false) {
