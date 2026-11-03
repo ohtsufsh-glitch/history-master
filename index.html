@@ -468,10 +468,10 @@
     .crane-glass-shine{position:absolute;inset:0;z-index:8;pointer-events:none;border-left:7px solid #ffffff66;border-right:7px solid #ffffff55;}
     .crane-rail{position:absolute;top:4px;left:7%;width:86%;height:9px;border-radius:10px;background:linear-gradient(#8aa3b8,#41667c);box-shadow:0 3px 5px #37546a4a;}
     .crane-arm{position:absolute;top:5px;left:50%;width:70px;height:105px;transform:translateX(-50%);z-index:5;transition:left .085s linear;pointer-events:none;}
-    .crane-cable{width:6px;height:66px;position:absolute;left:calc(50% - 3px);top:3px;border-radius:3px;background:repeating-linear-gradient(180deg,#5e6d76 0 4px,#c6d2d7 4px 7px);box-shadow:1px 1px 2px #344c6170;transform-origin:top center;transition:height .55s ease;}
-    .crane-head{position:absolute;top:59px;left:18px;width:34px;height:28px;background:linear-gradient(#f5f7fa,#8a9bad);border:3px solid #57758a;border-radius:11px;box-shadow:0 2px 3px #31507166;transition:top .55s ease;}
+    .crane-cable{width:6px;height:66px;position:absolute;left:calc(50% - 3px);top:3px;border-radius:3px;background:repeating-linear-gradient(180deg,#5e6d76 0 4px,#c6d2d7 4px 7px);box-shadow:1px 1px 2px #344c6170;transform-origin:top center;transition:height var(--crane-lift-ms) ease;}
+    .crane-head{position:absolute;top:59px;left:18px;width:34px;height:28px;background:linear-gradient(#f5f7fa,#8a9bad);border:3px solid #57758a;border-radius:11px;box-shadow:0 2px 3px #31507166;transition:top var(--crane-lift-ms) ease;}
     .crane-head span{display:block;width:10px;height:10px;border-radius:50%;background:#f0c46b;margin:6px auto;border:1px solid #9a754b;}
-    .claw{position:absolute;top:78px;width:24px;height:30px;border:6px solid #7c8d9c;border-top:0;border-radius:0 0 15px 15px;transition:top .55s ease,transform .24s ease;}
+    .claw{position:absolute;top:78px;width:24px;height:30px;border:6px solid #7c8d9c;border-top:0;border-radius:0 0 15px 15px;transition:top var(--crane-lift-ms) ease,transform .24s ease;}
     .claw-left{left:6px;transform:rotate(15deg);border-right:0;}
     .claw-right{right:6px;transform:rotate(-15deg);border-left:0;}
     .crane-stage.dropping .crane-cable{height:179px;}
@@ -537,7 +537,10 @@
     .crane-rail { left:10%; width:80%; }
     .crane-arm { transition:left .075s linear; }
     .crane-stage.sweeping .crane-arm { transition:none; }
-    .crane-stage.transporting .crane-arm { transition:left 1.35s linear; }
+    .crane-stage.transporting .crane-arm { transition:left var(--crane-travel-ms, var(--crane-transport-ms)) linear; }
+    /* 時間は演出開始時にCRANE_CONFIGから設定。上昇・下降で距離とイージングを共有する。 */
+    .crane-stage.dropping .crane-cable, .crane-stage.dropping .crane-head { transition-duration:var(--crane-drop-ms); }
+    .crane-stage.dropping .claw { transition-duration:var(--crane-drop-ms), .24s; }
     /* 下降量は演出開始時に景品の実寸から計算。ケーブル・ヘッド・ツメを同じ距離だけ動かす。 */
     .crane-stage.dropping .crane-cable { height:calc(66px + var(--crane-drop-distance)); }
     .crane-stage.dropping .crane-head { top:calc(59px + var(--crane-drop-distance)); }
@@ -547,13 +550,13 @@
     .crane-prizes { z-index:3; }
     .crane-toy {
       width:11.8%; max-width:102px; min-width:0; bottom:34px;
-      transition: left 1.35s linear, bottom .55s ease, opacity .35s ease, transform .4s ease;
+      transition: left var(--crane-travel-ms, var(--crane-transport-ms)) linear, bottom .55s ease, opacity .35s ease, transform .4s ease;
       will-change:transform;
     }
     /* 景品を縮小せず、ツメが景品の上から60%の位置に触れたまま一緒に上昇する。 */
-    .crane-toy.grabbed { bottom:calc(100% - var(--crane-grip-y) - var(--crane-toy-size) * .4); transform:translateX(-50%); z-index:6; }
+    .crane-toy.grabbed { bottom:calc(100% - var(--crane-grip-y) - var(--crane-toy-size) * .4); transform:translateX(-50%); z-index:6; transition-duration:var(--crane-travel-ms, var(--crane-transport-ms)), var(--crane-lift-ms), .35s, .4s; }
     .crane-toy.fallen { bottom:34px; transform:translateX(-50%) rotate(20deg) scale(.92); }
-    .crane-toy.delivered { bottom:0; opacity:0; transform:translateX(-50%) scale(.60); }
+    .crane-toy.delivered { bottom:0; opacity:0; transform:translateX(-50%) scale(.60); transition-duration:var(--crane-release-ms); }
     .crane-toy.collected { display:none; }
     .crane-chute {
       right:1.4%; bottom:0; width:12%; min-width:76px; height:58px;
@@ -1106,7 +1109,7 @@ const isSecretPlush=id=>typeof id==="string" && Object.hasOwn(SECRET_PLUSH_TYPES
 const plushName=id=>PLUSH_TYPES[id]||SECRET_PLUSH_TYPES[id];
 const CRANE_CONFIG=Object.freeze({
   left:12,right:88,oneWaySeconds:2.5,exitX:92,
-  dropMs:760,liftMs:750,transportMs:1350,releaseMs:480,
+  dropMs:1520,liftMs:2000,transportMs:2000,releaseMs:480,
   // とても正確で約75%、ほぼ正確で約50%、端で約20%の最終獲得率
   bands:[{max:2,alignment:"perfect",grab:.90,carry:.84},
          {max:3.8,alignment:"good",grab:.75,carry:.67},
@@ -1132,6 +1135,8 @@ function plushPresentation(id,reveal=false) {
   return {name:hidden?SECRET_UNKNOWN.name:plushName(id),path:plushPath(hidden?SECRET_UNKNOWN.assetId:id)};
 }
 const craneSleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+// CSSの開始フレームを描画してから設定時間を待ち、途中で次の動作に切り替わるのを防ぐ。
+const cranePaint=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
 function randomArcadePrizes(random=Math.random) {
   // 判定単位は盤面。通常20種類は等確率・重複あり、秘密は最大1体。
   const secret=random()<SECRET_BOARD_CHANCE;
@@ -1633,6 +1638,10 @@ async function animateCraneOutcome(play) {
     if(!viewCurrent(ctx)||arcadeResumeRequired)throw Object.assign(new Error("キャッチを中断しました"),{navigationInterrupted:true});
   }
   const stage=$("crane-stage"),arm=$("crane-arm"),result=play.result;
+  // JSの待機とCSSの動きを同じ設定から同期。途中落下用の時間も再生ごとにリセットする。
+  for(const phase of ["drop","lift","transport","release"])
+    stage.style.setProperty(`--crane-${phase}-ms`,`${CRANE_CONFIG[`${phase}Ms`]}ms`);
+  stage.style.removeProperty("--crane-travel-ms");
   const toy=$("crane-prizes").querySelector(`[data-slot="${result.targetIndex}"]`);
   // 保存済み判定には触れず、画面内の景品サイズ・位置にだけ演出を合わせる。
   const target=toy||$("crane-prizes").querySelector(".crane-toy");
@@ -1645,11 +1654,13 @@ async function animateCraneOutcome(play) {
   if(result.grabbed&&toy)arm.style.left=toy.style.left;
   $("arcade-message").textContent="アームが下降中…つかめるかな？";
   stage.classList.add("dropping");
+  await cranePaint();
   await craneSleep(CRANE_CONFIG.dropMs);
   checkView();
   if(result.grabbed&&toy){stage.classList.add("holding");toy.classList.add("grabbed");$("arcade-message").textContent="つかんだ！ 出口まで落とさず運ぼう！";}
   else $("arcade-message").textContent="あっ、つかめなかった！";
   stage.classList.remove("dropping");
+  await cranePaint();
   await craneSleep(CRANE_CONFIG.liftMs);
   checkView();
   if(result.grabbed&&toy) {
@@ -1661,10 +1672,9 @@ async function animateCraneOutcome(play) {
     stage.classList.add("transporting");
     if(result.won)$("arcade-message").textContent="景品を出口へ運んでいます…！";
     // 通過点の位置と所要時間を一致させる。
-    const armDuration=result.won?travelMs:Math.max(280,Math.round(travelMs*dropAt));
-    arm.style.transitionDuration=`${armDuration}ms`;
-    toy.style.transitionDuration=`${armDuration}ms, .55s, .35s, .4s`;
-    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    const armDuration=result.won?travelMs:Math.round(travelMs*dropAt);
+    stage.style.setProperty("--crane-travel-ms",`${armDuration}ms`);
+    await cranePaint();
     checkView();
     arm.style.left=`${result.won?toX:travelEnd}%`;
     toy.style.left=`${result.won?toX:travelEnd}%`;
@@ -1674,6 +1684,7 @@ async function animateCraneOutcome(play) {
       $("arcade-message").textContent="取り出し口に到着！ 景品をおろすよ！";
       stage.classList.remove("holding");
       toy.classList.add("delivered");
+      await cranePaint();
       await craneSleep(CRANE_CONFIG.releaseMs);
       checkView();
       const id=play.prizes[result.targetIndex];
@@ -1686,7 +1697,6 @@ async function animateCraneOutcome(play) {
       checkView();
     }
   } else {await craneSleep(420);checkView();}
-  arm.style.transitionDuration="";
 }
 // ページ/タブ復帰は手動再開。保存済み結果を勝手に再生・課金しない。
 document.addEventListener("visibilitychange",()=>{
