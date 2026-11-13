@@ -3851,7 +3851,9 @@ function pickQuestion(era, records, previousId, recentIds=[]) {
   const stats=answerStatsFor(profile);
   let total=0;
   const weighted=candidates.map(q=>{
-    const weight=questionWeight(stats.get(q.id));
+    const progress=activeProgress(q,records.get(q.id));
+    // 現在版で未回答・未習得の問題を優先し、習得済みも復習対象に残す。
+    const weight=questionWeight(stats.get(q.id))*(progress?.mastered?1:10);
     total+=weight;
     return {q,weight};
   });

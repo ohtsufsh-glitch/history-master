@@ -607,7 +607,8 @@ class QuestionFeedbackTest(unittest.TestCase):
         self.page.wait_for_function('document.querySelector("#notice").textContent.includes("2ファイル")')
         self.assertEqual(len(downloads), 2)
         counts = []
-        for download in downloads:
+        # 通知の到着順は保証されないため、分割番号順で内容を検証する。
+        for download in sorted(downloads, key=lambda d: d.suggested_filename):
             path = Path(download.path())
             self.assertLessEqual(path.stat().st_size, 8 * 1024 * 1024)
             obj = json.loads(path.read_text())
