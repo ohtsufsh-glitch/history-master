@@ -920,7 +920,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.3";
+const APP_VERSION = "v1.7.4";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -1119,6 +1119,8 @@ const LEGACY_PRIZE_POSITIONS=[20,50,80];
 const NEW_PRIZE_POSITIONS=[14,26,38,50,62,74,86];
 const positionsForPlay=play=>play?.prizes.length===3?LEGACY_PRIZE_POSITIONS:NEW_PRIZE_POSITIONS;
 let arcadePlay=null;
+// 今回の滞在中に確定した結果だけ表示する。保存済み履歴からは復元しない。
+let arcadeResult=null;
 let arcadeBoard=null;
 let arcadeBusy=false;
 let arcadeSweepFrame=null;
@@ -1412,7 +1414,12 @@ function paintCranePrizeResult(play,revealed=true,animate=false) {
   }
   host.append(img,name);host.classList.remove("hidden");host.classList.toggle("revealed",animate);
 }
-// finishCranePlayのtx.oncomplete後だけ呼ぶ。再表示は保存済み結果を静的に表示する。
+function clearArcadeResult() {
+  arcadeResult=null;
+  paintCranePrizeResult(null);
+  $("arcade-message").textContent="";
+}
+// finishCranePlayのtx.oncomplete後だけ呼ぶ。同じ滞在中の再描画では静的に表示する。
 async function revealSecretPrize(play) {
   if(play.status!=="finished"||!play.result?.won||!isSecretPlush(play.prizes[play.result.targetIndex]))return;
   const ctx=viewContext();
@@ -1476,7 +1483,8 @@ async function renderArcade() {
   arcadeDirection=arcadePlay?.direction===-1?-1:1;
   const stage=$("crane-stage");stage.className="crane-stage";
   paintArcadeArm();paintArcadePrizes();
-  paintCranePrizeResult(arcadePlay);
+  const resultPlay=arcadeResult?.profile===ctx.who&&arcadeResult.id===arcadePlay?.id?arcadePlay:null;
+  paintCranePrizeResult(resultPlay);
   const aiming=arcadePlay?.status==="aiming";
   const resolving=arcadePlay?.status==="resolving";
   const waitingForResume=arcadeResumeRequired && (aiming || resolving);
@@ -1500,9 +1508,9 @@ async function renderArcade() {
     if(empty&&!aiming&&!resolving)$("arcade-message").textContent=EMPTY_ARCADE_MESSAGE;
     else if(aiming)$("arcade-message").textContent="動くアームを見て、ねらった場所で「キャッチ！」を押そう！";
     else if(resolving)$("arcade-message").textContent="前回のキャッチ結果を再生できます。金貨は追加で使いません。";
-    else if(arcadePlay?.status==="finished") {
-      const r=arcadePlay.result;
-      $("arcade-message").textContent=r.won?`🎉 ${plushName(arcadePlay.prizes[r.targetIndex])}をゲット！`:r.grabbed?"あと少し！ 運ぶ途中で落ちちゃった…":"おしい！ 今度はもっと近くをねらおう！";
+    else if(resultPlay?.status==="finished") {
+      const r=resultPlay.result;
+      $("arcade-message").textContent=r.won?`🎉 ${plushName(resultPlay.prizes[r.targetIndex])}をゲット！`:r.grabbed?"あと少し！ 運ぶ途中で落ちちゃった…":"おしい！ 今度はもっと近くをねらおう！";
     }else $("arcade-message").textContent=testMode?"テストモードでは金貨を使わず、何度でも遊べます。":"100金貨で1回遊べます。";
   }
   await renderArcadeCollection(ctx);
@@ -1568,6 +1576,7 @@ async function catchCrane() {
     const finished=await finishCranePlay(play.id);
     if(!viewCurrent(ctx))return;
     arcadePlay=finished;
+    arcadeResult={id:finished.id,profile:finished.profile};
     await revealSecretPrize(arcadePlay);
     if(!viewCurrent(ctx))return;
     await renderArcade();
@@ -1587,6 +1596,7 @@ async function animatePendingCrane(insideBusy=false) {
     const finished=await finishCranePlay(play.id);
     if(!viewCurrent(ctx))return;
     arcadePlay=finished;
+    arcadeResult={id:finished.id,profile:finished.profile};
     await revealSecretPrize(arcadePlay);
     if(!viewCurrent(ctx))return;
     await renderArcade();
@@ -1703,7 +1713,7 @@ document.addEventListener("visibilitychange",()=>{
   if(document.hidden){closePlushDetail(false);++viewGeneration;stopCraneSweep(true);arcadeResumeRequired=true;}
   else reconcilePage().catch(err);
 });
-window.addEventListener("pagehide",()=>{closeFeedback();closePlushDetail(false);++viewGeneration;stopCraneSweep(true);arcadeResumeRequired=true;});
+window.addEventListener("pagehide",()=>{closeFeedback();closePlushDetail(false);clearArcadeResult();++viewGeneration;stopCraneSweep(true);arcadeResumeRequired=true;});
 
 const CARD_MIN_QUESTIONS = 50;
 const RANKS = [
@@ -3330,6 +3340,7 @@ function resetStudentViewAfterDataChange() {
   ++viewGeneration;
   draftSelections.clear();
   stopCraneSweep();arcadePlay=null;arcadeBoard=null;arcadeResumeRequired=true;
+  clearArcadeResult();
   profile="student";
   currentEra=null;
   currentQuestion=null;
@@ -3497,6 +3508,7 @@ function navigateHome(who=profile) { return navigate("home",who); }
 async function restoreRoute(target,{allowCreate=false}={}) {
   closeFeedback();
   closePlushDetail(false);
+  if(target.profile!==profile)clearArcadeResult();
   stopCraneSweep(true);
   arcadeResumeRequired=true;
   ++viewGeneration;
@@ -3562,6 +3574,7 @@ window.addEventListener("focus",()=>{
 function show(sectionId) {
   closeFeedback();
   closePlushDetail(false);
+  if(sectionId!=="arcade")clearArcadeResult();
   // どの画面へ移っても、プレイ中のアーム位置を一度保存する。
   if(sectionId!=="arcade" && !$("arcade").classList.contains("hidden")) stopCraneSweep(true);
   for (const id of ["home", "admin", "quiz", "finished", "study-finished", "arcade"]) $(id).classList.toggle("hidden", id !== sectionId);

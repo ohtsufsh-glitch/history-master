@@ -351,15 +351,15 @@ class SecretPlushTest(unittest.TestCase):
                     self.assertEqual(self.snapshot()['arcadePrizes'], [])
                     self.assert_hidden()
 
-    def test_finished_play_reload_shows_static_identity_without_second_award(self):
+    def test_finished_play_reload_hides_result_but_keeps_collection_without_second_award(self):
         play_id = self.prepare('resolving')
         self.page.evaluate('id=>finishCranePlay(id)', play_id)
         before = self.snapshot()
         self.page.reload()
         self.ready()
         self.page.evaluate("async()=>{profile='test';await openArcade();}")
-        self.assertIn('こりゅん', self.page.locator('#crane-secret-reveal').inner_text())
-        self.assertEqual(self.page.locator('#crane-secret-reveal img').evaluate('img=>getComputedStyle(img).animationName'), 'none')
+        self.assert_result_cleared()
+        self.assertEqual(self.page.locator('#arcade-secret-collection-list [data-prize-id="secret_koryun"] .owned').inner_text(), '×1')
         self.assertEqual(self.snapshot(), before)
         self.page.evaluate('id=>Promise.all([finishCranePlay(id),finishCranePlay(id)])', play_id)
         self.assertEqual(self.snapshot(), before)
@@ -419,24 +419,23 @@ class SecretPlushTest(unittest.TestCase):
         self.assertFalse(self.page.locator('#crane-secret-reveal').is_visible())
         self.assertNotIn('こりゅん', self.page.locator('#arcade').inner_text())
         self.page.evaluate("navigate('arcade','test')")
-        self.assertIn('こりゅん', self.page.locator('#crane-secret-reveal').inner_text())
-        self.assertEqual(self.page.locator('#crane-secret-reveal img').evaluate('img=>getComputedStyle(img).animationName'), 'none')
+        self.assert_result_cleared()
         self.page.evaluate("""async()=>{
           allowIdentity();await catching;Math.random=savedRandom;
           animateCraneOutcome=savedAnimation;window.setTimeout=savedTimer;
         }""")
         self.assertFalse(self.page.evaluate('window.lateReveal'))
         self.assertEqual(self.snapshot(), before)
-        self.assertEqual(self.page.locator('#crane-secret-reveal img').evaluate('img=>getComputedStyle(img).animationName'), 'none')
+        self.assert_result_cleared()
         self.page.reload()
         self.ready()
-        self.assertIn('こりゅん', self.page.locator('#crane-secret-reveal').inner_text())
+        self.assert_result_cleared()
         self.assertEqual(self.page.locator('#arcade-secret-collection-list [data-prize-id="secret_koryun"] .owned').inner_text(), '×1')
         self.page.evaluate("navigate('arcade','student')")
         self.assertEqual(self.page.locator('#arcade-secret-collection-list strong').all_text_contents(), ['？？？'] * 3)
         self.page.go_back()
         self.page.wait_for_function("profile==='test'&&document.querySelector('#arcade-secret-collection-count').textContent.includes('1/3種類')")
-        self.assertEqual(self.page.locator('#crane-secret-reveal img').get_attribute('src'), 'assets/plush/secret_koryun.webp')
+        self.assert_result_cleared()
         self.page.go_forward()
         self.page.wait_for_function("profile==='student'&&document.querySelector('#arcade-secret-collection-count').textContent.includes('0/3種類')")
         self.assertEqual(self.snapshot(), before)
@@ -458,7 +457,7 @@ class SecretPlushTest(unittest.TestCase):
         self.assertEqual(self.snapshot(), before, '回答・習得・コインを含む14ストアを保持')
         self.assertEqual(self.page.evaluate('[profile,history.state.profile]'), ['student', 'student'])
         self.page.evaluate("navigate('arcade','test')")
-        self.assertEqual(self.page.locator('#crane-secret-reveal img').get_attribute('src'), 'assets/plush/secret_koryun.webp')
+        self.assert_result_cleared()
         self.assertEqual(self.page.locator('#arcade-secret-collection-list [data-prize-id="secret_koryun"] .owned').inner_text(), '×1')
         self.assertEqual(self.snapshot(), before)
 
@@ -574,8 +573,9 @@ class SecretPlushTest(unittest.TestCase):
         """通常景品も獲得後に画像と名前を表示。失敗・プロフィール違いでは非表示。"""
         play_id = self.prepare('resolving', secret='shiba')
         self.assertFalse(self.page.locator('#crane-secret-reveal').is_visible())
-        self.page.evaluate('id=>finishCranePlay(id)', play_id)
+        self.page.evaluate('async()=>{const restore=fastCrane();try{await startCrane();}finally{restore();}}')
         saved = self.snapshot()
+        self.assertEqual(saved['arcadePrizes'][0]['id'], play_id)
         self.page.evaluate('renderArcade()')
         self.assertEqual(self.page.locator('#arcade-message').text_content(), '🎉 しば犬をゲット！')
         panel = self.page.locator('#crane-secret-reveal')
@@ -594,21 +594,119 @@ class SecretPlushTest(unittest.TestCase):
                     document.documentElement.scrollWidth<=innerWidth;
                 }"""))
         self.assertEqual(self.snapshot(), saved)
+        # 同じ画面での再照合は表示を保持。外部ページからのbfcache復帰は消す。
+        self.page.evaluate('reconcilePage()')
+        self.assertTrue(panel.is_visible())
+        self.page.evaluate("""async()=>{
+          dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));
+          await reconcilePage();
+        }""")
+        self.assert_result_cleared()
+        self.assertEqual(self.snapshot(), saved)
         self.page.reload()
         self.ready()
         self.page.evaluate("async()=>{profile='test';await openArcade();}")
-        self.assertEqual(self.page.locator('#crane-secret-reveal img').get_attribute('src'), 'assets/plush/shiba.webp')
-        self.assertEqual(self.page.locator('#crane-secret-reveal img').evaluate('img=>getComputedStyle(img).animationName'), 'none')
+        self.assert_result_cleared()
         self.assertEqual(self.snapshot(), saved)
-        self.page.evaluate("async()=>{profile='student';await renderArcade();}")
-        self.assertFalse(panel.is_visible())
-        self.page.evaluate("async()=>{profile='test';await renderArcade();}")
-        self.assertEqual(panel.locator('img').get_attribute('src'), 'assets/plush/shiba.webp')
+        self.page.evaluate("navigate('arcade','student')")
+        self.assert_result_cleared()
+        self.page.evaluate("navigate('arcade','test')")
+        self.assert_result_cleared()
 
         self.prepare('resolving', outcome='miss', secret='shiba')
         self.page.evaluate('id=>finishCranePlay(id)', self.page.evaluate('arcadePlay.id'))
         self.page.evaluate('renderArcade()')
         self.assertFalse(panel.is_visible())
+
+    def assert_result_cleared(self):
+        self.assertFalse(self.page.locator('#crane-secret-reveal').is_visible())
+        self.assertEqual(self.page.locator('#crane-secret-reveal').inner_text(), '')
+        self.assertEqual(self.page.locator('#crane-secret-reveal img').count(), 0)
+        self.assertNotIn('ゲット', self.page.locator('#arcade-message').text_content())
+
+    def test_finished_results_stay_until_exit_then_home_admin_and_history_cannot_restore_them(self):
+        for prize in ['shiba', 'secret_koryun']:
+            for width, height in [(390, 844), (768, 1024)]:
+                with self.subTest(prize=prize, width=width):
+                    self.page.set_viewport_size({'width': width, 'height': height})
+                    self.prepare(who='student', secret=prize)
+                    self.page.evaluate("""async()=>{
+                      await startCrane();stopCraneSweep();arcadePlay.armX=50;
+                      const choose=chooseCraneOutcome,restore=fastCrane();
+                      chooseCraneOutcome=play=>choose(play,()=>0);
+                      try{await catchCrane();}finally{chooseCraneOutcome=choose;restore();}
+                    }""")
+                    saved = self.snapshot()
+                    balance = self.page.evaluate('getAvailableCoins()')
+                    self.page.evaluate('renderArcade()')
+                    self.assertTrue(self.page.locator('#crane-secret-reveal').is_visible())
+                    self.assertIn('をゲット！', self.page.locator('#arcade-message').text_content())
+                    self.page.locator('#arcade-back').click()
+                    self.page.wait_for_function("history.state.screen==='home'")
+                    self.assert_result_cleared()
+                    self.page.locator('#open-arcade').click()
+                    self.wait_arcade_result_loaded()
+                    self.assert_result_cleared()
+                    for direction, screen in [('go_back', 'home'), ('go_forward', 'arcade')]:
+                        getattr(self.page, direction)()
+                        self.page.wait_for_function('screen=>history.state.screen===screen', arg=screen)
+                        if screen == 'arcade':
+                            self.wait_arcade_result_loaded()
+                        self.assert_result_cleared()
+                    self.page.locator('#open-admin').click()
+                    self.page.wait_for_function("history.state.screen==='admin'")
+                    self.page.go_back()
+                    self.wait_arcade_result_loaded()
+                    self.assert_result_cleared()
+                    # Safariのpageshowで再照合されても表示は復活しない。
+                    self.page.evaluate("""async()=>{
+                      const original=reconcilePage;
+                      reconcilePage=(...args)=>window.pageRestoration=original(...args);
+                      try {
+                        dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));
+                        await pageRestoration;
+                      }finally{reconcilePage=original;}
+                    }""")
+                    self.assert_result_cleared()
+                    self.assertEqual(self.page.locator(f'.plush-item[data-prize-id="{prize}"] .owned').inner_text(), '×1')
+                    self.assertEqual(self.page.locator('#arcade-balance').inner_text(), str(balance))
+                    self.assertEqual(self.snapshot(), saved)
+
+    def wait_arcade_result_loaded(self):
+        self.page.wait_for_function("""!document.querySelector('#arcade').classList.contains('hidden')&&
+          document.querySelector('#arcade-balance').textContent!=='確認中…'&&
+          document.querySelector('#arcade-collection-count').textContent.includes('通常：')""")
+
+    def test_navigation_while_completion_is_pending_cannot_publish_a_stale_result(self):
+        for status in ['aiming', 'resolving']:
+            with self.subTest(status=status):
+                play_id = self.prepare(status, who='student', secret='shiba')
+                self.page.evaluate("""async status=>{
+                  if(status==='aiming'){await startCrane();stopCraneSweep();arcadePlay.armX=50;}
+                  window.savedFinish=finishCranePlay;
+                  window.savedAnimation=animateCraneOutcome;
+                  window.savedChoose=chooseCraneOutcome;
+                  animateCraneOutcome=async()=>{};
+                  chooseCraneOutcome=play=>savedChoose(play,()=>0);
+                  finishCranePlay=async id=>{
+                    const play=await savedFinish(id);
+                    await new Promise(resolve=>window.releaseFinish=resolve);return play;
+                  };
+                  window.completing=status==='aiming'?catchCrane():startCrane();
+                }""", status)
+                self.page.wait_for_function("typeof window.releaseFinish==='function'")
+                saved = self.snapshot()
+                self.assertEqual(saved['arcadePlays'][0]['status'], 'finished')
+                self.page.evaluate("async()=>{await navigateHome();await navigate('arcade');}")
+                self.page.evaluate("""async()=>{
+                  releaseFinish();await completing;
+                  finishCranePlay=savedFinish;animateCraneOutcome=savedAnimation;chooseCraneOutcome=savedChoose;
+                  delete window.releaseFinish;
+                }""")
+                self.assert_result_cleared()
+                self.assertEqual(self.snapshot(), saved)
+                self.assertEqual(saved['arcadePrizes'][0]['id'], play_id)
+                self.assertFalse(self.page.locator('#crane-start').is_disabled())
 
 
 if __name__ == '__main__':
