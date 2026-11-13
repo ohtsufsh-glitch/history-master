@@ -104,7 +104,7 @@ class UiCleanupTest(unittest.TestCase):
         self.page.locator('#open-admin').click()
         version = self.page.locator('#app-version')
         self.assertTrue(version.is_visible())
-        self.assertEqual(version.inner_text(), 'アプリバージョン：v1.7.1')
+        self.assertRegex(self.page.evaluate('APP_VERSION'), r'^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$')
         self.assertEqual(version.inner_text(), 'アプリバージョン：' + self.page.evaluate('APP_VERSION'))
         self.assertEqual(version.evaluate('el=>el.previousElementSibling.textContent'), '⚙️ 保護者用管理画面')
         self.assertEqual(self.page.evaluate('[DB_NAME,DB_VERSION,BACKUP_VERSION]'),

@@ -1,6 +1,8 @@
 # history-master
 Japanese history learning game
 
+開発時の[アプリバージョン更新・PRチェック・GitHub追加設定](docs/APP_VERSION.md)
+
 Issue #33・#34（v1.7.0）のレビュー用資料：
 
 - [新学習モード・保存互換性・Issue #32との統合箇所](docs/RELEASE_v1.7.0.md)

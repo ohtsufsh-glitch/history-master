@@ -1,6 +1,6 @@
 # AGENTS.md — Codex 開発指示（歴史マスター）
 
-> 更新日: 2026-10-22  
+> 更新日: 2026-11-13
 > 対象: `ohtsufsh-glitch/history-master`（公開 GitHub、既定ブランチ `main`）  
 > このファイルは **Codex が作業のたびに読む恒常的な指示**。詳細は `docs/REQUIREMENTS.md` と `docs/DECISIONS_AND_TESTS.md` を参照する。
 
@@ -69,6 +69,15 @@
 5. 変更したファイル、差分の要点、既存機能への影響、テスト結果、**iPhone/iPad Safariで要確認の項目**を日本語で報告する。
 6. 原則 **Pull Requestを作成し、ユーザーが内容を確認・承認するまで `main` にマージしない**。`main`への直接push、公開済みサイトの直接変更、破壊的操作は明示承認が必要。
 7. 承認後のマージに伴いGitHub Pagesが自動デプロイする構成を利用する。Actions/Pagesが成功するまで公開成功を断言しない。
+
+### アプリバージョン更新（Issue #54）
+
+- `index.html`、配信する画像などの `assets/**`、その他実際のアプリコード・画面を変更するPRでは、**`index.html` の `APP_VERSION` も原則1回更新する**。毎コミットで増やす必要はない。文書・テスト・開発ツールだけのPRでは通常不要（`assets/**/.gitkeep` も対象外）。
+- 作業開始時とPR完了前に `git fetch origin main` で最新mainを取得し、コードと `APP_VERSION` を確認する。基本はパッチ +1。`python3 scripts/bump_app_version.py` を使う。大きな機能群の節目のマイナー変更はユーザー承認の上、例として `python3 scripts/bump_app_version.py v1.8.0` を使う。
+- 版は先頭ゼロのない **`vX.Y.Z`** とし、単独行の `const APP_VERSION = "vX.Y.Z";` を1箇所だけ置く。管理画面の表示はこの定数から生成し、版番号を別のHTMLテキストに直書きしない。
+- `python3 scripts/check_app_version.py --base origin/main --head HEAD` で、コミット済みのPR版が**最新mainより厳密に大きい**ことを確認する。並行PRで同じ番号が先にマージされたら最新mainを取り込み、もう一度番号を上げる。配信ファイルを新設・分離する場合は、検査スクリプトの対象パスも更新する。
+- PR完了時に変更前/後のアプリ版を報告する。`APP_VERSION` はリリース識別子で、正確なビルド識別子はcommit SHA。**DB版・バックアップ版・問題JSON版とは独立**しており、版更新だけでデータ構造・学習履歴を書き換えない。
+- バージョン更新だけでGitタグを自動作成しない。タグ作成・Pages公開・mainへのマージ・ブランチ保護設定は別途承認の範囲に従う。Actions導入だけでマージを強制防止できると説明しない。運用・追加設定は [docs/APP_VERSION.md](docs/APP_VERSION.md) を参照する。
 
 ## 6. 出力形式と品質
 
