@@ -68,7 +68,7 @@ FIXTURE_HELPERS = """() => {
       data.coinSpends.push({id:playId,profile:who,game:'crane',amount:who==='test'?0:100,at:startedAt});
       data.arcadePrizes.push({id:playId,profile:who,prizeId:id,wonAt:startedAt});
     });
-    data.arcadeBoards=['student','test'].map(who=>initialArcadeBoard(who,data.arcadePlays)).filter(Boolean);
+    data.arcadeBoards=['student','test'].map(who=>initialArcadeBoard(who,data.arcadePlays,data.arcadePrizes)).filter(Boolean);
     return data;
   };
   window.plushInstall = async data => {
@@ -152,7 +152,7 @@ class PlushTest(unittest.TestCase):
             try {
               // 各等幅区間の両端付近を確認。重複配置も同時に検証する。
               for(let i=0;i<20;i++)for(const offset of [.001,.999]) {
-                let first=true;samples.push(randomArcadePrizes(()=>{if(first){first=false;return .5;}return (i+offset)/20;}));
+                let first=true;samples.push(randomArcadePrizes([],()=>{if(first){first=false;return .5;}return (i+offset)/20;}));
               }
             } finally {Math.random=saved;}
             return samples;

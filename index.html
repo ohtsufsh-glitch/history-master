@@ -920,7 +920,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.4";
+const APP_VERSION = "v1.7.5";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -1139,12 +1139,22 @@ function plushPresentation(id,reveal=false) {
 const craneSleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 // CSSの開始フレームを描画してから設定時間を待ち、途中で次の動作に切り替わるのを防ぐ。
 const cranePaint=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-function randomArcadePrizes(random=Math.random) {
+// 解放は所持済みの秘密とは別。プロフィール別の通常獲得記録だけから毎回計算する。
+function unlockedSecretPlushIds(who,prizes) {
+  const normal=prizes.filter(p=>p.profile===who&&Object.hasOwn(PLUSH_TYPES,p.prizeId));
+  const kinds=new Set(normal.map(p=>p.prizeId));
+  const unlocked=[];
+  if(normal.length>=25)unlocked.push("secret_koryun");
+  if(normal.length>=35)unlocked.push("secret_yuniko");
+  if(PLUSH_IDS.every(id=>kinds.has(id)))unlocked.push("secret_kappamaru");
+  return unlocked;
+}
+function randomArcadePrizes(unlockedSecrets=[],random=Math.random) {
   // 判定単位は盤面。通常20種類は等確率・重複あり、秘密は最大1体。
-  const secret=random()<SECRET_BOARD_CHANCE;
+  const secret=random()<SECRET_BOARD_CHANCE&&unlockedSecrets.length>0;
   const slots=Array.from({length:7},()=>PLUSH_IDS[Math.floor(random()*PLUSH_IDS.length)]);
   if(secret) {
-    const id=SECRET_PLUSH_IDS[Math.floor(random()*SECRET_PLUSH_IDS.length)];
+    const id=unlockedSecrets[Math.floor(random()*unlockedSecrets.length)];
     slots[Math.floor(random()*slots.length)]=id;
   }
   return slots;
@@ -1156,24 +1166,31 @@ const sameArcadeSlots=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const EMPTY_ARCADE_MESSAGE="景品がなくなったよ！『景品を入れ替える』で新しくしよう！";
 // 不在だけを初期化する。全nullは保存済みの正当な盤面。
 // 旧3体の中断中は新盤面を作らず、従来のプレイ完了後まで待つ。
-function initialArcadeBoard(who,plays) {
+function initialArcadeBoard(who,plays,prizes) {
   const records=plays.filter(p=>p.profile===who);
   if(records.some(p=>pendingArcadePlay(p)&&p.prizes.length===3))return null;
   const latest=records.filter(p=>p.prizes.length===7).sort((a,b)=>b.startedAt.localeCompare(a.startedAt))[0];
-  const slots=latest?[...latest.prizes]:randomArcadePrizes();
+  const slots=latest?[...latest.prizes]:randomArcadePrizes(unlockedSecretPlushIds(who,prizes));
   if(latest?.status==="finished"&&latest.result?.won)slots[latest.result.targetIndex]=null;
   return {profile:who,slots};
 }
 function ensureArcadeBoard(who) {
   return new Promise((resolve,reject)=>{
-    const tx=db.transaction(["arcadeBoards","arcadePlays"],"readwrite");
+    const tx=db.transaction(["arcadeBoards","arcadePlays","arcadePrizes"],"readwrite");
     const store=tx.objectStore("arcadeBoards");
     let board=null;
     const req=store.get(who);
     req.onsuccess=()=>{
       if(req.result){board=req.result;return;}
       const plays=tx.objectStore("arcadePlays").getAll();
-      plays.onsuccess=()=>{board=initialArcadeBoard(who,plays.result);if(board)store.add(board);};
+      const prizes=tx.objectStore("arcadePrizes").getAll();
+      let remaining=2;
+      function create() {
+        if(--remaining)return;
+        board=initialArcadeBoard(who,plays.result,prizes.result);
+        if(board)store.add(board);
+      }
+      plays.onsuccess=create;prizes.onsuccess=create;
     };
     tx.oncomplete=()=>resolve(board);
     tx.onerror=()=>reject(tx.error||new Error("景品配置の保存に失敗しました"));
@@ -1190,7 +1207,7 @@ function newArcadePlay(who) {
 // 残高確認・消費・プレイ登録を単一トランザクションで確定。
 function purchaseCranePlay(play) {
   return new Promise((resolve,reject)=>{
-    const names=["coinEvents","reviewEvents","coinSpends","arcadePlays","arcadeBoards"];
+    const names=["coinEvents","reviewEvents","coinSpends","arcadePlays","arcadeBoards","arcadePrizes"];
     const tx=db.transaction(names,"readwrite");
     let remaining=names.length;
     const results={};
@@ -1202,7 +1219,7 @@ function purchaseCranePlay(play) {
         const balance=availableCoins(results.coinEvents,results.reviewEvents,results.coinSpends,play.profile);
         const isTest=play.profile==="test";
         if(results.arcadePlays.some(p=>p.profile===play.profile && (p.status==="aiming"||p.status==="resolving")) || (!isTest && balance<CRANE_COST)) {tx.abort();return;}
-        const board=results.arcadeBoards.find(b=>b.profile===play.profile)||initialArcadeBoard(play.profile,results.arcadePlays);
+        const board=results.arcadeBoards.find(b=>b.profile===play.profile)||initialArcadeBoard(play.profile,results.arcadePlays,results.arcadePrizes);
         if(!board||!validBoardSlots(board.slots)||!board.slots.some(validPlushId)){tx.abort();return;}
         tx.objectStore("arcadeBoards").put(board);
         play.prizes=[...board.slots];
@@ -1605,20 +1622,21 @@ async function animatePendingCrane(insideBusy=false) {
     await renderArcade().catch(err);
   }
 }
-// 盤面と未完了プレイを同じ書込トランザクションで検査する（別タブも含む）。
+// 盤面・未完了プレイ・獲得記録を同じ書込トランザクションで検査する（別タブも含む）。
 function replaceCraneBoard(who,expectedSlots) {
   return new Promise((resolve,reject)=>{
-    const tx=db.transaction(["arcadeBoards","arcadePlays"],"readwrite");
+    const tx=db.transaction(["arcadeBoards","arcadePlays","arcadePrizes"],"readwrite");
     const boards=tx.objectStore("arcadeBoards"),boardReq=boards.get(who);
     const playsReq=tx.objectStore("arcadePlays").getAll();
-    let remaining=2,updated;
+    const prizesReq=tx.objectStore("arcadePrizes").getAll();
+    let remaining=3,updated;
     function commit() {
       if(--remaining)return;
       if(!boardReq.result||!sameArcadeSlots(boardReq.result.slots,expectedSlots)||
         playsReq.result.some(p=>p.profile===who&&pendingArcadePlay(p))){tx.abort();return;}
-      updated={profile:who,slots:randomArcadePrizes()};boards.put(updated);
+      updated={profile:who,slots:randomArcadePrizes(unlockedSecretPlushIds(who,prizesReq.result))};boards.put(updated);
     }
-    boardReq.onsuccess=commit;playsReq.onsuccess=commit;
+    boardReq.onsuccess=commit;playsReq.onsuccess=commit;prizesReq.onsuccess=commit;
     tx.oncomplete=()=>resolve(updated);
     tx.onerror=()=>reject(tx.error||new Error("景品配置の保存に失敗しました"));
     tx.onabort=()=>reject(new Error("盤面が変わったか、進行中のプレイがあります。画面を確認してください。"));
@@ -3199,7 +3217,7 @@ function validateBackup(obj) {
   }
   for(const play of plays.values()) if(play.status==="finished" && play.result.won && !prizeRecords.has(play.id)) throw new Error("獲得済み景品の記録が不足しています。");
   // 検証はDBに触れない。旧版の初期盤面もプレビュー内の復元候補だけに保持する。
-  if(obj.backupVersion<7)data.arcadeBoards=["student","test"].map(who=>initialArcadeBoard(who,data.arcadePlays)).filter(Boolean);
+  if(obj.backupVersion<7)data.arcadeBoards=["student","test"].map(who=>initialArcadeBoard(who,data.arcadePlays,data.arcadePrizes)).filter(Boolean);
   const boards=new Map();
   for(const board of data.arcadeBoards) {
     if(!board||!isProfile(board.profile)||boards.has(board.profile)||!validBoardSlots(board.slots))throw new Error("景品配置の形式またはプロフィールが不正です。");

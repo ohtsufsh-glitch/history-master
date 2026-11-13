@@ -1,4 +1,4 @@
-"""Issue #12。localhost・一時ブラウザ・公開可能な架空履歴だけで検証する。
+"""Issue #12・#50・#51。localhost・一時ブラウザ・公開可能な架空履歴だけで検証する。
 
 実行方法・Playwrightの準備はquestion_editor_test.pyと同じ。
 確率は乱数列を注入して全区間を検証し、統計的な偶然には依存しない。
@@ -26,7 +26,17 @@ HELPERS = """() => {
       const id=p.prizes[0];
       if(isSecretPlush(id)){p.prizes=Array(7).fill('shiba');p.prizes[0]=id;}
     }
-    data.arcadeBoards=['student','test'].map(who=>initialArcadeBoard(who,data.arcadePlays)).filter(Boolean);
+    data.arcadeBoards=['student','test'].map(who=>initialArcadeBoard(who,data.arcadePlays,data.arcadePrizes)).filter(Boolean);
+    return data;
+  };
+  // 旧3枠の獲得履歴。7枠の復元元がないため、新規生成と旧バックアップを検証できる。
+  window.secretProgressFixture = (student=[],test=[]) => {
+    const data=plushFixture(student,'student',3),other=plushFixture(test,'test',3);
+    for(const name of ['arcadePlays','arcadePrizes','coinSpends'])data[name].push(...other[name]);
+    const balance=availableCoins(data.coinEvents,data.reviewEvents,data.coinSpends,'student');
+    for(let n=balance;n<CRANE_COST;n+=2)data.reviewEvents.push({
+      ...data.reviewEvents[0],key:`review:student:${crypto.randomUUID()}`});
+    data.arcadeBoards=[];
     return data;
   };
   window.secretUI = () => ({
@@ -89,33 +99,148 @@ class SecretPlushTest(unittest.TestCase):
             self.assertNotIn(prize_id, state['html'])
             self.assertNotIn(name, state['html'])
 
+    def test_unlock_boundaries_use_only_normal_prize_records_for_each_profile(self):
+        cases = [
+            ([], []), (['shiba'] * 24, []),
+            (['shiba'] * 25, ['secret_koryun']),
+            (['shiba'] * 34, ['secret_koryun']),
+            (['shiba'] * 35, ['secret_koryun', 'secret_yuniko']),
+            (plush_test.IDS[:19] + ['shiba'] * 16, ['secret_koryun', 'secret_yuniko']),
+            (plush_test.IDS, ['secret_kappamaru']),
+            (plush_test.IDS + ['shiba'] * 5, ['secret_koryun', 'secret_kappamaru']),
+            (plush_test.IDS + ['shiba'] * 15, list(SECRETS)),
+        ]
+        for normal, expected in cases:
+            for who in ['student', 'test']:
+                with self.subTest(total=len(normal), kinds=len(set(normal)), who=who):
+                    result = self.page.evaluate("""({normal,who})=>{
+                      const other=who==='student'?'test':'student';
+                      const prizes=[...normal,...Array(35).fill(SECRET_PLUSH_IDS).flat()]
+                        .map(prizeId=>({profile:who,prizeId}));
+                      prizes.push(...[...PLUSH_IDS,...Array(15).fill('shiba')]
+                        .map(prizeId=>({profile:other,prizeId})));
+                      const before=JSON.stringify(prizes);
+                      return {own:unlockedSecretPlushIds(who,prizes),other:unlockedSecretPlushIds(other,prizes),
+                        unchanged:before===JSON.stringify(prizes)};
+                    }""", {'normal': normal, 'who': who})
+                    self.assertEqual(result, {'own': expected, 'other': list(SECRETS), 'unchanged': True})
+
+    def test_all_new_board_paths_use_saved_progress_and_preserve_existing_records(self):
+        cases = [
+            (['shiba'] * 24, []), (['shiba'] * 25, ['secret_koryun']),
+            (['shiba'] * 35, ['secret_koryun', 'secret_yuniko']),
+            (plush_test.IDS, ['secret_kappamaru']),
+            (plush_test.IDS + ['shiba'] * 5, ['secret_koryun', 'secret_kappamaru']),
+            (plush_test.IDS + ['shiba'] * 15, list(SECRETS)),
+        ]
+        for normal, expected in cases:
+            for who in ['student', 'test']:
+                for route in ['ensure', 'purchase', 'replace']:
+                    with self.subTest(total=len(normal), kinds=len(set(normal)), who=who, route=route):
+                        result = self.page.evaluate("""async ({normal,who,route,slots})=>{
+                          const own=[...normal,...SECRET_PLUSH_IDS],other=[...PLUSH_IDS,...Array(15).fill('shiba')];
+                          const data=secretProgressFixture(...(who==='student'?[own,other]:[other,own]));
+                          if(route==='replace')data.arcadeBoards=[{profile:who,slots}];
+                          await plushInstall(data);const before=await snapshotAllStores();
+                          const random=Math.random,values=[0,...Array(7).fill(.5),.999,.999];
+                          let board,play;
+                          Math.random=()=>values.shift();
+                          try {
+                            if(route==='ensure')board=await ensureArcadeBoard(who);
+                            if(route==='purchase') {
+                              play=await purchaseCranePlay(newArcadePlay(who));board=await readOne('arcadeBoards',who);
+                            }
+                            if(route==='replace')board=await replaceCraneBoard(who,slots);
+                          }finally{Math.random=random;}
+                          return {before,after:await snapshotAllStores(),board,play};
+                        }""", {'normal': normal, 'who': who, 'route': route, 'slots': SLOTS})
+                        slots = ['capybara'] * 7
+                        if expected:
+                            slots[-1] = expected[-1]
+                        self.assertEqual(result['board'], {'profile': who, 'slots': slots})
+                        after = result['after']
+                        if route == 'purchase':
+                            play = result['play']
+                            self.assertEqual(play['prizes'], slots)
+                            spend = next(r for r in after['coinSpends'] if r['id'] == play['id'])
+                            self.assertEqual((spend['profile'], spend['amount']), (who, 100 if who == 'student' else 0))
+                            for store in ['arcadePlays', 'coinSpends']:
+                                after[store] = [r for r in after[store] if r['id'] != play['id']]
+                        for store in result['before']:
+                            if store != 'arcadeBoards':
+                                self.assertEqual(after[store], result['before'][store], store)
+
+    def test_legacy_backup_generation_uses_restored_prizes_without_local_unlock_leaks(self):
+        for version in [5, 6]:
+            for student, test, expected in [
+                (list(SECRETS), plush_test.IDS + ['shiba'] * 15, [None, 'secret_koryun']),
+                (plush_test.IDS, ['shiba'] * 35, ['secret_kappamaru', 'secret_koryun']),
+                (['shiba'] * 35, list(SECRETS), ['secret_koryun', None]),
+            ]:
+                with self.subTest(version=version, expected=expected):
+                    result = self.page.evaluate("""async ({student,test,version})=>{
+                      const local=[...PLUSH_IDS,...Array(15).fill('shiba')];
+                      await plushInstall(secretProgressFixture(local,local));await ensureArcadeBoards();
+                      const before=await snapshotAllStores(),data=secretProgressFixture(student,test);
+                      delete data.arcadeBoards;
+                      const random=Math.random;Math.random=()=>0;
+                      let restored;
+                      try{restored=validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:version,data});}
+                      finally{Math.random=random;}
+                      const preview=await snapshotAllStores();
+                      pendingRestore=restored;await applyRestore();
+                      return {data,restored,before,preview,after:await snapshotAllStores()};
+                    }""", {'student': student, 'test': test, 'version': version})
+                    self.assertEqual(result['before'], result['preview'])
+                    for who, secret in zip(['student', 'test'], expected):
+                        slots = ['shiba'] * 7
+                        if secret:
+                            slots[0] = secret
+                        self.assertEqual(next(b for b in result['after']['arcadeBoards'] if b['profile'] == who)['slots'], slots)
+                    for store in ['arcadePrizes', 'arcadePlays', 'coinSpends', 'coinEvents', 'reviewEvents',
+                                  'answers', 'progress', 'sessions', 'awards', 'questions']:
+                        key = lambda r: r.get('key', r.get('id', ''))
+                        self.assertEqual(sorted(result['after'][store], key=key), sorted(result['data'][store], key=key), store)
+                    self.page.reload()
+                    self.ready()
+                    self.assertEqual(self.snapshot(), result['after'])
+
     def test_board_probability_exact_ten_percent_equal_types_positions_and_normal_twenty(self):
-        result = self.page.evaluate("""()=>{
-          const types=Object.fromEntries(SECRET_PLUSH_IDS.map(id=>[id,0]));
+        results = self.page.evaluate("""()=>[0,1,2,3].map(size=>{
+          const unlocked=SECRET_PLUSH_IDS.slice(0,size);
+          const types=Object.fromEntries(unlocked.map(id=>[id,0]));
           const normal=Object.fromEntries(PLUSH_IDS.map(id=>[id,0]));
           const positions=Array(7).fill(0);let total=0,secret=0,max=0;
-          for(let b=0;b<10;b++)for(let t=0;t<3;t++)for(let s=0;s<7;s++)
+          for(let b=0;b<10;b++)for(let t=0;t<Math.max(1,size);t++)for(let s=0;s<7;s++)
           for(let n=0;n<20;n++)for(const edge of [.001,.999]) {
-            const values=[(b+.5)/10,...Array(7).fill((n+edge)/20),(t+edge)/3,(s+edge)/7];
-            const slots=randomArcadePrizes(()=>values.shift());
+            const values=[(b+.5)/10,...Array(7).fill((n+edge)/20),(t+edge)/Math.max(1,size),(s+edge)/7];
+            const slots=randomArcadePrizes(unlocked,()=>values.shift());
             let count=0;total++;
             slots.forEach((id,i)=>{if(isSecretPlush(id)){count++;types[id]++;positions[i]++;}else normal[id]++;});
             max=Math.max(max,count);if(count)secret++;
           }
           const boundary=[.099999999,.1].map(value=>{
-            let first=true;return randomArcadePrizes(()=>{if(first){first=false;return value;}return .5;}).some(isSecretPlush);
+            let first=true;return randomArcadePrizes(unlocked,()=>{if(first){first=false;return value;}return .5;}).some(isSecretPlush);
           });
           return {total,secret,max,types,normal,positions,boundary,unknownValid:validPlushId('secret_unknown')};
-        }""")
-        self.assertEqual((result['total'], result['secret'], result['max']), (8400, 840, 1))
-        self.assertEqual(result['types'], dict.fromkeys(SECRETS, 280))
-        self.assertEqual(result['positions'], [120] * 7)
-        self.assertEqual(result['normal'], dict.fromkeys(plush_test.IDS, 2898))
-        self.assertEqual(result['boundary'], [True, False])
-        self.assertFalse(result['unknownValid'])
+        })""")
+        for size, result in enumerate(results):
+            with self.subTest(unlocked=size):
+                total = 2800 * max(1, size)
+                secret = 280 * size
+                self.assertEqual((result['total'], result['secret'], result['max']),
+                                 (total, secret, int(size > 0)))
+                self.assertEqual(result['types'], dict.fromkeys(list(SECRETS)[:size], 280))
+                self.assertEqual(result['positions'], [40 * size] * 7)
+                self.assertEqual(result['normal'], dict.fromkeys(plush_test.IDS, (total * 7 - secret) // 20))
+                self.assertEqual(result['boundary'], [size > 0, False])
+                self.assertFalse(result['unknownValid'])
 
     def test_free_replacement_uses_same_distribution_for_both_profiles_without_spends(self):
-        self.install()
+        self.page.evaluate("""async()=>{
+          const ids=[...PLUSH_IDS,...Array(15).fill('shiba')];
+          await plushInstall(secretProgressFixture(ids,ids));await ensureArcadeBoards();
+        }""")
         before = self.snapshot()
         result = self.page.evaluate("""async()=>{
           const saved=Math.random,rows=[];
