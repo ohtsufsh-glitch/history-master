@@ -323,6 +323,7 @@ function initializeRunner() {
   const viewport = document.getElementById("runner-viewport");
   const status = document.getElementById("runner-status");
   const toggle = document.getElementById("runner-toggle");
+  const jumpButton = document.getElementById("runner-jump");
   const modeLabel = document.getElementById("runner-mode");
   const scoreLabel = document.getElementById("runner-score");
   const progressLabel = document.getElementById("runner-progress");
@@ -336,6 +337,7 @@ function initializeRunner() {
   if (!context) {
     stage.hidden = true;
     toggle.disabled = true;
+    document.getElementById("runner-jump").disabled = true;
     modeLabel.textContent = "表示できません";
     status.textContent = "ゲーム画面を表示できません。Canvas 2Dに対応したSafariなどで開き直してください。";
     return;
@@ -351,6 +353,7 @@ function initializeRunner() {
   function updateControls() {
     const text = { ready: "ゲーム開始", running: "一時停止", paused: "再開", finished: "もう一度" }[state.mode];
     if (toggle.textContent !== text) toggle.textContent = text;
+    jumpButton.disabled = !active || state.mode !== "running";
     const mode = { ready: "開始前", running: "走行中", paused: "一時停止中", finished: "終了" }[state.mode];
     if (modeLabel.textContent !== mode) modeLabel.textContent = mode;
     if (scoreLabel.textContent !== String(state.score)) scoreLabel.textContent = state.score;
@@ -435,6 +438,11 @@ function initializeRunner() {
       updateControls();
       requestRedraw();
     }
+  });
+  // タップとキーボード操作のどちらでも同じジャンプ処理を利用する。
+  jumpButton.addEventListener("click", () => {
+    if (!active || document.hidden || state.mode !== "running") return;
+    startJump(state);
   });
   canvas.addEventListener("pointerdown", event => {
     if (!active || document.hidden || !event.isPrimary || event.button !== 0 || state.mode !== "running") return;
