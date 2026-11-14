@@ -1,6 +1,7 @@
-"""独立Canvas画面・距離ゴール・しば犬描画。HTTPと一時Chromiumのみを使用する。
+"""独立Canvas画面・距離ゴール・しば犬描画。HTTPと一時ブラウザを使用する。
 
 実行: python3 -m unittest discover -s tests -p 'runner_canvas_test.py' -v
+HISTORY_MASTER_ENGINE=webkit で、導入済みのPlaywright WebKitも選択できる。
 Safari実機の検証を置き換えるものではない。
 """
 
@@ -8,6 +9,7 @@ import functools
 import http.server
 import os
 from pathlib import Path
+import re
 import shutil
 import threading
 import unittest
@@ -16,6 +18,20 @@ from playwright.sync_api import sync_playwright
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+BUTTON_STYLE = """button => {
+  const r=button.getBoundingClientRect(), s=getComputedStyle(button);
+  return {x:r.x,y:r.y,width:r.width,height:r.height,
+    background:s.backgroundImage,radius:s.borderRadius,shadow:s.boxShadow,
+    color:s.color,textShadow:s.textShadow,font:s.fontSize,weight:s.fontWeight,
+    transform:s.transform};
+}"""
+
+JUMP_PROBE = """() => {
+  const {calls,state}=runnerJumpProbe;
+  return {calls,mode:state?.mode,jumping:state?.jumping,
+    elapsed:state?.jumpElapsed,offset:state?.jumpOffset,ground:state?.ground};
+}"""
 
 ISOLATION_GUARD = """() => {
   window.runnerStorageAccesses = [];
@@ -168,8 +184,11 @@ class RunnerCanvasTest(unittest.TestCase):
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
         cls.thread.start()
         cls.playwright = sync_playwright().start()
-        executable = os.environ.get('HISTORY_MASTER_BROWSER') or shutil.which('chromium')
-        cls.browser = cls.playwright.chromium.launch(executable_path=executable)
+        engine = os.environ.get('HISTORY_MASTER_ENGINE', 'chromium')
+        executable = os.environ.get('HISTORY_MASTER_BROWSER')
+        if engine == 'chromium' and not executable:
+            executable = shutil.which('chromium')
+        cls.browser = getattr(cls.playwright, engine).launch(executable_path=executable)
         cls.url = f'http://127.0.0.1:{cls.server.server_port}/runner/'
 
     @classmethod
@@ -180,10 +199,10 @@ class RunnerCanvasTest(unittest.TestCase):
         cls.server.server_close()
         cls.thread.join()
 
-    def open_runner(self, width=390, height=844, dpr=3, setup=None, broken_image=False):
+    def open_runner(self, width=390, height=844, dpr=3, setup=None, broken_image=False, probe=False):
         context = self.browser.new_context(
             viewport={'width': width, 'height': height},
-            device_scale_factor=dpr, has_touch=True)
+            device_scale_factor=dpr, has_touch=True, is_mobile=True)
         self.addCleanup(context.close)
         context.add_init_script(f'({ISOLATION_GUARD})();')
         if setup:
@@ -193,6 +212,14 @@ class RunnerCanvasTest(unittest.TestCase):
         errors, requests = [], []
         page.on('pageerror', lambda error: errors.append(str(error)))
         page.on('request', lambda request: requests.append(request.url))
+        if probe:
+            context.add_init_script('window.runnerJumpProbe={calls:0,state:null};')
+            # 配信コードだけをテスト用に計測し、本番へ状態公開APIを足さない。
+            script = (ROOT / 'runner/game.js').read_text(encoding='utf-8')
+            script = script.replace('function startJump(state) {',
+                'function startJump(state) { runnerJumpProbe.calls++; runnerJumpProbe.state=state;', 1)
+            page.route('**/runner/game.js*', lambda route: route.fulfill(
+                status=200, content_type='text/javascript', body=script))
         if broken_image:
             page.route('**/assets/plush/shiba.webp', lambda route: route.fulfill(status=404, body='missing'))
         response = page.goto(self.url)
@@ -262,39 +289,132 @@ class RunnerCanvasTest(unittest.TestCase):
                 self.assertEqual(page.locator('#runner-toggle').inner_text(), '再開')
                 self.assert_isolated(page, errors, requests)
 
-    def test_jump_button_style_position_and_disabled_state(self):
-        page, errors, requests = self.manual_runner()
-        jump = page.locator('#runner-jump')
-        toggle = page.locator('#runner-toggle')
+    def test_jump_button_matches_catcher_and_fits_phone_tablet_layouts(self):
+        # 全CSSの後勝ちルールと実際の親余白を再現する。アプリJSは実行しない。
+        css = re.search(r'<style>(.*?)</style>', (ROOT / 'index.html').read_text(), re.S)[1]
+        fixture = ('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">'
+            '<style>' + css + '</style><main><section id="arcade" class="card arcade-screen">'
+            '<div class="machine-wrap"><div class="machine-lower"><div class="crane-controls">'
+            '<button id="crane-catch" class="crane-catch">🎯 キャッチ！</button>'
+            '</div></div></div></section></main>')
+        for width, height in ((375,667),(390,844),(667,375),(844,390),(768,1024),(1024,768)):
+            with self.subTest(width=width, height=height):
+                page, errors, requests = self.open_runner(width, height)
+                self.assert_geometry(page)
+                jump, toggle = page.locator('#runner-jump'), page.locator('#runner-toggle')
+                self.assertTrue(jump.is_disabled())
+                toggle.tap()
+                self.assertFalse(jump.is_disabled())
+                actual = jump.evaluate(BUTTON_STYLE)
+                lower = toggle.bounding_box()
+                self.assertGreaterEqual(actual['width'], 240)
+                self.assertLessEqual(actual['width'], 440)
+                self.assertAlmostEqual(actual['height'], 58 if width <= 640 else 62, delta=.01)
+                self.assertGreaterEqual(lower['y'] - actual['y'] - actual['height'], 11.9)
+                self.assertAlmostEqual(actual['x'], lower['x'], delta=.01)
+                self.assertAlmostEqual(actual['width'], lower['width'], delta=.01)
+                self.assertLessEqual(lower['y'] + lower['height'], height)
+                self.assertEqual(jump.evaluate("b=>{const r=b.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.id}"), 'runner-jump')
+                canvas = page.locator('#runner-canvas').bounding_box()
+                # ボタンを重ねて大きく見せず、横画面でもCanvasの面積を確保する。
+                self.assertTrue(canvas['x']+canvas['width'] <= actual['x'] or
+                    canvas['y']+canvas['height'] <= actual['y'])
+                if height < 500:
+                    self.assertGreaterEqual(canvas['height'], 200)
+                reference_page = page.context.new_page()
+                reference_page.set_content(fixture)
+                reference = reference_page.locator('#crane-catch')
+                expected = reference.evaluate(BUTTON_STYLE)
+                for prop in ('background','radius','shadow','color','textShadow','font','weight'):
+                    self.assertEqual(actual[prop], expected[prop], prop)
+                # 実キャッチは後勝ちCSSで74px。依頼されたジャンプ基準62/58pxと区別する。
+                self.assertEqual(expected['height'], 74)
+                self.assertEqual(reference_page.evaluate('runnerStorageAccesses'), [])
+                def pressed(target, locator):
+                    r = locator.bounding_box()
+                    target.mouse.move(r['x']+r['width']/2, r['y']+r['height']/2)
+                    target.mouse.down()
+                    result = locator.evaluate(BUTTON_STYLE)
+                    target.mouse.up()
+                    return result
+                active, catch_active = pressed(page, jump), pressed(reference_page, reference)
+                for prop in ('shadow','transform','background','radius'):
+                    self.assertEqual(active[prop], catch_active[prop], prop)
+                print(f"buttons {width}x{height}: jump {actual['width']:.2f}x{actual['height']:.0f}, catch {expected['width']:.2f}x{expected['height']:.0f}")
+                self.assert_isolated(page, errors, requests)
+
+    def test_jump_button_real_taps_change_state_and_rendered_position(self):
+        page, errors, requests = self.manual_runner(probe=True)
+        jump, toggle = page.locator('#runner-jump'), page.locator('#runner-toggle')
+        def disabled_tap():
+            r = jump.bounding_box()
+            page.touchscreen.tap(r['x']+r['width']/2, r['y']+r['height']/2)
+        def probe():
+            return page.evaluate(JUMP_PROBE)
         self.assertTrue(jump.is_disabled())
-        self.assertLess(jump.bounding_box()['y'], toggle.bounding_box()['y'])
-        style = jump.evaluate("""button => {
-            const s = getComputedStyle(button);
-            return {background:s.backgroundImage, radius:s.borderRadius,
-                    height:button.getBoundingClientRect().height,
-                    width:button.getBoundingClientRect().width};
-        }""")
-        self.assertIn('rgb(231, 169, 186)', style['background'])
-        self.assertIn('rgb(200, 108, 137)', style['background'])
-        self.assertEqual(style['radius'], '18px')
-        self.assertGreaterEqual(style['height'], 58)
-        self.assertLessEqual(style['width'], 222)
-        self.toggle(page)
+        disabled_tap()
+        self.assertEqual(probe()['calls'], 0)
+        # HTMLが要求するCSS/JSの識別子を揃えて旧配信物の再利用を避ける。
+        versions = page.evaluate("""() => [document.querySelector('link[rel=stylesheet]').href,
+          document.querySelector('script[type=module]').src].map(url=>new URL(url).searchParams.get('v'))""")
+        self.assertTrue(versions[0])
+        self.assertEqual(*versions)
+        toggle.tap()
         page.evaluate('runnerClock.step(0)')
-        self.assertFalse(jump.is_disabled())
-        jump.dispatch_event('click')
+        jump.tap()
+        self.assertEqual((probe()['calls'], probe()['jumping'], probe()['elapsed']), (1,True,0))
         page.evaluate('runnerClock.advance(225)')
-        rising = self.snapshot(page)
-        self.assertAlmostEqual(rising['character']['y'], 470-43-90, delta=.01)
-        jump.dispatch_event('click')  # 空中追加タップは無視。
+        self.assertAlmostEqual(self.snapshot(page)['character']['y'], 337, delta=.01)
+        in_air = probe()
+        for _ in range(5):
+            jump.tap()
+        self.assertEqual(probe()['calls'], 6)  # native tapごとにclickは1回だけ。
+        self.assertEqual(probe()['elapsed'], in_air['elapsed'])
         page.evaluate('runnerClock.advance(225)')
-        self.assertAlmostEqual(self.snapshot(page)['character']['y'], 470-43-120, delta=.01)
-        self.toggle(page)
+        self.assertAlmostEqual(self.snapshot(page)['character']['y'], 307, delta=.01)
+        page.evaluate('runnerClock.advance(450)')
+        self.assertFalse(probe()['jumping'])
+        jump.tap()
+        self.assertTrue(probe()['jumping'])
+        page.evaluate('runnerClock.advance(225)')
+        toggle.tap()
         self.assertTrue(jump.is_disabled())
-        paused = self.snapshot(page)
-        jump.dispatch_event('click')
+        paused, calls = self.snapshot(page), probe()['calls']
+        disabled_tap()
+        self.assertEqual(probe()['calls'], calls)
         self.assertEqual(page.evaluate('runnerClock.advance(1000)'), 0)
         self.assert_same_scene(paused, self.snapshot(page))
+        toggle.tap()
+        page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
+        page.evaluate('runnerClock.advance(675)')
+        self.assertFalse(probe()['jumping'])
+        # 画面直接タップの経路も実タップで検証する。
+        page.locator('#runner-canvas').tap()
+        self.assertTrue(probe()['jumping'])
+        page.evaluate('runnerClock.advance(900)')
+        page.evaluate('runnerClock.advance(4000,60)')
+        self.assertEqual(page.locator('#runner-result-title').inner_text(), 'ゲームオーバー')
+        self.assertTrue(jump.is_disabled())
+        stopped, calls = self.snapshot(page), probe()['calls']
+        disabled_tap()
+        self.assertEqual(probe()['calls'], calls)
+        self.assertEqual(page.evaluate('runnerClock.advance(1000)'), 0)
+        self.assert_same_scene(stopped, self.snapshot(page))
+        self.assert_isolated(page, errors, requests)
+
+    def test_jump_button_real_mouse_enter_and_space_use_one_action(self):
+        page, errors, requests = self.manual_runner(probe=True)
+        jump = page.locator('#runner-jump')
+        page.locator('#runner-toggle').click()
+        page.evaluate('runnerClock.step(0)')
+        for count, action in enumerate((lambda: jump.click(), lambda: jump.press('Enter'), lambda: jump.press('Space')), 1):
+            action()
+            actual = page.evaluate(JUMP_PROBE)
+            self.assertEqual((actual['calls'], actual['jumping'], actual['elapsed']), (count,True,0))
+            page.evaluate('runnerClock.advance(225)')
+            self.assertAlmostEqual(self.snapshot(page)['character']['y'], 337, delta=.01)
+            page.evaluate('runnerClock.advance(675)')
+            self.assertFalse(page.evaluate(JUMP_PROBE)['jumping'])
         self.assert_isolated(page, errors, requests)
 
     def test_resize_repaints_and_static_page_has_no_continuous_loop(self):
@@ -349,11 +469,12 @@ class RunnerCanvasTest(unittest.TestCase):
                     setup=f'HTMLCanvasElement.prototype.getContext = function() {{{failure}}};')
                 page.locator('#runner-status').wait_for(state='visible')
                 self.assertRegex(page.locator('#runner-status').inner_text(), 'Canvas|キャンバス|描画')
-                self.assertTrue(page.locator('button').is_disabled())
+                self.assertTrue(page.locator('#runner-toggle').is_disabled())
+                self.assertTrue(page.locator('#runner-jump').is_disabled())
                 self.assert_isolated(page, errors, requests)
 
-    def manual_runner(self, broken_image=False):
-        page, errors, requests = self.open_runner(setup=MANUAL_FRAMES, broken_image=broken_image)
+    def manual_runner(self, broken_image=False, probe=False):
+        page, errors, requests = self.open_runner(setup=MANUAL_FRAMES, broken_image=broken_image, probe=probe)
         page.wait_for_function('runnerImages.length > 0 && runnerImages.every(image=>image.complete)')
         page.evaluate('runnerClock.settle()')
         page.evaluate('runnerClock.step(0)')
@@ -533,7 +654,7 @@ class RunnerCanvasTest(unittest.TestCase):
     def model_runner(self):
         page, errors, requests = self.manual_runner()
         # 通常のES Module APIだけを使い、実ゲームの非公開状態へテスト用hookを追加しない。
-        page.evaluate("async () => { window.runnerModel = await import('./game.js'); }")
+        page.evaluate("async () => { window.runnerModel = await import(document.querySelector('script[type=module]').src); }")
         return page, errors, requests
 
     def test_jump_has_fixed_height_parabolic_motion_and_exact_landing(self):
