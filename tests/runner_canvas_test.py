@@ -1,4 +1,4 @@
-"""独立Canvas画面と段階④のゲームルール。HTTPと一時Chromiumのみを使用する。
+"""独立Canvas画面とジャンプ方式のゲームルール。HTTPと一時Chromiumのみを使用する。
 
 実行: python3 -m unittest discover -s tests -p 'runner_canvas_test.py' -v
 Safari実機の検証を置き換えるものではない。
@@ -356,54 +356,46 @@ class RunnerCanvasTest(unittest.TestCase):
         self.assertEqual(len(outcomes), 2)
         self.assertAlmostEqual(*outcomes, delta=.001)
 
-    def test_taps_retarget_smoothly_and_pause_freezes_every_animation(self):
+    def test_tap_jumps_once_and_pause_freezes_every_animation(self):
         page, errors, requests = self.manual_runner()
         self.toggle(page)
         page.evaluate('runnerClock.step(0)')
-        lower = self.snapshot(page)
+        grounded = self.snapshot(page)
         self.tap(page, primary=False)
         self.tap(page, pointer_type='mouse', button=2)
         page.evaluate('runnerClock.advance(200)')
         self.assertAlmostEqual(self.snapshot(page)['character']['y'],
-                               lower['character']['y'], delta=6)
+                               grounded['character']['y'], delta=6)
         self.tap(page)
-        page.evaluate('runnerClock.advance(200)')
-        upper = self.snapshot(page)
-        self.assertAlmostEqual(upper['character']['y'], 326-43, delta=6)
-        # マウスでも同じ動作。途中で戻しても座標が跳ばない。
-        self.tap(page, pointer_type='mouse')
-        page.evaluate('runnerClock.advance(80)')
-        middle = self.snapshot(page)
-        self.assertGreater(middle['character']['y'], upper['character']['y'] + 10)
-        self.tap(page)
-        page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
-        self.assertAlmostEqual(self.snapshot(page)['character']['y'],
-                               middle['character']['y'], delta=.001)
+        page.evaluate('runnerClock.advance(225)')
+        rising = self.snapshot(page)
+        self.assertAlmostEqual(rising['character']['y'], 470-43-90, delta=.01)
+        # touch互換clickや連打・長押しを追加のジャンプとして扱わない。
         for _ in range(20):
             self.tap(page)
-            page.evaluate('runnerClock.advance(10)')
-            y = self.snapshot(page)['character']['y']
-            self.assertGreaterEqual(y, 326-49)
-            self.assertLessEqual(y, 470-37)
-        # 移動の途中で停止し、長い停止時間とCanvasタップを無視する。
+        page.evaluate('runnerClock.advance(225)')
+        apex = self.snapshot(page)
+        self.assertAlmostEqual(apex['character']['y'], 470-43-120, delta=.01)
         self.toggle(page)
         self.assertEqual(page.locator('#runner-toggle').inner_text(), '再開')
         paused = self.snapshot(page)
         self.assertEqual(paused['pending'], 0)
         self.tap(page)
         self.assertEqual(page.evaluate('runnerClock.advance(300000)'), 0)
-        self.assertTrue(self.snapshot(page)['image'] == paused['image'], '停止中は再描画しない')
+        self.assertTrue(self.snapshot(page)['image'] == paused['image'], '空中停止中は再描画しない')
         self.assertEqual(self.snapshot(page)['remaining'], paused['remaining'])
         self.toggle(page)
         page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
         resumed = self.snapshot(page)
         self.assert_same_scene(paused, resumed)
-        page.evaluate('runnerClock.advance(200)')
-        final = self.snapshot(page)
-        self.assertAlmostEqual(final['character']['y'], 326-43, delta=6)
-        self.assert_marker_advance(resumed, final, 40)
-        self.assertEqual(final['pending'], 1)
-        # 停止・再開を繰り返しても、再開初回はdt=0、以後50msで10px。
+        page.evaluate('runnerClock.advance(450)')
+        landed = self.snapshot(page)
+        self.assertAlmostEqual(landed['character']['y'], 470-43, delta=6)
+        self.assert_marker_advance(resumed, landed, 90)
+        # 着地後はマウスでも再ジャンプできる。
+        self.tap(page, pointer_type='mouse')
+        page.evaluate('runnerClock.advance(225)')
+        self.assertAlmostEqual(self.snapshot(page)['character']['y'], 470-43-90, delta=.01)
         for _ in range(3):
             self.toggle(page)
             stopped = self.snapshot(page)
@@ -477,25 +469,69 @@ class RunnerCanvasTest(unittest.TestCase):
         page.evaluate("async () => { window.runnerModel = await import('./game.js'); }")
         return page, errors, requests
 
-    def test_star_scores_once_and_offscreen_objects_are_removed(self):
+    def test_jump_has_fixed_height_parabolic_motion_and_exact_landing(self):
         page, errors, requests = self.model_runner()
         actual = page.evaluate("""() => {
-          const {createRunnerState, updateRunner} = runnerModel;
-          const state = createRunnerState([]);
-          state.mode = 'running';
-          state.objects = [{id:'star', type:'star', lane:1, x:186}];
-          updateRunner(state, 0);
-          const collected = {score:state.score, objects:state.objects.length};
-          updateRunner(state, .2);
-          const repeated = state.score;
-          state.objects = [
-            {id:'old-star',type:'star',lane:1,x:-200},
-            {id:'old-obstacle',type:'obstacle',lane:1,x:-200}];
-          updateRunner(state, 0);
-          return {collected, repeated, objects:state.objects.length, mode:state.mode};
+          const {createRunnerState, updateRunner, startJump, GROUND_Y, JUMP} = runnerModel;
+          const state=createRunnerState([]); state.mode='running';
+          updateRunner(state,1);
+          const idle={offset:state.jumpOffset,ground:state.ground,jumping:state.jumping};
+          startJump(state); updateRunner(state,.225);
+          const rising={offset:state.jumpOffset,velocity:state.jumpVelocity};
+          const airborne=JSON.stringify(state);
+          for(let i=0;i<20;i++)startJump(state);
+          const repeatedIgnored=airborne===JSON.stringify(state);
+          updateRunner(state,.225);
+          const apex={offset:state.jumpOffset,velocity:state.jumpVelocity};
+          updateRunner(state,.225);
+          const descending={offset:state.jumpOffset,velocity:state.jumpVelocity};
+          updateRunner(state,.225);
+          const landed={offset:state.jumpOffset,velocity:state.jumpVelocity,
+            ground:state.ground,jumping:state.jumping};
+          updateRunner(state,1);
+          const grounded=state.jumpOffset===0&&state.ground===GROUND_Y;
+          startJump(state); updateRunner(state,.45);
+          return {idle,rising,repeatedIgnored,apex,descending,landed,grounded,
+            secondApex:state.jumpOffset,ground:GROUND_Y,config:JUMP};
         }""")
-        self.assertEqual(actual['collected'], {'score':10, 'objects':0})
+        self.assertEqual(actual['idle'], {'offset':0,'ground':actual['ground'],'jumping':False})
+        self.assertAlmostEqual(actual['rising']['offset'], 90, delta=.000001)
+        self.assertGreater(actual['rising']['velocity'], 0)
+        self.assertTrue(actual['repeatedIgnored'])
+        self.assertAlmostEqual(actual['apex']['offset'], 120, delta=.000001)
+        self.assertAlmostEqual(actual['apex']['velocity'], 0, delta=.000001)
+        self.assertAlmostEqual(actual['descending']['offset'], 90, delta=.000001)
+        self.assertLess(actual['descending']['velocity'], 0)
+        self.assertEqual(actual['landed'], {'offset':0,'velocity':0,
+                                           'ground':actual['ground'],'jumping':False})
+        self.assertTrue(actual['grounded'])
+        self.assertAlmostEqual(actual['secondApex'], 120, delta=.000001)
+        self.assert_isolated(page, errors, requests)
+
+    def test_star_scores_once_on_ground_and_in_air_and_offscreen_objects_are_removed(self):
+        page, errors, requests = self.model_runner()
+        actual = page.evaluate("""() => {
+          const {createRunnerState, updateRunner, startJump} = runnerModel;
+          const state=createRunnerState([]); state.mode='running';
+          state.objects=[{id:'ground-star',type:'star',height:0,x:186}];
+          updateRunner(state,0);
+          const collected={score:state.score,objects:state.objects.length};
+          updateRunner(state,.2);
+          const repeated=state.score;
+          startJump(state); updateRunner(state,.45);
+          state.objects=[{id:'air-star',type:'star',height:120,x:186}];
+          updateRunner(state,0);
+          const airScore=state.score;
+          updateRunner(state,.1);
+          const airRepeated=state.score;
+          state.objects=[{id:'old-star',type:'star',height:0,x:-200},
+                         {id:'old-obstacle',type:'obstacle',x:-200}];
+          updateRunner(state,0);
+          return {collected,repeated,airScore,airRepeated,objects:state.objects.length,mode:state.mode};
+        }""")
+        self.assertEqual(actual['collected'], {'score':10,'objects':0})
         self.assertEqual(actual['repeated'], 10)
+        self.assertEqual((actual['airScore'], actual['airRepeated']), (20,20))
         self.assertEqual(actual['objects'], 0)
         self.assertEqual(actual['mode'], 'running')
         self.assert_isolated(page, errors, requests)
@@ -503,82 +539,78 @@ class RunnerCanvasTest(unittest.TestCase):
     def test_obstacle_collision_miss_and_priority_over_star(self):
         page, errors, requests = self.model_runner()
         actual = page.evaluate("""() => {
-          const {createRunnerState, updateRunner, remainingSeconds} = runnerModel;
-          const state = createRunnerState([]);
-          state.mode = 'running';
-          state.objects = [{id:'upper',type:'obstacle',lane:0,x:186}];
-          updateRunner(state, 0);
-          const miss = state.mode;
-          state.objects = [
-            {id:'star',type:'star',lane:1,x:186},
-            {id:'lower',type:'obstacle',lane:1,x:186}];
-          state.score = 20; // 以前の更新で獲得した点は残す。
-          updateRunner(state, 0);
-          const stopped = JSON.stringify(state);
-          updateRunner(state, 10);
+          const {createRunnerState,updateRunner,remainingSeconds}=runnerModel;
+          const state=createRunnerState([]); state.mode='running';
+          state.objects=[{id:'distant',type:'obstacle',x:500}];
+          updateRunner(state,0); const miss=state.mode;
+          state.objects=[{id:'star',type:'star',height:0,x:186},
+                         {id:'box',type:'obstacle',x:186}];
+          state.score=20; updateRunner(state,0);
+          const stopped=JSON.stringify(state); updateRunner(state,10);
           const delayed=createRunnerState([]); delayed.mode='running'; delayed.score=20;
-          delayed.objects=[
-            {id:'star',type:'star',lane:1,x:186},
-            {id:'approaching',type:'obstacle',lane:1,x:240}];
-          updateRunner(delayed,.05); // 先にスターへ触れても、同じ更新の障害物を優先。
-          return {miss, mode:state.mode, reason:state.reason, score:state.score,
-            remaining:remainingSeconds(state), frozen:JSON.stringify(state)===stopped,
-            delayedScore:delayed.score, delayedReason:delayed.reason};
+          delayed.objects=[{id:'star',type:'star',height:0,x:186},
+                           {id:'approaching',type:'obstacle',x:240}];
+          updateRunner(delayed,.05);
+          return {miss,mode:state.mode,reason:state.reason,score:state.score,
+            remaining:remainingSeconds(state),frozen:JSON.stringify(state)===stopped,
+            delayedScore:delayed.score,delayedReason:delayed.reason};
         }""")
-        self.assertEqual(actual, {'miss':'running', 'mode':'finished', 'reason':'collision',
-                                  'score':20, 'remaining':0, 'frozen':True,
-                                  'delayedScore':20, 'delayedReason':'collision'})
+        self.assertEqual(actual, {'miss':'running','mode':'finished','reason':'collision',
+                                  'score':20,'remaining':0,'frozen':True,
+                                  'delayedScore':20,'delayedReason':'collision'})
         self.assert_isolated(page, errors, requests)
 
-    def test_collision_uses_interpolated_position_during_lane_change(self):
+    def test_box_collision_uses_actual_height_and_a_jump_clears_the_box(self):
         page, errors, requests = self.model_runner()
         actual = page.evaluate("""() => {
-          const {createRunnerState, updateRunner, switchLane} = runnerModel;
-          const early = createRunnerState([]); early.mode='running';
-          switchLane(early); // 目標は上だが、まだ下レーンの実座標にいる。
-          early.objects=[{id:'lower',type:'obstacle',lane:1,x:186}];
-          updateRunner(early, 0);
-          const late = createRunnerState([]); late.mode='running';
-          switchLane(late); updateRunner(late, .1);
-          late.objects=[{id:'upper',type:'obstacle',lane:0,x:186}];
-          updateRunner(late, 0);
-          const middle={mode:late.mode,ground:late.ground,target:late.targetLane};
-          updateRunner(late, .1);
-          return {early:{mode:early.mode,target:early.targetLane}, middle,
-            late:{mode:late.mode,reason:late.reason,ground:late.ground,
-                  moving:late.transition!==null}};
+          const {createRunnerState,updateRunner,startJump}=runnerModel;
+          const early=createRunnerState([]); early.mode='running'; startJump(early);
+          early.objects=[{id:'box',type:'obstacle',x:186}]; updateRunner(early,0);
+          const over=createRunnerState([]); over.mode='running'; startJump(over);
+          updateRunner(over,.45);
+          over.objects=[{id:'box',type:'obstacle',x:186}]; updateRunner(over,0);
+          const apex={mode:over.mode,offset:over.jumpOffset};
+          updateRunner(over,.45);
+          const passed={mode:over.mode,offset:over.jumpOffset,jumping:over.jumping};
+          const descending=createRunnerState([]); descending.mode='running'; startJump(descending);
+          updateRunner(descending,.83);
+          descending.objects=[{id:'box',type:'obstacle',x:186}]; updateRunner(descending,0);
+          return {early:early.mode,apex,passed,descending:{mode:descending.mode,
+            offset:descending.jumpOffset,jumping:descending.jumping}};
         }""")
-        self.assertEqual(actual['early'], {'mode':'finished', 'target':0})
-        self.assertEqual(actual['middle']['mode'], 'running')
-        self.assertEqual(actual['middle']['target'], 0)
-        self.assertGreater(actual['middle']['ground'], 326)
-        self.assertLess(actual['middle']['ground'], 470)
-        self.assertEqual(actual['late']['mode'], 'finished')
-        self.assertEqual(actual['late']['reason'], 'collision')
-        self.assertTrue(actual['late']['moving'])
-        self.assertGreater(actual['late']['ground'], 326)
+        self.assertEqual(actual['early'], 'finished')
+        self.assertEqual(actual['apex']['mode'], 'running')
+        self.assertAlmostEqual(actual['apex']['offset'], 120, delta=.000001)
+        self.assertEqual(actual['passed'], {'mode':'running','offset':0,'jumping':False})
+        self.assertEqual(actual['descending']['mode'], 'finished')
+        self.assertGreater(actual['descending']['offset'], 0)
+        self.assertTrue(actual['descending']['jumping'])
         self.assert_isolated(page, errors, requests)
 
-    def test_timer_and_spawn_progress_match_at_60_and_120_hz(self):
+    def test_timer_spawn_and_jump_match_at_60_and_120_hz(self):
         page, errors, requests = self.model_runner()
-        outcomes = page.evaluate("""() => {
-          const {createRunnerState, updateRunner, remainingSeconds} = runnerModel;
-          return [60,120].map(hz => {
-            const state=createRunnerState([{at:.25,type:'star',lane:0}]);
-            const ready=JSON.stringify(state); updateRunner(state, 20);
+        outcomes=page.evaluate("""() => {
+          const {createRunnerState,updateRunner,startJump,remainingSeconds}=runnerModel;
+          return [60,120].map(hz=>{
+            const state=createRunnerState([{at:.25,type:'star',height:300}]);
+            const ready=JSON.stringify(state); updateRunner(state,20);
             const readyFrozen=ready===JSON.stringify(state);
-            state.mode='running';
-            for(let i=0;i<hz*2;i++)updateRunner(state,1/hz);
-            const midway={elapsed:state.elapsed,distance:state.distance,
-              x:state.objects[0].x,remaining:remainingSeconds(state)};
+            state.mode='running'; startJump(state);
+            let peak=0,landing=null;
+            for(let i=0;i<hz*2;i++){
+              updateRunner(state,1/hz); peak=Math.max(peak,state.jumpOffset);
+              if(landing===null&&!state.jumping)landing=state.elapsed;
+            }
+            const midway={elapsed:state.elapsed,distance:state.distance,x:state.objects[0].x,
+              remaining:remainingSeconds(state),peak,landing,offset:state.jumpOffset};
+            startJump(state); updateRunner(state,.2);
             state.mode='paused'; const paused=JSON.stringify(state);
-            updateRunner(state,300);
+            updateRunner(state,300); startJump(state);
             const pauseFrozen=paused===JSON.stringify(state);
             state.mode='running';
             for(let i=0;i<hz*28;i++)updateRunner(state,1/hz);
-            return {readyFrozen,pauseFrozen,midway,elapsed:state.elapsed,
-              mode:state.mode,reason:state.reason,remaining:remainingSeconds(state),
-              distance:state.distance};
+            return {readyFrozen,pauseFrozen,midway,elapsed:state.elapsed,mode:state.mode,
+              reason:state.reason,remaining:remainingSeconds(state),distance:state.distance};
           });
         }""")
         for outcome in outcomes:
@@ -587,84 +619,76 @@ class RunnerCanvasTest(unittest.TestCase):
             self.assertAlmostEqual(outcome['midway']['elapsed'], 2, delta=.000001)
             self.assertAlmostEqual(outcome['midway']['distance'], 400, delta=.000001)
             self.assertEqual(outcome['midway']['remaining'], 28)
-            self.assertEqual(outcome['mode'], 'finished')
-            self.assertEqual(outcome['reason'], 'clear')
-            self.assertEqual(outcome['remaining'], 0)
+            self.assertAlmostEqual(outcome['midway']['peak'], 120, delta=.000001)
+            self.assertAlmostEqual(outcome['midway']['landing'], .9, delta=.000001)
+            self.assertEqual(outcome['midway']['offset'], 0)
+            self.assertEqual((outcome['mode'],outcome['reason'],outcome['remaining']), ('finished','clear',0))
             self.assertAlmostEqual(outcome['elapsed'], 30, delta=.000001)
             self.assertAlmostEqual(outcome['distance'], 6000, delta=.000001)
-        self.assertAlmostEqual(outcomes[0]['midway']['x'], outcomes[1]['midway']['x'], delta=.000001)
+        self.assertAlmostEqual(outcomes[0]['midway']['x'],outcomes[1]['midway']['x'],delta=.000001)
         self.assert_isolated(page, errors, requests)
 
-    def test_gameover_stops_loop_and_retry_resets_course_score_time_and_lane(self):
-        page, errors, requests = self.manual_runner()
-        ready = self.snapshot(page)
-        self.assertEqual((ready['score'], ready['remaining']), (0, 30))
-        self.toggle(page)
-        page.evaluate('runnerClock.step(0)')
-        self.tap(page) # 上レーンへ。最初の上スター獲得後、次の上障害物に接触する。
-        page.evaluate('runnerClock.advance(6500,60)')
-        self.assertEqual(self.snapshot(page)['score'], 10)
-        page.evaluate('runnerClock.advance(3000,60)')
-        stopped = self.snapshot(page)
-        self.assertEqual(stopped['remaining'], 0)
-        self.assertEqual(stopped['pending'], 0)
-        self.assertEqual(page.locator('#runner-toggle').inner_text(), 'もう一度')
-        self.assertEqual(page.locator('#runner-result-title').inner_text(), 'ゲームオーバー')
+    def test_gameover_stops_loop_and_retry_resets_course_score_time_and_jump(self):
+        page,errors,requests=self.manual_runner()
+        ready=self.snapshot(page)
+        self.assertEqual((ready['score'],ready['remaining']),(0,30))
+        self.toggle(page); page.evaluate('runnerClock.step(0)')
+        page.evaluate('runnerClock.advance(5350,60)')
+        self.assertEqual(self.snapshot(page)['score'],10)
+        self.tap(page) # 木箱の直前では間に合わず、空中のままゲームオーバーになる。
+        page.evaluate('runnerClock.advance(500,60)')
+        stopped=self.snapshot(page)
+        self.assertEqual((stopped['remaining'],stopped['pending']),(0,0))
+        self.assertEqual(page.locator('#runner-toggle').inner_text(),'もう一度')
+        self.assertEqual(page.locator('#runner-result-title').inner_text(),'ゲームオーバー')
         self.assertTrue(page.locator('#runner-result').is_visible())
-        self.assertEqual(page.locator('#runner-result-score').inner_text(), '10')
+        self.assertEqual(page.locator('#runner-result-score').inner_text(),'10')
         self.tap(page)
-        self.assertEqual(page.evaluate('runnerClock.advance(10000)'), 0)
-        self.assertTrue(self.snapshot(page)['image'] == stopped['image'])
-        self.toggle(page)
-        page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
-        restarted = self.snapshot(page)
-        self.assertEqual((restarted['score'], restarted['remaining'], restarted['pending']), (0,30,1))
-        self.assert_same_scene(ready, restarted)
+        self.assertEqual(page.evaluate('runnerClock.advance(10000)'),0)
+        self.assertTrue(self.snapshot(page)['image']==stopped['image'])
+        self.toggle(page); page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
+        restarted=self.snapshot(page)
+        self.assertEqual((restarted['score'],restarted['remaining'],restarted['pending']),(0,30,1))
+        self.assert_same_scene(ready,restarted)
         self.assertTrue(page.locator('#runner-result').is_hidden())
-        self.assertEqual(page.locator('#runner-toggle').inner_text(), '一時停止')
+        self.assertEqual(page.locator('#runner-toggle').inner_text(),'一時停止')
         for _ in range(4):
             self.toggle(page)
-            self.assertLessEqual(self.snapshot(page)['pending'], 1)
-        self.assertEqual(self.snapshot(page)['pending'], 1)
+            self.assertLessEqual(self.snapshot(page)['pending'],1)
         page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
         page.evaluate('runnerClock.advance(4500,60)')
-        self.assertEqual(self.snapshot(page)['score'], 10)
-        self.assertEqual(self.snapshot(page)['pending'], 1)
-        self.assert_isolated(page, errors, requests)
+        self.assertEqual((self.snapshot(page)['score'],self.snapshot(page)['pending']),(10,1))
+        self.assert_isolated(page,errors,requests)
 
     def test_full_fixed_course_can_clear_and_finished_screen_keeps_layout(self):
-        page, errors, requests = self.model_runner()
-        obstacles = page.evaluate("runnerModel.COURSE.filter(item=>item.type==='obstacle')")
-        self.toggle(page)
-        page.evaluate('runnerClock.step(0)')
-        lane = 1
+        page,errors,requests=self.model_runner()
+        obstacles=page.evaluate("runnerModel.COURSE.filter(item=>item.type==='obstacle')")
+        self.assertGreaterEqual(obstacles[0]['at']+(1008-234)/200,5)
+        self.toggle(page); page.evaluate('runnerClock.step(0)')
         for obstacle in obstacles:
-            # 出現後3秒なら右端からの接近を確認でき、前の障害物は通過済み。
-            target_time = (obstacle['at'] + 3) * 1000
-            now = self.snapshot(page)['now']
-            page.evaluate('ms=>runnerClock.advance(ms,60)', target_time-now)
-            safe_lane = 1-obstacle['lane']
-            if safe_lane != lane:
-                self.tap(page)
-                lane = safe_lane
-        now = self.snapshot(page)['now']
-        page.evaluate('ms=>runnerClock.advance(ms,60)', 30000-now)
-        finished = self.snapshot(page)
-        self.assertEqual((finished['remaining'], finished['pending']), (0,0))
-        self.assertEqual(page.locator('#runner-result-title').inner_text(), 'クリア！')
-        self.assertEqual(page.locator('#runner-result-score').inner_text(), str(finished['score']))
-        self.assertGreater(finished['score'], 0)
-        self.assertEqual(page.evaluate('runnerClock.advance(10000)'), 0)
-        self.assertTrue(self.snapshot(page)['image'] == finished['image'])
-        for width, height in ((844,390),(768,1024),(1024,768)):
+            # 右端出現からキャラ中心到達まで4.11秒。0.45秒前に跳ぶ。
+            target_time=(obstacle['at']+3.66)*1000
+            now=self.snapshot(page)['now']
+            page.evaluate('ms=>runnerClock.advance(ms,60)',target_time-now)
+            self.tap(page)
+        now=self.snapshot(page)['now']
+        page.evaluate('ms=>runnerClock.advance(ms,60)',30000-now)
+        finished=self.snapshot(page)
+        self.assertEqual((finished['remaining'],finished['pending']),(0,0))
+        self.assertEqual(page.locator('#runner-result-title').inner_text(),'クリア！')
+        self.assertEqual(page.locator('#runner-result-score').inner_text(),str(finished['score']))
+        self.assertGreater(finished['score'],0)
+        self.assertEqual(page.evaluate('runnerClock.advance(10000)'),0)
+        self.assertTrue(self.snapshot(page)['image']==finished['image'])
+        for width,height in ((844,390),(768,1024),(1024,768)):
             page.set_viewport_size({'width':width,'height':height})
             page.evaluate('runnerClock.settle()')
             page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
             self.assert_geometry(page)
-            self.assertEqual(self.snapshot(page)['pending'], 0)
+            self.assertEqual(self.snapshot(page)['pending'],0)
             self.assertTrue(page.locator('#runner-result').is_visible())
-            self.assertGreaterEqual(page.locator('#runner-toggle').bounding_box()['height'], 44)
-        self.assert_isolated(page, errors, requests)
+            self.assertGreaterEqual(page.locator('#runner-toggle').bounding_box()['height'],44)
+        self.assert_isolated(page,errors,requests)
 
 
 if __name__ == '__main__':

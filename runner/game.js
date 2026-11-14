@@ -2,36 +2,33 @@
 const WORLD = Object.freeze({ width: 960, height: 540 });
 const MAX_DPR = 2; // 最大1920×1080（RGBAで約8MiB）。表示を拡大しすぎない。
 const SCROLL_SPEED = 200; // 論理座標 px/秒。
-const LANE_SWITCH_SECONDS = 0.2;
+const JUMP_HEIGHT = 120;
+const JUMP_DURATION = 0.9;
+const JUMP = Object.freeze({ height: JUMP_HEIGHT, duration: JUMP_DURATION,
+  initialVelocity: 4 * JUMP_HEIGHT / JUMP_DURATION,
+  gravity: 8 * JUMP_HEIGHT / (JUMP_DURATION * JUMP_DURATION) });
 const MAX_FRAME_SECONDS = 0.05; // 長い処理停止後の急な飛びを防ぐ。
 const GAME_DURATION = 30;
 const SIMULATION_STEP = 1 / 120;
 const CHARACTER_X = 186;
+const GROUND_Y = 470;
 const SPAWN_X = WORLD.width + 48;
 const COLLISION = Object.freeze({ characterRadius: 28, obstacleWidth: 52,
   obstacleHeight: 64, obstacleInset: 6, starRadius: 20, starHitRadius: 18 });
-// 出現時刻・種類・レーンだけの固定コース。後の配置データに差し替えられる。
-// 最初のスターまで約4秒。障害物は3秒間隔で交互に置き、反対側を空ける。
+// 時刻は右端での出現時刻。heightはスターの地上基準位置からの上昇量。
+// 木箱の初接触は約5.37秒後、以後3秒間隔。滞空0.9秒の後に着地猶予を残す。
 const COURSE = Object.freeze([
-  { at: 0.25, type: "star", lane: 1 },
+  { at: 0.25, type: "star", height: 0 },
   ...Array.from({ length: 8 }, (_, index) => [
-    { at: 1.5 + index * 3, type: "obstacle", lane: 1 - index % 2 },
-    { at: 1.5 + index * 3, type: "star", lane: index % 2 },
+    { at: 1.5 + index * 3, type: "obstacle" },
+    { at: 1.5 + index * 3, type: "star", height: JUMP.height },
   ]).flat(),
-  { at: 24.25, type: "star", lane: 1 },
+  { at: 24.25, type: "star", height: 0 },
 ].map(entry => Object.freeze(entry)));
-const LANES = Object.freeze([
-  { top: 230, height: 112 },
-  { top: 374, height: 112 },
-]);
-
-function laneGround(index) {
-  return LANES[index].top + LANES[index].height - 16;
-}
 
 function createRunnerState(course = COURSE) {
   return { mode: "ready", distance: 0, animationTime: 0,
-    targetLane: 1, ground: laneGround(1), transition: null,
+    ground: GROUND_Y, jumping: false, jumpElapsed: 0, jumpOffset: 0, jumpVelocity: 0,
     elapsed: 0, score: 0, reason: null, objects: [], nextSpawn: 0,
     course: course.map(entry => ({ ...entry })).sort((a, b) => a.at - b.at) };
 }
@@ -39,26 +36,35 @@ function createRunnerState(course = COURSE) {
 function advanceMotion(state, seconds) {
   state.distance += SCROLL_SPEED * seconds;
   state.animationTime += seconds;
-  if (!state.transition) return;
-  const transition = state.transition;
-  transition.elapsed = Math.min(transition.elapsed + seconds, LANE_SWITCH_SECONDS);
-  const progress = transition.elapsed / LANE_SWITCH_SECONDS;
-  const eased = progress * progress * (3 - 2 * progress);
-  state.ground = transition.from + (transition.to - transition.from) * eased;
-  if (progress === 1) state.transition = null;
+  if (!state.jumping) return;
+  state.jumpElapsed = Math.min(state.jumpElapsed + seconds, JUMP.duration);
+  if (JUMP.duration - state.jumpElapsed < 1e-9) {
+    // 着地は丸め誤差を残さず、次のタップで再び跳べる状態に戻す。
+    state.jumping = false;
+    state.jumpElapsed = 0;
+    state.jumpOffset = 0;
+    state.jumpVelocity = 0;
+    state.ground = GROUND_Y;
+    return;
+  }
+  const time = state.jumpElapsed;
+  // 解析式なので、更新回数に依存せず上昇は減速、下降は加速する。
+  state.jumpOffset = Math.max(0, JUMP.initialVelocity * time - JUMP.gravity * time * time / 2);
+  state.jumpVelocity = JUMP.initialVelocity - JUMP.gravity * time;
+  state.ground = GROUND_Y - state.jumpOffset;
 }
 
 function characterCenter(state) {
-  const bob = Math.abs(Math.sin(state.animationTime * Math.PI * 6)) * 4;
+  const bob = state.jumping ? 0 : Math.abs(Math.sin(state.animationTime * Math.PI * 6)) * 4;
   return { x: CHARACTER_X, y: state.ground - 43 - bob };
 }
 
 function touchesObject(state, object) {
   const character = characterCenter(state);
-  const ground = laneGround(object.lane);
+  const ground = GROUND_Y;
   if (object.type === "star") {
     const radius = COLLISION.characterRadius + COLLISION.starHitRadius;
-    return Math.hypot(character.x - object.x, character.y - (ground - 43)) <= radius;
+    return Math.hypot(character.x - object.x, character.y - (ground - 43 - (object.height ?? 0))) <= radius;
   }
   const inset = COLLISION.obstacleInset;
   const halfWidth = COLLISION.obstacleWidth / 2 - inset;
@@ -113,11 +119,12 @@ function updateRunner(state, seconds) {
   state.score += gained;
 }
 
-function switchLane(state) {
-  if (state.mode !== "running") return;
-  state.targetLane = 1 - state.targetLane;
-  // 連打時も表示中の座標から補間し直す。座標をレーン端へ飛ばさない。
-  state.transition = { from: state.ground, to: laneGround(state.targetLane), elapsed: 0 };
+function startJump(state) {
+  if (state.mode !== "running" || state.jumping) return false;
+  state.jumping = true;
+  state.jumpElapsed = 0;
+  state.jumpVelocity = JUMP.initialVelocity;
+  return true;
 }
 
 function drawBackground(context, state) {
@@ -158,41 +165,28 @@ function drawBackground(context, state) {
   }
 }
 
-function drawLanes(context, state) {
-  for (const lane of LANES) {
-    context.fillStyle = "#edd4a5";
-    context.fillRect(0, lane.top, WORLD.width, lane.height);
-    context.fillStyle = "#fae7bd";
-    context.fillRect(0, lane.top, WORLD.width, 7);
-    context.fillStyle = "#a77d50";
-    context.fillRect(0, lane.top + lane.height - 7, WORLD.width, 7);
-    context.fillStyle = "#d5b987";
-    for (let x = 36 - state.distance % 108; x < WORLD.width; x += 108) {
-      context.fillRect(x, lane.top + lane.height - 29, 30, 5);
-    }
+function drawGround(context, state) {
+  context.fillStyle = "#edd4a5";
+  context.fillRect(0, GROUND_Y, WORLD.width, WORLD.height - GROUND_Y);
+  context.fillStyle = "#fae7bd";
+  context.fillRect(0, GROUND_Y, WORLD.width, 7);
+  context.fillStyle = "#a77d50";
+  context.fillRect(0, WORLD.height - 7, WORLD.width, 7);
+  context.fillStyle = "#d5b987";
+  for (let x = 36 - state.distance % 108; x < WORLD.width; x += 108) {
+    context.fillRect(x, GROUND_Y + 35, 30, 5);
   }
-
-  context.save();
-  context.strokeStyle = "#f4f4ce";
-  context.lineWidth = 3;
-  context.setLineDash([12, 12]);
-  context.lineDashOffset = state.distance % 24;
-  context.beginPath();
-  context.moveTo(0, 358);
-  context.lineTo(WORLD.width, 358);
-  context.stroke();
-  context.restore();
 }
 
-// 後からキャラクター画像の描画に差し替えるため、背景・レーンと分離。
+// 後からキャラクター画像の描画に差し替えるため、背景・地面と分離。
 function drawCharacter(context, state) {
   const x = CHARACTER_X;
   const ground = state.ground;
-  const stride = Math.sin(state.animationTime * Math.PI * 6);
+  const stride = state.jumping ? 0 : Math.sin(state.animationTime * Math.PI * 6);
   const bob = Math.abs(stride) * 4;
   context.fillStyle = "#705c4930";
   context.beginPath();
-  context.ellipse(x, ground, 38, 9, 0, 0, Math.PI * 2);
+  context.ellipse(x, GROUND_Y, 38, 9, 0, 0, Math.PI * 2);
   context.fill();
 
   context.fillStyle = "#344e47";
@@ -217,24 +211,30 @@ function drawObjects(context, state) {
   for (const object of state.objects) {
     const radius = object.type === "star" ? COLLISION.starRadius : COLLISION.obstacleWidth / 2;
     if (object.x + radius < 0 || object.x - radius > WORLD.width) continue;
-    const ground = laneGround(object.lane);
+    const ground = GROUND_Y;
     if (object.type === "obstacle") {
       const left = object.x - COLLISION.obstacleWidth / 2;
       const top = ground - COLLISION.obstacleHeight;
-      context.fillStyle = "#b65645";
+      context.fillStyle = "#b98045";
       context.fillRect(left, top, COLLISION.obstacleWidth, COLLISION.obstacleHeight);
-      context.fillStyle = "#ef9e70";
+      context.fillStyle = "#e7b77a";
       context.fillRect(left, top, COLLISION.obstacleWidth, 8);
-      context.strokeStyle = "#793f36";
+      context.strokeStyle = "#725033";
       context.lineWidth = 2;
       context.strokeRect(left + 1, top + 1, COLLISION.obstacleWidth - 2, COLLISION.obstacleHeight - 2);
+      context.beginPath();
+      context.moveTo(left + 7, top + 13);
+      context.lineTo(left + COLLISION.obstacleWidth - 7, ground - 7);
+      context.moveTo(left + COLLISION.obstacleWidth - 7, top + 13);
+      context.lineTo(left + 7, ground - 7);
+      context.stroke();
     } else {
       context.beginPath();
       for (let point = 0; point < 10; point++) {
         const angle = -Math.PI / 2 + point * Math.PI / 5;
         const length = point % 2 ? COLLISION.starRadius * 0.48 : COLLISION.starRadius;
         const x = object.x + Math.cos(angle) * length;
-        const y = ground - 43 + Math.sin(angle) * length;
+        const y = ground - 43 - (object.height ?? 0) + Math.sin(angle) * length;
         if (point === 0) context.moveTo(x, y);
         else context.lineTo(x, y);
       }
@@ -252,7 +252,7 @@ function renderScene(context, canvas, state) {
   // width/heightの変更でリセットされた変換も毎回復元する。
   context.setTransform(canvas.width / WORLD.width, 0, 0, canvas.height / WORLD.height, 0, 0);
   drawBackground(context, state);
-  drawLanes(context, state);
+  drawGround(context, state);
   drawObjects(context, state);
   drawCharacter(context, state);
 }
@@ -318,7 +318,7 @@ function initializeRunner() {
     if (state.mode === "finished") {
       document.getElementById("runner-result-title").textContent = state.reason === "clear" ? "クリア！" : "ゲームオーバー";
       document.getElementById("runner-result-message").textContent = state.reason === "clear" ?
-        "30秒間、走りきったよ！" : "障害物にぶつかったよ。もう一度挑戦しよう！";
+        "30秒間、走りきったよ！" : "木箱にぶつかったよ。もう一度挑戦しよう！";
       document.getElementById("runner-result-score").textContent = state.score;
     }
   }
@@ -395,7 +395,7 @@ function initializeRunner() {
   canvas.addEventListener("pointerdown", event => {
     if (!active || document.hidden || !event.isPrimary || event.button !== 0 || state.mode !== "running") return;
     event.preventDefault();
-    switchLane(state);
+    startJump(state);
   });
 
   window.addEventListener("resize", resizeAndRedraw);
@@ -419,5 +419,5 @@ function initializeRunner() {
 initializeRunner();
 
 // コースとゲーム状態はDOMから独立。配置の差し替えや決定的なルール検証に使う。
-export { COURSE, COLLISION, CHARACTER_X, GAME_DURATION, SCROLL_SPEED,
-  createRunnerState, updateRunner, switchLane, remainingSeconds, characterCenter };
+export { COURSE, COLLISION, CHARACTER_X, GROUND_Y, JUMP, GAME_DURATION, SCROLL_SPEED,
+  createRunnerState, updateRunner, startJump, remainingSeconds, characterCenter };
