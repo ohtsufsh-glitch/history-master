@@ -8,10 +8,12 @@ const JUMP = Object.freeze({ height: JUMP_HEIGHT, duration: JUMP_DURATION,
   initialVelocity: 4 * JUMP_HEIGHT / JUMP_DURATION,
   gravity: 8 * JUMP_HEIGHT / (JUMP_DURATION * JUMP_DURATION) });
 const MAX_FRAME_SECONDS = 0.05; // 長い処理停止後の急な飛びを防ぐ。
-const GAME_DURATION = 30;
+const COURSE_LENGTH = 6400; // スタートからゴールまでの走行距離（論理px）。
 const SIMULATION_STEP = 1 / 120;
 const CHARACTER_X = 186;
 const GROUND_Y = 470;
+const CHARACTER_IMAGE = Object.freeze({ src: "../assets/plush/shiba.webp", maxSize: 100,
+  feetRatio: 465 / 512 }); // 既存画像の透明余白を含む、足元の基準位置。
 const SPAWN_X = WORLD.width + 48;
 const COLLISION = Object.freeze({ characterRadius: 28, obstacleWidth: 52,
   obstacleHeight: 64, obstacleInset: 6, starRadius: 20, starHitRadius: 18 });
@@ -74,9 +76,13 @@ function touchesObject(state, object) {
   return Math.hypot(character.x - closestX, character.y - closestY) <= COLLISION.characterRadius;
 }
 
-function remainingSeconds(state) {
-  // 秒境界の浮動小数点誤差で表示が1秒遅れないようにする。
-  return state.mode === "finished" ? 0 : Math.ceil(Math.max(0, GAME_DURATION - state.elapsed - 1e-9));
+function progressPercent(state) {
+  if (state.distance >= COURSE_LENGTH) return 100;
+  return Math.min(99, Math.max(0, Math.floor(state.distance / COURSE_LENGTH * 100 + 1e-9)));
+}
+
+function goalX(state) {
+  return CHARACTER_X + COURSE_LENGTH - state.distance;
 }
 
 function updateRunner(state, seconds) {
@@ -85,10 +91,10 @@ function updateRunner(state, seconds) {
   let gained = 0;
   // 同じ更新内に接触があれば、新たなスターの加点より障害物を優先する。
   do {
-    const step = Math.min(SIMULATION_STEP, remaining, Math.max(0, GAME_DURATION - state.elapsed));
+    const step = Math.min(SIMULATION_STEP, remaining, Math.max(0, COURSE_LENGTH - state.distance) / SCROLL_SPEED);
     advanceMotion(state, step);
-    state.elapsed = Math.min(GAME_DURATION, state.elapsed + step);
-    if (GAME_DURATION - state.elapsed < 1e-9) state.elapsed = GAME_DURATION;
+    state.elapsed += step;
+    if (COURSE_LENGTH - state.distance < 1e-9) state.distance = COURSE_LENGTH;
     for (const object of state.objects) object.x -= SCROLL_SPEED * step;
     while (state.nextSpawn < state.course.length && state.course[state.nextSpawn].at <= state.elapsed + 1e-9) {
       const entry = state.course[state.nextSpawn];
@@ -109,7 +115,8 @@ function updateRunner(state, seconds) {
       }
       return true;
     });
-    if (state.elapsed === GAME_DURATION) {
+    // 同じ更新でゴールラインを越えても、直前の障害物判定を優先する。
+    if (state.distance >= COURSE_LENGTH) {
       state.mode = "finished";
       state.reason = "clear";
       break;
@@ -178,8 +185,8 @@ function drawGround(context, state) {
   }
 }
 
-// 後からキャラクター画像の描画に差し替えるため、背景・地面と分離。
-function drawCharacter(context, state) {
+// 読み込み中・失敗時にも表示とプレイを継続できる仮キャラクター。
+function drawFallbackCharacter(context, state) {
   const x = CHARACTER_X;
   const ground = state.ground;
   const stride = state.jumping ? 0 : Math.sin(state.animationTime * Math.PI * 6);
@@ -205,6 +212,40 @@ function drawCharacter(context, state) {
   context.arc(x + 12, ground - 49 - bob, 4, 0, Math.PI * 2);
   context.arc(x + 27, ground - 49 - bob, 4, 0, Math.PI * 2);
   context.fill();
+}
+
+function drawCharacter(context, state, characterImage) {
+  if (!characterImage?.complete || !characterImage.naturalWidth || !characterImage.naturalHeight) {
+    drawFallbackCharacter(context, state);
+    return;
+  }
+  const scale = CHARACTER_IMAGE.maxSize / Math.max(characterImage.naturalWidth, characterImage.naturalHeight);
+  const width = characterImage.naturalWidth * scale;
+  const height = characterImage.naturalHeight * scale;
+  const bob = state.jumping ? 0 : Math.abs(Math.sin(state.animationTime * Math.PI * 6)) * 4;
+  context.fillStyle = "#705c4930";
+  context.beginPath();
+  context.ellipse(CHARACTER_X, GROUND_Y, 38, 9, 0, 0, Math.PI * 2);
+  context.fill();
+  context.drawImage(characterImage, CHARACTER_X - width / 2,
+    state.ground - height * CHARACTER_IMAGE.feetRatio - bob, width, height);
+}
+
+function drawGoal(context, state) {
+  const x = goalX(state);
+  if (x < -80 || x > WORLD.width + 80) return;
+  const top = GROUND_Y - 156;
+  context.fillStyle = "#fffdf3";
+  context.fillRect(x - 3, GROUND_Y, 6, WORLD.height - GROUND_Y);
+  context.fillStyle = "#35594b";
+  context.fillRect(x - 3, top, 6, GROUND_Y - top);
+  for (let row = 0; row < 4; row++) for (let column = 0; column < 6; column++) {
+    context.fillStyle = (row + column) % 2 ? "#35594b" : "#fffdf3";
+    context.fillRect(x + 3 + column * 10, top + row * 10, 10, 10);
+  }
+  context.font = "bold 24px sans-serif";
+  context.fillStyle = "#263f3b";
+  context.fillText("GOAL", x + 8, top - 12);
 }
 
 function drawObjects(context, state) {
@@ -248,13 +289,14 @@ function drawObjects(context, state) {
   }
 }
 
-function renderScene(context, canvas, state) {
+function renderScene(context, canvas, state, characterImage) {
   // width/heightの変更でリセットされた変換も毎回復元する。
   context.setTransform(canvas.width / WORLD.width, 0, 0, canvas.height / WORLD.height, 0, 0);
   drawBackground(context, state);
   drawGround(context, state);
   drawObjects(context, state);
-  drawCharacter(context, state);
+  drawGoal(context, state);
+  drawCharacter(context, state, characterImage);
 }
 
 function resizeCanvas(canvas, stage, viewport) {
@@ -283,7 +325,7 @@ function initializeRunner() {
   const toggle = document.getElementById("runner-toggle");
   const modeLabel = document.getElementById("runner-mode");
   const scoreLabel = document.getElementById("runner-score");
-  const timeLabel = document.getElementById("runner-time");
+  const progressLabel = document.getElementById("runner-progress");
   const result = document.getElementById("runner-result");
   let context;
   try {
@@ -300,6 +342,7 @@ function initializeRunner() {
   }
 
   let state = createRunnerState();
+  const characterImage = new Image();
   let active = !document.hidden;
   let pendingFrame = null;
   let previousTimestamp = null;
@@ -311,15 +354,16 @@ function initializeRunner() {
     const mode = { ready: "開始前", running: "走行中", paused: "一時停止中", finished: "終了" }[state.mode];
     if (modeLabel.textContent !== mode) modeLabel.textContent = mode;
     if (scoreLabel.textContent !== String(state.score)) scoreLabel.textContent = state.score;
-    const remaining = String(remainingSeconds(state));
-    if (timeLabel.textContent !== remaining) timeLabel.textContent = remaining;
+    const progress = String(progressPercent(state));
+    if (progressLabel.textContent !== progress) progressLabel.textContent = progress;
     const hideResult = state.mode !== "finished";
     if (result.hidden !== hideResult) result.hidden = hideResult;
     if (state.mode === "finished") {
       document.getElementById("runner-result-title").textContent = state.reason === "clear" ? "クリア！" : "ゲームオーバー";
       document.getElementById("runner-result-message").textContent = state.reason === "clear" ?
-        "30秒間、走りきったよ！" : "木箱にぶつかったよ。もう一度挑戦しよう！";
+        "ゴールまで走りきったよ！" : "木箱にぶつかったよ。もう一度挑戦しよう！";
       document.getElementById("runner-result-score").textContent = state.score;
+      document.getElementById("runner-result-progress").textContent = progress;
     }
   }
 
@@ -343,7 +387,7 @@ function initializeRunner() {
       previousTimestamp = state.mode === "running" ? timestamp : null;
       updateControls();
     }
-    renderScene(context, canvas, state);
+    renderScene(context, canvas, state, characterImage);
     status.hidden = true;
     if (state.mode === "running") requestRedraw();
   }
@@ -411,6 +455,10 @@ function initializeRunner() {
     if (document.hidden) suspendRendering();
     else resumeRendering();
   });
+  // 画像を待ってゲームを止めない。復帰・静止中も必要な1フレームだけ更新する。
+  characterImage.onload = requestRedraw;
+  characterImage.onerror = requestRedraw;
+  characterImage.src = new URL(CHARACTER_IMAGE.src, import.meta.url).href;
   toggle.disabled = false;
   updateControls();
   requestRedraw();
@@ -419,5 +467,5 @@ function initializeRunner() {
 initializeRunner();
 
 // コースとゲーム状態はDOMから独立。配置の差し替えや決定的なルール検証に使う。
-export { COURSE, COLLISION, CHARACTER_X, GROUND_Y, JUMP, GAME_DURATION, SCROLL_SPEED,
-  createRunnerState, updateRunner, startJump, remainingSeconds, characterCenter };
+export { COURSE, COLLISION, CHARACTER_X, CHARACTER_IMAGE, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
+  createRunnerState, updateRunner, startJump, progressPercent, goalX, characterCenter };

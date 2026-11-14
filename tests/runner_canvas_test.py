@@ -1,4 +1,4 @@
-"""独立Canvas画面とジャンプ方式のゲームルール。HTTPと一時Chromiumのみを使用する。
+"""独立Canvas画面・距離ゴール・しば犬描画。HTTPと一時Chromiumのみを使用する。
 
 実行: python3 -m unittest discover -s tests -p 'runner_canvas_test.py' -v
 Safari実機の検証を置き換えるものではない。
@@ -26,6 +26,14 @@ ISOLATION_GUARD = """() => {
     }});
   }
   window.runnerFrameRequests = 0;
+  window.runnerImages = [];
+  const OriginalImage = window.Image;
+  window.Image = function(...args) {
+    const image = new OriginalImage(...args);
+    runnerImages.push(image);
+    return image;
+  };
+  window.Image.prototype = OriginalImage.prototype;
   const request = window.requestAnimationFrame.bind(window);
   window.requestAnimationFrame = callback => {
     runnerFrameRequests++;
@@ -41,12 +49,16 @@ MANUAL_FRAMES = """(() => {
     const id = ++next; frames.set(id, callback); return id;
   };
   window.cancelAnimationFrame = id => frames.delete(id);
-  const scene = {character: null, markers: [], feet: []};
+  const scene = {character: null, markers: [], feet: [], sprite:null, goal:null};
   const proto = CanvasRenderingContext2D.prototype;
   const transform = proto.setTransform, rectangle = proto.fillRect, arc = proto.arc;
+  const drawImage = proto.drawImage, fillText = proto.fillText;
   proto.setTransform = function(...args) {
     scene.markers = [];
     scene.feet = [];
+    scene.character = null;
+    scene.sprite = null;
+    scene.goal = null;
     return transform.apply(this, args);
   };
   proto.fillRect = function(x, y, width, height) {
@@ -67,6 +79,20 @@ MANUAL_FRAMES = """(() => {
                          y: point.y * 540 / this.canvas.height};
     }
     return arc.call(this, x, y, radius, ...rest);
+  };
+  proto.drawImage = function(image, ...args) {
+    if (image.src?.endsWith('/assets/plush/shiba.webp') && args.length === 4) {
+      const [x,y,width,height] = args;
+      const point=this.getTransform().transformPoint({x:x+width/2,y:y+height*465/512-43});
+      scene.character={x:point.x*960/this.canvas.width,y:point.y*540/this.canvas.height};
+      scene.sprite={x,y,width,height,src:image.src,
+        naturalWidth:image.naturalWidth,naturalHeight:image.naturalHeight};
+    }
+    return drawImage.call(this,image,...args);
+  };
+  proto.fillText = function(text, x, y, ...args) {
+    if (text === 'GOAL') scene.goal={x,y};
+    return fillText.call(this,text,x,y,...args);
   };
   function step(timestamp) {
     now = timestamp;
@@ -91,9 +117,10 @@ MANUAL_FRAMES = """(() => {
       let background = 0;
       for (let i=0; i<pixels.length; i+=16) background = (background*31+pixels[i]) >>> 0;
       return {now, pending:frames.size, character:scene.character, feet:scene.feet,
+        sprite:scene.sprite,goal:scene.goal,
         marker:scene.markers.find(x=>x>=0), background, image:c.toDataURL(),
         score:Number(document.querySelector('#runner-score').textContent),
-        remaining:Number(document.querySelector('#runner-time').textContent)};
+        progress:Number(document.querySelector('#runner-progress').textContent)};
     }
   };
 })();"""
@@ -153,7 +180,7 @@ class RunnerCanvasTest(unittest.TestCase):
         cls.server.server_close()
         cls.thread.join()
 
-    def open_runner(self, width=390, height=844, dpr=3, setup=None):
+    def open_runner(self, width=390, height=844, dpr=3, setup=None, broken_image=False):
         context = self.browser.new_context(
             viewport={'width': width, 'height': height},
             device_scale_factor=dpr, has_touch=True)
@@ -166,6 +193,8 @@ class RunnerCanvasTest(unittest.TestCase):
         errors, requests = [], []
         page.on('pageerror', lambda error: errors.append(str(error)))
         page.on('request', lambda request: requests.append(request.url))
+        if broken_image:
+            page.route('**/assets/plush/shiba.webp', lambda route: route.fulfill(status=404, body='missing'))
         response = page.goto(self.url)
         self.assertEqual(response.status, 200)
         return page, errors, requests
@@ -173,8 +202,9 @@ class RunnerCanvasTest(unittest.TestCase):
     def assert_isolated(self, page, errors, requests):
         self.assertEqual(errors, [])
         self.assertEqual(page.evaluate('runnerStorageAccesses'), [])
-        # 親index.htmlや他機能のJS・画像を暗黙に読み込まない。
-        self.assertTrue(all(url.startswith(self.url) for url in requests), requests)
+        # 再利用するしば犬画像1点だけを許可し、親アプリのJSやページは読まない。
+        shiba = self.url.removesuffix('runner/') + 'assets/plush/shiba.webp'
+        self.assertTrue(all(url.startswith(self.url) or url == shiba for url in requests), requests)
 
     def assert_geometry(self, page):
         page.wait_for_function(HAS_DRAWING)
@@ -202,8 +232,9 @@ class RunnerCanvasTest(unittest.TestCase):
         self.assertGreaterEqual(actual['button']['height'], 44)
         self.assertIn('ランナーゲーム', actual['text'])
         self.assertRegex(page.locator('#runner-score').inner_text(), r'^\d+$')
-        self.assertGreaterEqual(int(page.locator('#runner-time').inner_text()), 0)
-        self.assertLessEqual(int(page.locator('#runner-time').inner_text()), 30)
+        self.assertGreaterEqual(int(page.locator('#runner-progress').inner_text()), 0)
+        self.assertLessEqual(int(page.locator('#runner-progress').inner_text()), 100)
+        self.assertEqual(page.locator('#runner-time').count(), 0)
         return actual
 
     def test_http_static_scene_and_phone_tablet_layouts(self):
@@ -214,8 +245,8 @@ class RunnerCanvasTest(unittest.TestCase):
                 page, errors, requests = self.open_runner(width, height, dpr)
                 self.assert_geometry(page)
                 self.assertEqual(page.locator('#runner-score').inner_text(), '0')
-                self.assertEqual(page.locator('#runner-time').inner_text(), '30')
-                # 空白や単色だけでなく、背景・走行エリア・仮キャラクターを描画する。
+                self.assertEqual(page.locator('#runner-progress').inner_text(), '0')
+                # 空白や単色だけでなく、背景・地面・キャラクターを描画する。
                 colors = page.evaluate("""() => {
                   const c = document.querySelector('#runner-canvas');
                   const ctx = c.getContext('2d'), colors = new Set();
@@ -286,8 +317,9 @@ class RunnerCanvasTest(unittest.TestCase):
                 self.assertTrue(page.locator('button').is_disabled())
                 self.assert_isolated(page, errors, requests)
 
-    def manual_runner(self):
-        page, errors, requests = self.open_runner(setup=MANUAL_FRAMES)
+    def manual_runner(self, broken_image=False):
+        page, errors, requests = self.open_runner(setup=MANUAL_FRAMES, broken_image=broken_image)
+        page.wait_for_function('runnerImages.length > 0 && runnerImages.every(image=>image.complete)')
         page.evaluate('runnerClock.settle()')
         page.evaluate('runnerClock.step(0)')
         page.evaluate('runnerClock.settle()')
@@ -318,7 +350,7 @@ class RunnerCanvasTest(unittest.TestCase):
                                distance % 108, delta=.01)
 
     def assert_same_scene(self, before, after):
-        # 再描画時のGPU/CPU切替による破線のAA差に依存せず、描画座標を検査する。
+        # 画像の再描画でも実際の描画座標が保持されることを検査する。
         for axis in ('x', 'y'):
             self.assertAlmostEqual(before['character'][axis], after['character'][axis], delta=.001)
         self.assertAlmostEqual(before['marker'], after['marker'], delta=.001)
@@ -351,7 +383,7 @@ class RunnerCanvasTest(unittest.TestCase):
                 # 5秒のフレーム空白でも、最大50ms（10px）だけ進める。
                 page.evaluate('runnerClock.step(7000)')
                 self.assert_marker_advance(finish, self.snapshot(page), 10)
-                self.assertEqual(self.snapshot(page)['remaining'], finish['remaining'])
+                self.assertEqual(self.snapshot(page)['progress'], finish['progress'])
                 self.assert_isolated(page, errors, requests)
         self.assertEqual(len(outcomes), 2)
         self.assertAlmostEqual(*outcomes, delta=.001)
@@ -383,7 +415,7 @@ class RunnerCanvasTest(unittest.TestCase):
         self.tap(page)
         self.assertEqual(page.evaluate('runnerClock.advance(300000)'), 0)
         self.assertTrue(self.snapshot(page)['image'] == paused['image'], '空中停止中は再描画しない')
-        self.assertEqual(self.snapshot(page)['remaining'], paused['remaining'])
+        self.assertEqual(self.snapshot(page)['progress'], paused['progress'])
         self.toggle(page)
         page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
         resumed = self.snapshot(page)
@@ -445,7 +477,7 @@ class RunnerCanvasTest(unittest.TestCase):
         restored = self.snapshot(page)
         self.assertEqual(restored['pending'], 0)
         self.assert_same_scene(hidden, restored)
-        self.assertEqual(hidden['remaining'], restored['remaining'])
+        self.assertEqual(hidden['progress'], restored['progress'])
         self.toggle(page)
         page.evaluate('runnerClock.step(60000)')
         self.assert_same_scene(restored, self.snapshot(page))
@@ -539,7 +571,7 @@ class RunnerCanvasTest(unittest.TestCase):
     def test_obstacle_collision_miss_and_priority_over_star(self):
         page, errors, requests = self.model_runner()
         actual = page.evaluate("""() => {
-          const {createRunnerState,updateRunner,remainingSeconds}=runnerModel;
+          const {createRunnerState,updateRunner,progressPercent}=runnerModel;
           const state=createRunnerState([]); state.mode='running';
           state.objects=[{id:'distant',type:'obstacle',x:500}];
           updateRunner(state,0); const miss=state.mode;
@@ -552,11 +584,11 @@ class RunnerCanvasTest(unittest.TestCase):
                            {id:'approaching',type:'obstacle',x:240}];
           updateRunner(delayed,.05);
           return {miss,mode:state.mode,reason:state.reason,score:state.score,
-            remaining:remainingSeconds(state),frozen:JSON.stringify(state)===stopped,
+            progress:progressPercent(state),frozen:JSON.stringify(state)===stopped,
             delayedScore:delayed.score,delayedReason:delayed.reason};
         }""")
         self.assertEqual(actual, {'miss':'running','mode':'finished','reason':'collision',
-                                  'score':20,'remaining':0,'frozen':True,
+                                  'score':20,'progress':0,'frozen':True,
                                   'delayedScore':20,'delayedReason':'collision'})
         self.assert_isolated(page, errors, requests)
 
@@ -587,10 +619,10 @@ class RunnerCanvasTest(unittest.TestCase):
         self.assertTrue(actual['descending']['jumping'])
         self.assert_isolated(page, errors, requests)
 
-    def test_timer_spawn_and_jump_match_at_60_and_120_hz(self):
+    def test_distance_spawn_and_jump_match_at_60_and_120_hz(self):
         page, errors, requests = self.model_runner()
         outcomes=page.evaluate("""() => {
-          const {createRunnerState,updateRunner,startJump,remainingSeconds}=runnerModel;
+          const {createRunnerState,updateRunner,startJump,progressPercent}=runnerModel;
           return [60,120].map(hz=>{
             const state=createRunnerState([{at:.25,type:'star',height:300}]);
             const ready=JSON.stringify(state); updateRunner(state,20);
@@ -602,15 +634,18 @@ class RunnerCanvasTest(unittest.TestCase):
               if(landing===null&&!state.jumping)landing=state.elapsed;
             }
             const midway={elapsed:state.elapsed,distance:state.distance,x:state.objects[0].x,
-              remaining:remainingSeconds(state),peak,landing,offset:state.jumpOffset};
+              progress:progressPercent(state),peak,landing,offset:state.jumpOffset};
             startJump(state); updateRunner(state,.2);
             state.mode='paused'; const paused=JSON.stringify(state);
             updateRunner(state,300); startJump(state);
             const pauseFrozen=paused===JSON.stringify(state);
             state.mode='running';
-            for(let i=0;i<hz*28;i++)updateRunner(state,1/hz);
-            return {readyFrozen,pauseFrozen,midway,elapsed:state.elapsed,mode:state.mode,
-              reason:state.reason,remaining:remainingSeconds(state),distance:state.distance};
+            for(let i=0;i<Math.round(hz*27.8);i++)updateRunner(state,1/hz);
+            const afterThirty={mode:state.mode,elapsed:state.elapsed,distance:state.distance,
+              progress:progressPercent(state)};
+            for(let i=0;i<hz*2;i++)updateRunner(state,1/hz);
+            return {readyFrozen,pauseFrozen,midway,afterThirty,elapsed:state.elapsed,mode:state.mode,
+              reason:state.reason,progress:progressPercent(state),distance:state.distance};
           });
         }""")
         for outcome in outcomes:
@@ -618,37 +653,42 @@ class RunnerCanvasTest(unittest.TestCase):
             self.assertTrue(outcome['pauseFrozen'])
             self.assertAlmostEqual(outcome['midway']['elapsed'], 2, delta=.000001)
             self.assertAlmostEqual(outcome['midway']['distance'], 400, delta=.000001)
-            self.assertEqual(outcome['midway']['remaining'], 28)
+            self.assertEqual(outcome['midway']['progress'], 6)
             self.assertAlmostEqual(outcome['midway']['peak'], 120, delta=.000001)
             self.assertAlmostEqual(outcome['midway']['landing'], .9, delta=.000001)
             self.assertEqual(outcome['midway']['offset'], 0)
-            self.assertEqual((outcome['mode'],outcome['reason'],outcome['remaining']), ('finished','clear',0))
-            self.assertAlmostEqual(outcome['elapsed'], 30, delta=.000001)
-            self.assertAlmostEqual(outcome['distance'], 6000, delta=.000001)
+            self.assertEqual(outcome['afterThirty']['mode'], 'running')
+            self.assertAlmostEqual(outcome['afterThirty']['elapsed'], 30, delta=.000001)
+            self.assertAlmostEqual(outcome['afterThirty']['distance'], 6000, delta=.000001)
+            self.assertEqual(outcome['afterThirty']['progress'], 93)
+            self.assertEqual((outcome['mode'],outcome['reason'],outcome['progress']), ('finished','clear',100))
+            self.assertAlmostEqual(outcome['elapsed'], 32, delta=.000001)
+            self.assertAlmostEqual(outcome['distance'], 6400, delta=.000001)
         self.assertAlmostEqual(outcomes[0]['midway']['x'],outcomes[1]['midway']['x'],delta=.000001)
         self.assert_isolated(page, errors, requests)
 
-    def test_gameover_stops_loop_and_retry_resets_course_score_time_and_jump(self):
+    def test_gameover_stops_loop_and_retry_resets_distance_score_and_jump(self):
         page,errors,requests=self.manual_runner()
         ready=self.snapshot(page)
-        self.assertEqual((ready['score'],ready['remaining']),(0,30))
+        self.assertEqual((ready['score'],ready['progress']),(0,0))
         self.toggle(page); page.evaluate('runnerClock.step(0)')
         page.evaluate('runnerClock.advance(5350,60)')
         self.assertEqual(self.snapshot(page)['score'],10)
         self.tap(page) # 木箱の直前では間に合わず、空中のままゲームオーバーになる。
         page.evaluate('runnerClock.advance(500,60)')
         stopped=self.snapshot(page)
-        self.assertEqual((stopped['remaining'],stopped['pending']),(0,0))
+        self.assertEqual((stopped['progress'],stopped['pending']),(16,0))
         self.assertEqual(page.locator('#runner-toggle').inner_text(),'もう一度')
         self.assertEqual(page.locator('#runner-result-title').inner_text(),'ゲームオーバー')
         self.assertTrue(page.locator('#runner-result').is_visible())
         self.assertEqual(page.locator('#runner-result-score').inner_text(),'10')
+        self.assertEqual(page.locator('#runner-result-progress').inner_text(),str(stopped['progress']))
         self.tap(page)
         self.assertEqual(page.evaluate('runnerClock.advance(10000)'),0)
         self.assertTrue(self.snapshot(page)['image']==stopped['image'])
         self.toggle(page); page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
         restarted=self.snapshot(page)
-        self.assertEqual((restarted['score'],restarted['remaining'],restarted['pending']),(0,30,1))
+        self.assertEqual((restarted['score'],restarted['progress'],restarted['pending']),(0,0,1))
         self.assert_same_scene(ready,restarted)
         self.assertTrue(page.locator('#runner-result').is_hidden())
         self.assertEqual(page.locator('#runner-toggle').inner_text(),'一時停止')
@@ -672,11 +712,13 @@ class RunnerCanvasTest(unittest.TestCase):
             page.evaluate('ms=>runnerClock.advance(ms,60)',target_time-now)
             self.tap(page)
         now=self.snapshot(page)['now']
-        page.evaluate('ms=>runnerClock.advance(ms,60)',30000-now)
+        page.evaluate('ms=>runnerClock.advance(ms,60)',32000-now)
         finished=self.snapshot(page)
-        self.assertEqual((finished['remaining'],finished['pending']),(0,0))
+        self.assertEqual((finished['progress'],finished['pending']),(100,0))
         self.assertEqual(page.locator('#runner-result-title').inner_text(),'クリア！')
         self.assertEqual(page.locator('#runner-result-score').inner_text(),str(finished['score']))
+        self.assertEqual(page.locator('#runner-result-progress').inner_text(),'100')
+        self.assertIsNotNone(finished['goal'])
         self.assertGreater(finished['score'],0)
         self.assertEqual(page.evaluate('runnerClock.advance(10000)'),0)
         self.assertTrue(self.snapshot(page)['image']==finished['image'])
@@ -689,6 +731,82 @@ class RunnerCanvasTest(unittest.TestCase):
             self.assertTrue(page.locator('#runner-result').is_visible())
             self.assertGreaterEqual(page.locator('#runner-toggle').bounding_box()['height'],44)
         self.assert_isolated(page,errors,requests)
+
+    def test_goal_depends_on_distance_and_collision_wins_at_the_finish(self):
+        page,errors,requests=self.model_runner()
+        actual=page.evaluate("""() => {
+          const {createRunnerState,updateRunner,progressPercent,goalX,COURSE_LENGTH}=runnerModel;
+          const state=createRunnerState([]); state.mode='running';
+          updateRunner(state,30);
+          const afterThirty={mode:state.mode,distance:state.distance,progress:progressPercent(state),
+            goal:goalX(state)};
+          state.mode='paused'; const paused=JSON.stringify(state); updateRunner(state,100);
+          const frozen=paused===JSON.stringify(state);
+          state.mode='running'; updateRunner(state,2);
+          const finished={mode:state.mode,reason:state.reason,distance:state.distance,
+            progress:progressPercent(state),goal:goalX(state)};
+          const simultaneous=createRunnerState([]); simultaneous.mode='running';
+          simultaneous.distance=COURSE_LENGTH-1;
+          simultaneous.objects=[{id:'box',type:'obstacle',x:186}];
+          updateRunner(simultaneous,.005);
+          const partial=createRunnerState([]); partial.mode='running'; partial.distance=3200;
+          partial.objects=[{id:'box',type:'obstacle',x:186}]; updateRunner(partial,0);
+          const elapsedOnly=createRunnerState([]); elapsedOnly.mode='running'; elapsedOnly.elapsed=1000;
+          updateRunner(elapsedOnly,0);
+          return {length:COURSE_LENGTH,afterThirty,frozen,finished,
+            simultaneous:{mode:simultaneous.mode,reason:simultaneous.reason,
+              progress:progressPercent(simultaneous)},
+            partial:{reason:partial.reason,progress:progressPercent(partial)},elapsedOnly:elapsedOnly.mode};
+        }""")
+        self.assertEqual(actual['length'],6400)
+        self.assertEqual(actual['afterThirty']['mode'],'running')
+        self.assertAlmostEqual(actual['afterThirty']['distance'],6000,delta=.000001)
+        self.assertEqual(actual['afterThirty']['progress'],93)
+        self.assertAlmostEqual(actual['afterThirty']['goal'],586,delta=.000001)
+        self.assertTrue(actual['frozen'])
+        self.assertEqual((actual['finished']['mode'],actual['finished']['reason'],
+                          actual['finished']['progress']),('finished','clear',100))
+        self.assertAlmostEqual(actual['finished']['distance'],6400,delta=.000001)
+        self.assertAlmostEqual(actual['finished']['goal'],186,delta=.000001)
+        self.assertEqual(actual['simultaneous'],{'mode':'finished','reason':'collision','progress':100})
+        self.assertEqual(actual['partial'],{'reason':'collision','progress':50})
+        self.assertEqual(actual['elapsedOnly'],'running')
+        self.assert_isolated(page,errors,requests)
+
+    def test_shiba_sprite_follows_run_and_jump_and_missing_image_uses_fallback(self):
+        for broken in (False,True):
+            with self.subTest(broken=broken):
+                page,errors,requests=self.manual_runner(broken_image=broken)
+                initial=self.snapshot(page)
+                if broken:
+                    self.assertIsNone(initial['sprite'])
+                    self.assertEqual(page.evaluate('runnerImages[0].naturalWidth'),0)
+                else:
+                    sprite=initial['sprite']
+                    self.assertIsNotNone(sprite)
+                    self.assertTrue(sprite['src'].endswith('/assets/plush/shiba.webp'))
+                    self.assertEqual((sprite['naturalWidth'],sprite['naturalHeight']),(512,512))
+                    self.assertAlmostEqual(sprite['width']/sprite['height'],1,delta=.000001)
+                    self.assertGreater(sprite['width'],0)
+                    self.assertLessEqual(sprite['width'],100)
+                    self.assertLessEqual(sprite['height'],100)
+                self.assertAlmostEqual(initial['character']['x'],186,delta=.001)
+                self.assertAlmostEqual(initial['character']['y'],427,delta=.001)
+                self.toggle(page); page.evaluate('runnerClock.step(0)')
+                page.evaluate('runnerClock.advance(1000/12,60)')
+                running=self.snapshot(page)
+                self.assertAlmostEqual(running['character']['y'],423,delta=.001)
+                self.tap(page); page.evaluate('runnerClock.advance(450,60)')
+                jumped=self.snapshot(page)
+                self.assertAlmostEqual(jumped['character']['x'],186,delta=.001)
+                self.assertAlmostEqual(jumped['character']['y'],307,delta=.001)
+                if not broken:
+                    self.assertAlmostEqual(jumped['sprite']['y'],
+                      350-jumped['sprite']['height']*465/512,delta=.001)
+                    self.assertEqual(jumped['sprite']['width'],initial['sprite']['width'])
+                self.assertEqual(jumped['pending'],1)
+                self.assertEqual(page.locator('#runner-toggle').inner_text(),'一時停止')
+                self.assert_isolated(page,errors,requests)
 
 
 if __name__ == '__main__':
