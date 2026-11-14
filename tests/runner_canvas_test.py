@@ -129,7 +129,7 @@ GEOMETRY = """() => {
   const canvas = document.querySelector('#runner-canvas');
   const viewport = document.querySelector('#runner-viewport');
   const c = canvas.getBoundingClientRect(), v = viewport.getBoundingClientRect();
-  const button = document.querySelector('button');
+  const button = document.querySelector('#runner-toggle');
   const b = button.getBoundingClientRect();
   const transform = canvas.getContext('2d').getTransform();
   return {
@@ -261,6 +261,41 @@ class RunnerCanvasTest(unittest.TestCase):
                 page.locator('#runner-toggle').click()
                 self.assertEqual(page.locator('#runner-toggle').inner_text(), '再開')
                 self.assert_isolated(page, errors, requests)
+
+    def test_jump_button_style_position_and_disabled_state(self):
+        page, errors, requests = self.manual_runner()
+        jump = page.locator('#runner-jump')
+        toggle = page.locator('#runner-toggle')
+        self.assertTrue(jump.is_disabled())
+        self.assertLess(jump.bounding_box()['y'], toggle.bounding_box()['y'])
+        style = jump.evaluate("""button => {
+            const s = getComputedStyle(button);
+            return {background:s.backgroundImage, radius:s.borderRadius,
+                    height:button.getBoundingClientRect().height,
+                    width:button.getBoundingClientRect().width};
+        }""")
+        self.assertIn('rgb(231, 169, 186)', style['background'])
+        self.assertIn('rgb(200, 108, 137)', style['background'])
+        self.assertEqual(style['radius'], '18px')
+        self.assertGreaterEqual(style['height'], 58)
+        self.assertLessEqual(style['width'], 222)
+        self.toggle(page)
+        page.evaluate('runnerClock.step(0)')
+        self.assertFalse(jump.is_disabled())
+        jump.dispatch_event('click')
+        page.evaluate('runnerClock.advance(225)')
+        rising = self.snapshot(page)
+        self.assertAlmostEqual(rising['character']['y'], 470-43-90, delta=.01)
+        jump.dispatch_event('click')  # 空中追加タップは無視。
+        page.evaluate('runnerClock.advance(225)')
+        self.assertAlmostEqual(self.snapshot(page)['character']['y'], 470-43-120, delta=.01)
+        self.toggle(page)
+        self.assertTrue(jump.is_disabled())
+        paused = self.snapshot(page)
+        jump.dispatch_event('click')
+        self.assertEqual(page.evaluate('runnerClock.advance(1000)'), 0)
+        self.assert_same_scene(paused, self.snapshot(page))
+        self.assert_isolated(page, errors, requests)
 
     def test_resize_repaints_and_static_page_has_no_continuous_loop(self):
         page, errors, requests = self.open_runner()
