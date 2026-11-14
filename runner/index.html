@@ -18,9 +18,9 @@
       <span id="runner-mode" class="runner-badge" role="status" aria-live="polite">開始前</span>
     </header>
 
-    <dl class="runner-hud" aria-label="ゲームの状況（仮表示）">
-      <div><dt>現在の得点</dt><dd>0<span>点</span></dd></div>
-      <div><dt>残り時間</dt><dd>30<span>秒</span></dd></div>
+    <dl class="runner-hud" aria-label="ゲームの状況">
+      <div><dt>現在の得点</dt><dd><span id="runner-score">0</span><span class="runner-unit">点</span></dd></div>
+      <div><dt>残り時間</dt><dd><span id="runner-time">30</span><span class="runner-unit">秒</span></dd></div>
     </dl>
 
     <section id="runner-viewport" class="runner-viewport" aria-label="ゲーム画面">
@@ -30,13 +30,18 @@
           このブラウザではゲーム画面を表示できません。Canvasに対応したSafariなどで開いてください。
         </canvas>
       </div>
+      <section id="runner-result" class="runner-result" hidden role="status" aria-live="polite" aria-atomic="true" aria-labelledby="runner-result-title">
+        <h2 id="runner-result-title"></h2>
+        <p id="runner-result-message"></p>
+        <p class="runner-result-score">得点 <span id="runner-result-score">0</span>点</p>
+      </section>
       <p id="runner-status" class="runner-status" role="status">ゲーム画面を準備しています…</p>
       <noscript><p class="runner-status">ゲーム画面の表示にはJavaScriptを有効にしてください。</p></noscript>
     </section>
 
     <footer class="runner-footer">
-      <p class="runner-help">走行中は画面をタップして上下のレーンを切り替えます。<br>得点・時間は仮表示です。</p>
-      <div class="runner-controls" aria-label="走行の開始・一時停止・再開">
+      <p class="runner-help">タップでレーン切替。障害物をよけて30秒走ろう！<br>スター1個で10点。</p>
+      <div class="runner-controls" aria-label="走行の開始・一時停止・再開・もう一度">
         <button id="runner-toggle" class="runner-start" type="button" disabled>ゲーム開始</button>
       </div>
     </footer>
