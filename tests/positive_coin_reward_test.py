@@ -67,7 +67,7 @@ class PositiveCoinRewardTest(unittest.TestCase):
                     self.assertEqual(saved, {'amount': amount, 'stages': [stage] if stage else []})
                     result = self.page.locator('#result').inner_text()
                     if correct:
-                        self.assertIn(f'+{amount} コイン獲得！', result)
+                        self.assertIn(f'コインを{amount}枚獲得！', result)
                         self.assertTrue(self.page.locator('.coin-reward small').inner_text().endswith(label))
                         self.assertNotIn('0枚', result)
                         # 保存された金額・種類が再読み込み後にも変わらない。
@@ -78,7 +78,7 @@ class PositiveCoinRewardTest(unittest.TestCase):
                         self.assertEqual(self.page.locator('#result').inner_text(), result)
                         self.assertEqual(self.snapshot(), before)
                     else:
-                        self.assertNotIn('コイン獲得', result)
+                        self.assertNotIn('枚獲得', result)
                 after = self.snapshot()
                 self.assertEqual(len(after['answers']), 9)
                 self.assertEqual(len(after['coinClaims']), 2)
@@ -268,7 +268,7 @@ class PositiveCoinRewardTest(unittest.TestCase):
         self.ready()
         self.balance(2)
         self.assertEqual(self.page.evaluate('phase'), 'result')
-        self.assertNotIn('コイン獲得', self.page.locator('#result').inner_text())
+        self.assertNotIn('枚獲得', self.page.locator('#result').inner_text())
         self.assertNotIn('0枚', self.page.locator('#result').inner_text())
         self.assertEqual(self.snapshot(), before)
         self.next_question()

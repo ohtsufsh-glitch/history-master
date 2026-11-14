@@ -104,7 +104,7 @@ class QuizCoinDisplayTest(unittest.TestCase):
         self.assertTrue(self.page.locator('#crane-start').is_disabled())
         self.page.evaluate('async()=>{getAvailableCoins=originalBalance;await refreshCoinDisplay();}')
         self.balance(0)
-        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '0')
+        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '0枚')
 
     def test_committed_snapshot_uses_existing_single_readonly_transaction(self):
         self.install(mastered=True)
@@ -138,7 +138,7 @@ class QuizCoinDisplayTest(unittest.TestCase):
         }""")
         self.quiz()
         self.balance(2805)
-        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '2,805')
+        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '2,805枚')
 
     def test_reward_is_displayed_only_after_answer_transaction_commits(self):
         self.quiz()
@@ -158,7 +158,7 @@ class QuizCoinDisplayTest(unittest.TestCase):
         self.assertTrue(self.page.locator('#result').is_hidden())
         self.page.evaluate('async()=>{releaseSave();await answering;saveAnswer=originalSave;}')
         self.balance(2)
-        self.assertIn('+2 コイン獲得！', self.page.locator('#result').inner_text())
+        self.assertIn('コインを2枚獲得！', self.page.locator('#result').inner_text())
         self.assertNotIn('所持', self.page.locator('#result').inner_text())
         self.assertNotIn('+', self.page.locator('#quiz-coins').inner_text())
 
@@ -174,9 +174,9 @@ class QuizCoinDisplayTest(unittest.TestCase):
             earned = amount - (expected[i-1] if i else 0)
             result = self.page.locator('#result').inner_text()
             if earned:
-                self.assertIn(f'+{earned} コイン獲得！', result)
+                self.assertIn(f'コインを{earned}枚獲得！', result)
             else:
-                self.assertNotIn('コイン獲得', result)
+                self.assertNotIn('枚獲得', result)
             self.assertEqual(self.page.evaluate('currentProgress.mastered'), i in [1, 2, 5, 6])
         after = self.snapshot()
         self.assertEqual(len(after['answers']), 7)
@@ -193,7 +193,7 @@ class QuizCoinDisplayTest(unittest.TestCase):
         self.quiz()
         self.answer()
         self.balance(4)
-        self.assertIn('+4 コイン獲得！', self.page.locator('#result').inner_text())
+        self.assertIn('コインを4枚獲得！', self.page.locator('#result').inner_text())
 
     def test_real_transaction_abort_does_not_add_uncommitted_reward(self):
         self.install(mastered=True)
@@ -245,7 +245,7 @@ class QuizCoinDisplayTest(unittest.TestCase):
         }""")
         self.answer()
         self.assertEqual(self.page.locator('#quiz-coin-amount').inner_text(), '確認できません')
-        self.assertIn('+2 コイン獲得！', self.page.locator('#result').inner_text())
+        self.assertIn('コインを2枚獲得！', self.page.locator('#result').inner_text())
         before = self.snapshot()
         self.assertEqual(len(before['answers']), 1)
         self.page.evaluate('async()=>{saveAnswer=originalSave;getAvailableCoins=originalBalance;await refreshCoinDisplay();}')
@@ -293,7 +293,7 @@ class QuizCoinDisplayTest(unittest.TestCase):
         self.page.reload()
         self.ready()
         self.balance(2)
-        self.assertIn('+2 コイン獲得！', self.page.locator('#result').inner_text())
+        self.assertIn('コインを2枚獲得！', self.page.locator('#result').inner_text())
         self.assertEqual(self.snapshot(), before)
 
     def test_other_screen_return_reads_latest_balance(self):
