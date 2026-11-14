@@ -18,9 +18,9 @@ def git(*args):
 
 def is_app_path(path):
     # 現在の配信物。追加のJS/CSS等を分離・配信するときはここも更新する。
-    # .gitkeepは画像ではなく、空ディレクトリを保持する開発用ファイル。
+    # .gitkeepは配信物ではなく、空ディレクトリを保持する開発用ファイル。
     return path == "index.html" or (
-        path.startswith("assets/") and PurePosixPath(path).name != ".gitkeep"
+        path.startswith(("assets/", "runner/")) and PurePosixPath(path).name != ".gitkeep"
     )
 
 

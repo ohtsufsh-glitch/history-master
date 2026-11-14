@@ -122,10 +122,31 @@ class CheckVersionTest(unittest.TestCase):
         head = self.commit({"assets/new.webp": "new", "index.html": html("v1.7.4")})
         self.assertIn("OK:", check.check_versions(self.base, head))
 
+    def test_runner_add_modify_delete_and_move_require_bump(self):
+        runner_base = self.commit({"runner/game.js": "fixture"})
+        cases = (
+            {"runner/index.html": "new page"},
+            {"runner/style.css": "new style"},
+            {"runner/patterns.js": "future module"},
+            {"runner/assets/character.svg": "future asset"},
+            {"runner/game.js": "updated"},
+            {"runner/game.js": None},
+            {"runner/game.js": None, "docs/game.js": "fixture"},
+        )
+        for files in cases:
+            with self.subTest(files=files):
+                self.run_git("reset", "--hard", runner_base)
+                head = self.commit(files)
+                with self.assertRaises(bump.VersionError):
+                    check.check_versions(runner_base, head)
+                bumped = self.commit({"index.html": html("v1.7.4")})
+                self.assertIn("OK:", check.check_versions(runner_base, bumped))
+
     def test_docs_tests_and_tools_only_do_not_require_bump_even_when_main_advances(self):
         head = self.commit({name: "fixture" for name in (
             "README.md", "AGENTS.md", "docs/guide.md", "tests/example_test.py",
             "scripts/tool.py", ".github/workflows/check.yml", "assets/empty/.gitkeep",
+            "runner/assets/.gitkeep",
         )})
         self.assertIn("版更新は不要", check.check_versions(self.base, head))
         self.run_git("checkout", "--detach", self.base)

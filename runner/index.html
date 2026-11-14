@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#eef6f1">
+  <title>ランナーゲーム</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./game.js"></script>
+</head>
+<body>
+  <main class="runner-app" aria-labelledby="runner-title">
+    <header class="runner-header">
+      <div>
+        <p class="runner-eyebrow">わくわくランナー</p>
+        <h1 id="runner-title">ランナーゲーム</h1>
+      </div>
+      <span class="runner-badge">準備中</span>
+    </header>
+
+    <dl class="runner-hud" aria-label="ゲームの状況（仮表示）">
+      <div><dt>現在の得点</dt><dd>0<span>点</span></dd></div>
+      <div><dt>残り時間</dt><dd>30<span>秒</span></dd></div>
+    </dl>
+
+    <section id="runner-viewport" class="runner-viewport" aria-label="ゲーム画面">
+      <div id="runner-stage" class="runner-stage">
+        <canvas id="runner-canvas" width="960" height="540" role="img"
+          aria-label="空と丘を背景にした上下2つの走行レーン。下のレーンに仮のキャラクターが1体います。静止した確認用の画面です。">
+          このブラウザではゲーム画面を表示できません。Canvasに対応したSafariなどで開いてください。
+        </canvas>
+      </div>
+      <p id="runner-status" class="runner-status" role="status">ゲーム画面を準備しています…</p>
+      <noscript><p class="runner-status">ゲーム画面の表示にはJavaScriptを有効にしてください。</p></noscript>
+    </section>
+
+    <footer class="runner-footer">
+      <p class="runner-help">画面をタップして上下のレーンを切り替える予定です。<br>今は静止した画面の確認だけができます。</p>
+      <div class="runner-controls" aria-label="ゲーム開始予定領域">
+        <button class="runner-start" type="button" disabled>ゲーム開始（開発中）</button>
+      </div>
+    </footer>
+  </main>
+</body>
+</html>
