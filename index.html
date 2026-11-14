@@ -501,7 +501,7 @@
     .plush-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;}
     .plush-item{position:relative;min-width:0;text-align:center;padding:9px 4px 12px;border-radius:13px;border:1px solid #efdbc7;background:linear-gradient(#fffdf7,#fff4e8);}
     .plush-item img{width:100%;max-width:105px;aspect-ratio:1;object-fit:contain;display:block;margin:0 auto 5px;}
-    .plush-item.not-owned img{filter:grayscale(1) brightness(.5);opacity:.45;}
+    .plush-item.not-owned img{filter:brightness(.5);opacity:.45;}
     .plush-item strong{font-size:.75rem;display:block;overflow-wrap:anywhere;line-height:1.5;}
     .plush-item .owned{display:block;color:#8b5425;font-weight:900;font-size:.88rem;}
     button.plush-item{font:inherit;color:inherit;cursor:pointer;min-height:44px;touch-action:manipulation;}
@@ -920,7 +920,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.5";
+const APP_VERSION = "v1.7.6";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -1348,6 +1348,8 @@ function paintArcadePrizes() {
 // 獲得済みだけ操作可能。未獲得の秘密はID・ラベルにも正体を出さない。
 function plushCollectionItem(id,amount) {
   const shown=plushPresentation(id,amount>0);
+  // 未獲得の通常景品は画像自体をモノクロにし、Safariの長押しプレビューでも色を出さない。
+  const path=amount>0||isSecretPlush(id)?shown.path:`assets/plush/monochrome/${id}.webp`;
   const box=document.createElement(amount>0?"button":"div");
   box.className="plush-item"+(amount?"":" not-owned")+(!amount&&isSecretPlush(id)?" secret-locked":"");
   if(amount>0){
@@ -1355,7 +1357,7 @@ function plushCollectionItem(id,amount) {
     box.setAttribute("aria-label",`${shown.name}を大きく見る（獲得数：${amount}体）`);
     box.setAttribute("aria-haspopup","dialog");
   }
-  const img=document.createElement("img");img.src=shown.path;img.alt=shown.name;img.loading="lazy";img.decoding="async";
+  const img=document.createElement("img");img.src=path;img.alt=shown.name;img.loading="lazy";img.decoding="async";
   const name=document.createElement("strong");name.textContent=shown.name;
   const count=document.createElement("span");count.className="owned";count.textContent=amount?`×${amount}`:"未獲得";
   box.append(img,name,count);return box;
