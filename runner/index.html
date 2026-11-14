@@ -15,7 +15,7 @@
         <p class="runner-eyebrow">わくわくランナー</p>
         <h1 id="runner-title">ランナーゲーム</h1>
       </div>
-      <span class="runner-badge">準備中</span>
+      <span id="runner-mode" class="runner-badge" role="status" aria-live="polite">開始前</span>
     </header>
 
     <dl class="runner-hud" aria-label="ゲームの状況（仮表示）">
@@ -26,7 +26,7 @@
     <section id="runner-viewport" class="runner-viewport" aria-label="ゲーム画面">
       <div id="runner-stage" class="runner-stage">
         <canvas id="runner-canvas" width="960" height="540" role="img"
-          aria-label="空と丘を背景にした上下2つの走行レーン。下のレーンに仮のキャラクターが1体います。静止した確認用の画面です。">
+          aria-label="空と丘を背景にした上下2つの走行レーン。走行中に画面をタップするとキャラクターが反対のレーンへ移動します。">
           このブラウザではゲーム画面を表示できません。Canvasに対応したSafariなどで開いてください。
         </canvas>
       </div>
@@ -35,9 +35,9 @@
     </section>
 
     <footer class="runner-footer">
-      <p class="runner-help">画面をタップして上下のレーンを切り替える予定です。<br>今は静止した画面の確認だけができます。</p>
-      <div class="runner-controls" aria-label="ゲーム開始予定領域">
-        <button class="runner-start" type="button" disabled>ゲーム開始（開発中）</button>
+      <p class="runner-help">走行中は画面をタップして上下のレーンを切り替えます。<br>得点・時間は仮表示です。</p>
+      <div class="runner-controls" aria-label="走行の開始・一時停止・再開">
+        <button id="runner-toggle" class="runner-start" type="button" disabled>ゲーム開始</button>
       </div>
     </footer>
   </main>
