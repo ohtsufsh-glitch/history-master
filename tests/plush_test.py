@@ -167,6 +167,77 @@ class PlushTest(unittest.TestCase):
             self.assertGreater(image['height'], 0)
         self.assertEqual(actual['samples'], [[prize_id] * 7 for prize_id in IDS for _ in range(2)])
 
+    def test_unowned_normal_sources_decode_as_monochrome_with_original_size_and_alpha(self):
+        self.install(self.fixture())
+        self.page.evaluate("navigate('arcade','student')")
+        images = self.page.locator('#arcade-collection-list .not-owned img')
+        self.assertEqual(images.count(), 20)
+        self.assertEqual(images.evaluate_all("imgs=>imgs.map(img=>img.getAttribute('src'))"),
+                         [f'assets/plush/monochrome/{prize_id}.webp' for prize_id in IDS])
+        directory = ROOT / 'assets' / 'plush' / 'monochrome'
+        self.assertEqual({p.name for p in directory.iterdir()}, {f'{prize_id}.webp' for prize_id in IDS})
+        for prize_id, image in zip(IDS, images.all()):
+            with self.subTest(prize=prize_id):
+                data = (directory / f'{prize_id}.webp').read_bytes()
+                self.assertEqual((data[:4], data[8:12]), (b'RIFF', b'WEBP'))
+                image.scroll_into_view_if_needed()
+                actual = image.evaluate("""async (img,id)=>{
+                  await img.decode();
+                  const original=new Image();original.src=plushPath(id);await original.decode();
+                  const pixels=image=>{
+                    const canvas=document.createElement('canvas');
+                    canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
+                    const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);
+                    return ctx.getImageData(0,0,canvas.width,canvas.height).data;
+                  };
+                  const gray=pixels(img),color=pixels(original);
+                  let monochrome=true,sameAlpha=gray.length===color.length,min=255,max=0;
+                  for(let i=0;i<gray.length;i+=4){
+                    monochrome&&=gray[i]===gray[i+1]&&gray[i+1]===gray[i+2];
+                    sameAlpha&&=gray[i+3]===color[i+3];
+                    min=Math.min(min,gray[i+3]);max=Math.max(max,gray[i+3]);
+                  }
+                  return {size:[img.naturalWidth,img.naturalHeight],
+                    originalSize:[original.naturalWidth,original.naturalHeight],
+                    monochrome,sameAlpha,min,max,opacity:getComputedStyle(img).opacity};
+                }""", prize_id)
+                self.assertEqual(actual, {'size': [512, 512], 'originalSize': [512, 512],
+                                          'monochrome': True, 'sameAlpha': True,
+                                          'min': 0, 'max': 255, 'opacity': '0.45'})
+        # 未獲得でもプレイ画面の通常景品には従来のカラー原画像を使う。
+        machine = self.page.locator('.crane-toy img').evaluate_all("imgs=>imgs.map(img=>img.getAttribute('src'))")
+        self.assertTrue(machine)
+        self.assertTrue(all(path in [f'assets/plush/{prize_id}.webp' for prize_id in IDS] for path in machine))
+
+    def test_profile_switch_changes_all_normal_sources_without_changing_saved_records(self):
+        data = self.fixture(['shiba', 'shiba'], 'student')
+        other = self.fixture(IDS[1:], 'test')
+        for store in ['arcadePlays', 'arcadePrizes', 'coinSpends']:
+            data[store] += other[store]
+        data['arcadeBoards'] = [data['arcadeBoards'][0], other['arcadeBoards'][1]]
+        self.install(data)
+        before = self.snapshot()
+        balances = self.page.evaluate("Promise.all(['student','test'].map(who=>getAvailableCoins(who)))")
+        for who in ['student', 'test', 'student']:
+            with self.subTest(profile=who):
+                self.page.evaluate("who=>navigate('arcade',who)", who)
+                actual = self.page.locator('#arcade-collection-list .plush-item').evaluate_all("""items=>items.map(item=>({
+                  path:item.querySelector('img').getAttribute('src'),name:item.querySelector('strong').textContent,
+                  count:item.querySelector('.owned').textContent,tag:item.tagName
+                }))""")
+                expected = []
+                for prize_id in IDS:
+                    amount = (2 if prize_id == 'shiba' else 0) if who == 'student' else (0 if prize_id == 'shiba' else 1)
+                    expected.append({'path': f'assets/plush/{"" if amount else "monochrome/"}{prize_id}.webp',
+                                     'name': TYPES[prize_id], 'count': f'×{amount}' if amount else '未獲得',
+                                     'tag': 'BUTTON' if amount else 'DIV'})
+                self.assertEqual(actual, expected)
+                self.assertEqual(self.snapshot(), before, '学習履歴・コイン・景品を含む全16ストアを維持する')
+                self.assertEqual(self.page.evaluate("Promise.all(['student','test'].map(who=>getAvailableCoins(who)))"), balances)
+        self.page.reload()
+        self.ready()
+        self.assertEqual(self.snapshot(), before)
+
     def test_collection_order_counts_dark_images_completion_and_dynamic_total(self):
         self.install(self.fixture(['shiba', 'shiba', 'rabbit'], 'student'))
         self.page.evaluate("async()=>{profile='student';await openArcade();await refreshArcadeHome();}")
@@ -180,7 +251,7 @@ class PlushTest(unittest.TestCase):
         filters = self.page.locator('#arcade-collection-list .plush-item img').evaluate_all(
             "imgs=>imgs.map(img=>({filter:getComputedStyle(img).filter,lazy:img.loading}))")
         self.assertEqual(filters[0]['filter'], 'none')
-        self.assertIn('grayscale', filters[1]['filter'])
+        self.assertEqual(filters[1]['filter'], 'brightness(0.5)')
         self.assertTrue(all(item['lazy'] == 'lazy' for item in filters))
         self.install(self.fixture(IDS[:-1]))
         self.page.evaluate("async()=>{profile='test';await renderArcadeCollection();}")
@@ -199,7 +270,7 @@ class PlushTest(unittest.TestCase):
 
     def test_collection_fits_ipad_and_iphone_and_all_lazy_images_load_on_scroll(self):
         self.page.evaluate('openArcade()')
-        for width, height, columns in [(1180, 820, 5), (1024, 768, 5), (390, 844, 3)]:
+        for width, height, columns in [(1180, 820, 5), (1024, 768, 5), (768, 1024, 5), (390, 844, 3), (375, 812, 3)]:
             with self.subTest(width=width):
                 self.page.set_viewport_size({'width': width, 'height': height})
                 for image in self.page.locator('#arcade-collection-list .plush-item img').all():

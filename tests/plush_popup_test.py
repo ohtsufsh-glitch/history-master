@@ -91,7 +91,8 @@ class PlushPopupTest(unittest.TestCase):
         self.assertEqual(item.evaluate('el=>el.tagName'), 'DIV')
         self.assertEqual(item.evaluate('el=>el.tabIndex'), -1)
         self.assertIsNone(item.get_attribute('data-prize-id'))
-        self.assertIn('grayscale(1)', item.locator('img').evaluate('el=>getComputedStyle(el).filter'))
+        self.assertEqual(item.locator('img').get_attribute('src'), 'assets/plush/monochrome/sloth.webp')
+        self.assertEqual(item.locator('img').evaluate('el=>getComputedStyle(el).filter'), 'brightness(0.5)')
         item.click()
         self.assert_cleared()
 
