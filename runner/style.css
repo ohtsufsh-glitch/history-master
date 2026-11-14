@@ -50,7 +50,7 @@ h1 { margin: 0; font-size: clamp(1.2rem, 3vw, 1.65rem); line-height: 1.3; }
 .runner-hud > div { display: flex; align-items: baseline; gap: 10px; }
 .runner-hud dt { font-size: .8rem; color: #53675e; }
 .runner-hud dd { margin: 0; font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.2; }
-.runner-hud dd span { margin-left: 3px; font-size: .85rem; font-weight: 600; }
+.runner-hud dd .runner-unit { margin-left: 3px; font-size: .85rem; font-weight: 600; }
 
 .runner-viewport {
   position: relative;
@@ -74,8 +74,13 @@ h1 { margin: 0; font-size: clamp(1.2rem, 3vw, 1.65rem); line-height: 1.3; }
 }
 
 #runner-canvas { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; -webkit-user-select: none; }
-.runner-stage[hidden], .runner-status[hidden] { display: none; }
+.runner-stage[hidden], .runner-status[hidden], .runner-result[hidden] { display: none; }
 .runner-status { position: absolute; inset: 0; display: grid; place-content: center; margin: 0; padding: 16px; text-align: center; font-size: .9rem; line-height: 1.6; background: #eef6f1; }
+.runner-result { position: absolute; z-index: 1; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(340px, calc(100% - 24px)); max-height: calc(100% - 16px); overflow: auto; padding: 18px; border: 2px solid #6d9b77; border-radius: 18px; background: #fffdf3f5; box-shadow: 0 8px 24px #254a3c30; text-align: center; }
+.runner-result h2 { margin: 0; font-size: 1.35rem; line-height: 1.3; }
+.runner-result p { margin: 8px 0 0; font-size: .85rem; line-height: 1.5; }
+.runner-result .runner-result-score { font-size: 1rem; }
+#runner-result-score { margin-inline: 6px 3px; font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 
 .runner-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .runner-help { margin: 0; color: #53675e; font-size: .8rem; line-height: 1.6; }
@@ -98,6 +103,9 @@ h1 { margin: 0; font-size: clamp(1.2rem, 3vw, 1.65rem); line-height: 1.3; }
   .runner-hud dd { font-size: 1.3rem; }
   .runner-help { font-size: .75rem; }
   .runner-stage { border-radius: 12px; }
+  .runner-result { padding: 10px 16px; border-radius: 12px; }
+  .runner-result h2 { font-size: 1.15rem; }
+  .runner-result p { margin-top: 5px; }
 }
 
 /* 大きな文字や拡大表示では、内容を切らずに縦スクロールを許可する。 */
