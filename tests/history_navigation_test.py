@@ -156,7 +156,7 @@ class HistoryNavigationTest(unittest.TestCase):
             self.forward('quiz')
             self.return_event()
         self.assertEqual(self.page.locator('#result').inner_text(), result)
-        self.assertIn('+2 コイン獲得', result)
+        self.assertIn('コインを2枚獲得', result)
         self.assertEqual(self.snapshot(), before)
         self.page.reload()
         self.ready()
@@ -229,7 +229,7 @@ class HistoryNavigationTest(unittest.TestCase):
         self.release_grade()
         self.page.evaluate('reconcilePage()')
         self.screen('home')
-        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '2')
+        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '2枚')
         self.assertEqual(len(self.snapshot()['answers']), 1)
         self.back('quiz')
         self.assertEqual(self.page.evaluate('phase'), 'result')
@@ -244,7 +244,7 @@ class HistoryNavigationTest(unittest.TestCase):
         self.release_grade()
         self.page.evaluate('reconcilePage()')
         self.assertEqual(self.page.evaluate('profile'), 'test')
-        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '0')
+        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '0枚')
         after = self.snapshot()
         for name in ['answers', 'progress', 'sessions', 'coinEvents', 'reviewEvents']:
             self.assertTrue(all(r['profile'] == 'student' for r in after[name]), name)
@@ -263,7 +263,7 @@ class HistoryNavigationTest(unittest.TestCase):
         self.page.reload()
         self.ready()
         self.assertEqual(self.page.evaluate('phase'), 'result')
-        self.assertIn('+2 コイン獲得', self.page.locator('#result').inner_text())
+        self.assertIn('コインを2枚獲得', self.page.locator('#result').inner_text())
         self.assertEqual(self.snapshot(), saved)
 
     def test_save_rejection_and_transaction_abort_keep_all_stores_unchanged(self):
@@ -298,11 +298,11 @@ class HistoryNavigationTest(unittest.TestCase):
         self.install(mastered=True)
         other = self.second_tab()
         before = self.snapshot()
-        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '805')
+        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '805枚')
         other.evaluate("purchaseCranePlay(newArcadePlay('student'))")
-        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '805')
+        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '805枚')
         self.return_event()
-        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '705')
+        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '705枚')
         after = self.snapshot()
         for name in ['coinEvents', 'reviewEvents', 'answers', 'progress']:
             self.assertEqual(after[name], before[name], name)
@@ -316,7 +316,7 @@ class HistoryNavigationTest(unittest.TestCase):
             {'names': ['coinEvents', 'reviewEvents', 'coinSpends'], 'mode': 'readonly'}]})
         self.page.reload()
         self.ready()
-        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '705')
+        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '705枚')
         self.assertEqual(self.snapshot(), after)
 
     def test_balance_read_failure_marks_value_unknown_and_recovers(self):
@@ -329,7 +329,7 @@ class HistoryNavigationTest(unittest.TestCase):
         self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '確認できません')
         self.page.evaluate('()=>{getAvailableCoins=originalBalance;}')
         self.return_event()
-        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '805')
+        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '805枚')
 
     def test_student_test_admin_quiz_arcade_history_is_separated(self):
         self.install(mastered=True)
@@ -340,7 +340,7 @@ class HistoryNavigationTest(unittest.TestCase):
         self.screen('admin')
         self.page.locator('#admin-start-test').click()
         self.screen('home')
-        self.page.wait_for_function("profile==='test'&&document.querySelector('#home-coin-amount').textContent==='9'")
+        self.page.wait_for_function("profile==='test'&&document.querySelector('#home-coin-amount').textContent==='9枚'")
         self.quiz()
         self.answer()
         self.page.locator('#back-home').click()
@@ -439,7 +439,7 @@ class HistoryNavigationTest(unittest.TestCase):
         }""")
         self.page.wait_for_function('typeof window.releaseBalance==="function"')
         self.page.evaluate("async()=>{getAvailableCoins=savedBalance;await navigateHome('test');releaseBalance();await oldCoins;}")
-        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '9')
+        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '9枚')
         self.page.evaluate("""()=>{
           window.savedLatest=latestArcadePlay;
           latestArcadePlay=async who=>{if(who==='test')await new Promise(r=>window.releaseArcade=r);return savedLatest(who);};
@@ -448,7 +448,7 @@ class HistoryNavigationTest(unittest.TestCase):
         self.page.wait_for_function('typeof window.releaseArcade==="function"')
         self.page.evaluate("async()=>{latestArcadePlay=savedLatest;await navigateHome('student');releaseArcade();await oldArcade;}")
         self.screen('home')
-        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '805')
+        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '805枚')
 
     def test_external_entry_browser_back_and_in_game_home_fallback(self):
         external = self.url.replace('127.0.0.1', 'localhost').replace('index.html', 'README.md')

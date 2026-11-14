@@ -16,7 +16,7 @@ from playwright.sync_api import sync_playwright
 from plush_test import FIXTURE_HELPERS, ROOT, QuietHandler
 
 
-TEST_NOTE = '🔧 テストモード：金貨を消費せず何回でも遊べます。景品と履歴はテスト用に保存されます。'
+TEST_NOTE = '🔧 テストモード：コインを消費せず何回でも遊べます。景品と履歴はテスト用に保存されます。'
 
 
 class UiCleanupTest(unittest.TestCase):
@@ -129,16 +129,16 @@ class UiCleanupTest(unittest.TestCase):
         self.assert_header('📖 学習用')
         self.assertTrue(self.page.locator('#open-admin').is_visible())
         self.assertTrue(self.page.locator('#home-coins').is_visible())
-        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '805')
+        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '805枚')
         self.page.locator('#open-arcade').click()
-        self.page.wait_for_function("document.querySelector('#arcade-balance').textContent==='805'")
+        self.page.wait_for_function("document.querySelector('#arcade-balance').textContent==='805枚'")
         self.assert_header('📖 学習用')
         self.assert_student_note_removed()
         self.assertEqual(self.page.locator('#arcade-hint').inner_text(), '途中で閉じても続きから再開できます。')
         self.page.locator('#crane-start').click()
         self.page.wait_for_function("arcadePlay?.status==='aiming'&&!arcadeBusy")
-        self.assertEqual(self.page.locator('#arcade-balance').inner_text(), '705')
-        self.assertEqual(self.page.locator('#home-coin-amount').text_content(), '705')
+        self.assertEqual(self.page.locator('#arcade-balance').inner_text(), '705枚')
+        self.assertEqual(self.page.locator('#home-coin-amount').text_content(), '705枚')
         self.page.locator('#arcade-back').click()
         self.page.wait_for_function("!document.querySelector('#home').classList.contains('hidden')")
         student = self.page.evaluate('snapshotAllStores()')
@@ -147,7 +147,7 @@ class UiCleanupTest(unittest.TestCase):
         self.page.locator('#admin-start-test').click()
         self.page.wait_for_function("profile==='test'&&!document.querySelector('#home').classList.contains('hidden')")
         self.assert_header('🔧 テスト中')
-        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '9')
+        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '9枚')
         self.page.locator('#open-arcade').click()
         self.page.wait_for_function("document.querySelector('#arcade-balance').textContent==='∞（無料）'")
         self.assertTrue(self.page.locator('#arcade-profile-note').is_visible())
@@ -160,9 +160,9 @@ class UiCleanupTest(unittest.TestCase):
         self.page.locator('#admin-back').click()
         self.page.wait_for_function("profile==='student'&&!document.querySelector('#home').classList.contains('hidden')")
         self.assert_header('📖 学習用')
-        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '705')
+        self.assertEqual(self.page.locator('#home-coin-amount').inner_text(), '705枚')
         self.page.locator('#open-arcade').click()
-        self.page.wait_for_function("document.querySelector('#arcade-balance').textContent==='705'")
+        self.page.wait_for_function("document.querySelector('#arcade-balance').textContent==='705枚'")
         self.assert_student_note_removed()
         self.assertIsNone(self.page.evaluate('arcadeSweepFrame'))
         after = self.page.evaluate('snapshotAllStores()')

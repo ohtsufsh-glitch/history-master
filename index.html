@@ -40,9 +40,10 @@
     /* 王冠の金貨WebPをホーム・問題画面・正解結果で共用。 */
     .gold-coin { display:block; width:27px; height:27px; object-fit:contain; flex:0 0 auto; filter:drop-shadow(0 2px 1px #9866173d); }
     .coin-home-line { display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fff9e8;border:1px solid #f0dfa9;padding:10px 13px;border-radius:12px;margin:4px 0 16px; }
-    .coin-home-line strong { display:inline-flex;align-items:center;gap:6px;color:#79570c;white-space:nowrap; }
+    .coin-home-line strong { display:inline-flex;align-items:center;gap:6px;color:#79570c;min-width:0;max-width:100%; }
+    #home-coin-amount, #arcade-balance, #arcade-home-cost-text, .coin-reward-title > span { min-width:0;overflow-wrap:anywhere; }
     .coin-reward { display:flex;flex-direction:column;align-items:flex-start;gap:4px;border-radius:11px;background:#fff4c9;border:1px solid #ead18b;color:#795300;padding:11px 12px;margin:12px 0 7px;font-weight:800; }
-    .coin-reward-title { display:inline-flex;align-items:center;gap:7px;line-height:1.5; }
+    .coin-reward-title { display:inline-flex;align-items:center;gap:7px;line-height:1.5;max-width:100%; }
     .coin-reward .gold-coin { width:31px; height:31px; }
     .coin-reward small {display:block;font-weight:500;color:#765f33;font-size:.77rem;}
 
@@ -378,14 +379,14 @@
       margin-top:6px;
       align-items:stretch;
     }
-    .progress-head-right { display:flex; align-items:center; justify-content:flex-end; }
+    .progress-head-right { display:flex; align-items:center; justify-content:flex-end; min-width:0; max-width:100%; }
     .progress-coin {
       margin:0;
       padding:6px 11px;
       border-radius:999px;
       background:linear-gradient(180deg,#fff7e5,#f9ecc8);
       border:1px solid #ebd599;
-      white-space:nowrap;
+      max-width:100%;
     }
     .progress-coin strong { color:#75551e; }
     .era-select-heading { margin:0; }
@@ -448,7 +449,8 @@
 
     /* v1.6.2 ぬいぐるみキャッチャー（タッチ操作優先） */
     .arcade-home-panel { background:linear-gradient(145deg,#fff7e5,#fffdf6);border-color:#ddc487; }
-    .arcade-home-cost,.arcade-balance{display:flex;align-items:center;gap:7px;font-weight:800;color:#805315;background:#fff3ce;border-radius:999px;padding:7px 12px;white-space:nowrap;}
+    .arcade-home-cost,.arcade-balance{display:flex;align-items:center;gap:7px;font-weight:800;color:#805315;background:#fff3ce;border-radius:999px;padding:7px 12px;min-width:0;max-width:100%;}
+    .arcade-home-cost img,.arcade-balance img{flex:0 0 auto;}
     .arcade-home-body{display:flex;align-items:center;gap:18px;margin:8px 0;}
     .arcade-home-preview{flex:0 0 100px;height:92px;display:flex;align-items:center;justify-content:center;border-radius:17px;background:linear-gradient(135deg,#ffe6c2,#dfedf3);border:2px solid #f1d2a4;font-size:2.2rem;letter-spacing:-5px;}
     .arcade-home-preview span{transform:translateY(-13px);font-size:1.3rem;}
@@ -620,7 +622,7 @@
       <div class="panel-head">
         <div><span class="section-kicker">PROGRESS</span><h3>10時代の理解度</h3></div>
         <div class="progress-head-right">
-          <div class="coin-home-line progress-coin"><strong id="home-coins"><img class="gold-coin" src="assets/coins/crown-gold.webp" alt="" aria-hidden="true" width="27" height="27" decoding="async"><span id="home-coin-amount">0</span> コイン</strong></div>
+          <div class="coin-home-line progress-coin"><strong id="home-coins"><img class="gold-coin" src="assets/coins/crown-gold.webp" alt="" aria-hidden="true" width="27" height="27" decoding="async">コイン <span id="home-coin-amount">0枚</span></strong></div>
         </div>
       </div>
       <div class="dashboard-grid">
@@ -656,10 +658,10 @@
     </section>
 
     <div id="game-center-home" class="home-panel arcade-home-panel">
-      <div class="panel-head"><div><span class="section-kicker">ARCADE</span><h3>🧸 ぬいぐるみキャッチャー</h3></div><div class="arcade-home-cost"><img src="assets/coins/crown-gold.webp" width="30" height="30" alt=""><span id="arcade-home-cost-text">100枚 / 1プレイ</span></div></div>
+      <div class="panel-head"><div><span class="section-kicker">ARCADE</span><h3>🧸 ぬいぐるみキャッチャー</h3></div><div class="arcade-home-cost"><img src="assets/coins/crown-gold.webp" width="30" height="30" alt=""><span id="arcade-home-cost-text">コイン100枚 / 1プレイ</span></div></div>
       <div class="arcade-home-body">
         <div class="arcade-home-preview" aria-hidden="true">🧸 <span>🎁</span> 🕹️</div>
-        <div class="arcade-home-copy"><p id="arcade-home-description">金貨を使ってクレーンに挑戦！ かわいいぬいぐるみを集めよう！</p><p id="arcade-home-status" class="small muted">景品を集めよう</p></div>
+        <div class="arcade-home-copy"><p id="arcade-home-description">コインを使ってクレーンに挑戦！ かわいいぬいぐるみを集めよう！</p><p id="arcade-home-status" class="small muted">景品を集めよう</p></div>
       </div>
       <button id="open-arcade" class="primary arcade-entry" type="button">キャッチャーで遊ぶ →</button>
     </div>
@@ -673,7 +675,7 @@
 
   <section id="arcade" class="card arcade-screen hidden" aria-label="ぬいぐるみキャッチャー">
     <button id="arcade-back" type="button" class="nav">← 学習ホームに戻る</button>
-    <div class="arcade-title-row"><div><span class="section-kicker">PLUSH CATCHER</span><h2>🧸 ぬいぐるみキャッチャー</h2></div><div class="arcade-balance"><img src="assets/coins/crown-gold.webp" alt="" width="33" height="33"><strong id="arcade-balance">0</strong></div></div>
+    <div class="arcade-title-row"><div><span class="section-kicker">PLUSH CATCHER</span><h2>🧸 ぬいぐるみキャッチャー</h2></div><div class="arcade-balance"><img src="assets/coins/crown-gold.webp" alt="" width="33" height="33">コイン <strong id="arcade-balance">0枚</strong></div></div>
     <p id="arcade-profile-note" class="arcade-profile-note hidden"></p>
     <p class="arcade-intro">アームが自動で左右に動きます。「キャッチ！」でタイミングよく止めよう！ つかんだ景品を出口まで運べたらゲットです。</p>
     <div class="machine-wrap">
@@ -686,12 +688,12 @@
         <div class="crane-floor" aria-hidden="true"></div><div class="crane-chute" aria-hidden="true">⬇ 景品出口</div>
       </div>
       <div class="machine-lower">
-        <p id="arcade-message" class="arcade-message" role="status" aria-live="polite">100金貨で1回遊べます。</p>
+        <p id="arcade-message" class="arcade-message" role="status" aria-live="polite">コイン100枚で1回遊べます。</p>
         <div id="crane-secret-reveal" class="secret-reveal hidden" role="status" aria-live="polite" aria-atomic="true"></div>
         <div id="crane-controls" class="crane-controls hidden">
           <button id="crane-catch" type="button" class="crane-catch" aria-label="自動で動くアームを止めてキャッチする">🎯 キャッチ！</button>
         </div>
-        <button id="crane-start" type="button" class="primary crane-start">100金貨でプレイ</button>
+        <button id="crane-start" type="button" class="primary crane-start">コイン100枚でプレイ</button>
         <button id="crane-replace" type="button" class="small-action crane-replace">🔄 景品を入れ替える</button>
         <p id="arcade-hint" class="arcade-hint">途中で閉じても続きから再開できます。</p>
       </div>
@@ -859,7 +861,7 @@
   <section id="quiz" class="hidden">
     <div class="quiz-toolbar">
       <button class="quiz-home" id="back-home" type="button">🏠 ホームへ</button>
-      <div id="quiz-coins" class="quiz-coins" role="status" aria-live="polite" aria-atomic="true"><img class="gold-coin" src="assets/coins/crown-gold.webp" alt="" aria-hidden="true" width="27" height="27" decoding="async"><span id="quiz-coin-amount">確認中…</span></div>
+      <div id="quiz-coins" class="quiz-coins" role="status" aria-label="コイン残高" aria-live="polite" aria-atomic="true"><img class="gold-coin" src="assets/coins/crown-gold.webp" alt="" aria-hidden="true" width="27" height="27" decoding="async"><span id="quiz-coin-amount">確認中…</span></div>
     </div>
     <div class="card">
       <div class="era-row"><h2 id="quiz-era" style="margin:0"></h2><span id="quiz-status" class="tag"></span></div>
@@ -920,7 +922,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.6";
+const APP_VERSION = "v1.7.7";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -1022,7 +1024,7 @@ async function refreshCoinDisplay() {
     const balance=await getAvailableCoins(ctx.who);
     if(viewCurrent(ctx)&&request===coinRender) {
       const amount=balance.toLocaleString("ja-JP");
-      $("home-coin-amount").textContent=amount;
+      $("home-coin-amount").textContent=`${amount}枚`;
       $("quiz-coin-amount").textContent=`所持 ${amount}枚`;
     }
     return balance;
@@ -1228,8 +1230,8 @@ function purchaseCranePlay(play) {
       };
     }
     tx.oncomplete=()=>resolve(play);
-    tx.onerror=()=>reject(tx.error||new Error("金貨の消費処理に失敗しました"));
-    tx.onabort=()=>reject(new Error("景品がないか、金貨不足、または進行中のプレイがあります"));
+    tx.onerror=()=>reject(tx.error||new Error("コインの消費処理に失敗しました"));
+    tx.onabort=()=>reject(new Error("景品がないか、コイン不足、または進行中のプレイがあります"));
   });
 }
 function persistArcadeArm(playId,position,direction) {
@@ -1323,10 +1325,10 @@ async function refreshArcadeHome(ctx=viewContext(),request=homeRender) {
   const owned=prizes.filter(p=>p.profile===profile);
   const kinds=PLUSH_IDS.filter(id=>owned.some(p=>p.prizeId===id)).length;
   const secrets=SECRET_PLUSH_IDS.filter(id=>owned.some(p=>p.prizeId===id)).length;
-  $("arcade-home-description").textContent=`金貨を使ってクレーンに挑戦！ 通常のぬいぐるみ全${PLUSH_IDS.length}種類とシークレット${SECRET_PLUSH_IDS.length}種類を集めよう！`;
+  $("arcade-home-description").textContent=`コインを使ってクレーンに挑戦！ 通常のぬいぐるみ全${PLUSH_IDS.length}種類とシークレット${SECRET_PLUSH_IDS.length}種類を集めよう！`;
   $("arcade-home-status").textContent=`獲得：${owned.length}体（通常：${kinds}/${PLUSH_IDS.length}種類 ／ シークレット：${secrets}/${SECRET_PLUSH_IDS.length}種類）${pending?" ／ 続きから遊べます":""}`;
   $("open-arcade").textContent=pending?"クレーンの続きを遊ぶ →":"キャッチャーで遊ぶ →";
-  $("arcade-home-cost-text").textContent=profile==="test"?"テスト中：無料で何回でも":"100枚 / 1プレイ";
+  $("arcade-home-cost-text").textContent=profile==="test"?"テスト中：無料で何回でも":"コイン100枚 / 1プレイ";
 }
 function paintArcadeArm() {
   if(arcadePlay)$("crane-arm").style.left=`${arcadePlay.armX}%`;
@@ -1495,8 +1497,8 @@ async function renderArcade() {
   if(!viewCurrent(ctx)||request!==arcadeRender)return;
   arcadeBoard=board;
   const testMode=ctx.who==="test";
-  $("arcade-balance").textContent=testMode?"∞（無料）":balance.toLocaleString("ja-JP");
-  $("arcade-profile-note").textContent=testMode?"🔧 テストモード：金貨を消費せず何回でも遊べます。景品と履歴はテスト用に保存されます。":"";
+  $("arcade-balance").textContent=testMode?"∞（無料）":`${balance.toLocaleString("ja-JP")}枚`;
+  $("arcade-profile-note").textContent=testMode?"🔧 テストモード：コインを消費せず何回でも遊べます。景品と履歴はテスト用に保存されます。":"";
   $("arcade-profile-note").classList.toggle("hidden",!testMode);
   arcadePlay=play;
   arcadeDirection=arcadePlay?.direction===-1?-1:1;
@@ -1523,14 +1525,14 @@ async function renderArcade() {
   }else{
     start.textContent=resolving?"▶ キャッチ結果の続きを見る（追加料金なし）":
       testMode?`無料で${arcadePlay?.status==="finished"?"もう一度":"プレイ"}（回数無制限）`:
-      balance<CRANE_COST?`あと${CRANE_COST-balance}金貨でプレイ可能`:`100金貨で${arcadePlay?.status==="finished"?"もう一度":"プレイ"}`;
+      balance<CRANE_COST?`あと${CRANE_COST-balance}枚必要`:`コイン100枚で${arcadePlay?.status==="finished"?"もう一度":"プレイ"}`;
     if(empty&&!aiming&&!resolving)$("arcade-message").textContent=EMPTY_ARCADE_MESSAGE;
     else if(aiming)$("arcade-message").textContent="動くアームを見て、ねらった場所で「キャッチ！」を押そう！";
-    else if(resolving)$("arcade-message").textContent="前回のキャッチ結果を再生できます。金貨は追加で使いません。";
+    else if(resolving)$("arcade-message").textContent="前回のキャッチ結果を再生できます。コインは追加で使いません。";
     else if(resultPlay?.status==="finished") {
       const r=resultPlay.result;
       $("arcade-message").textContent=r.won?`🎉 ${plushName(resultPlay.prizes[r.targetIndex])}をゲット！`:r.grabbed?"あと少し！ 運ぶ途中で落ちちゃった…":"おしい！ 今度はもっと近くをねらおう！";
-    }else $("arcade-message").textContent=testMode?"テストモードでは金貨を使わず、何度でも遊べます。":"100金貨で1回遊べます。";
+    }else $("arcade-message").textContent=testMode?"テストモードではコインを使わず、何度でも遊べます。":"コイン100枚で1回遊べます。";
   }
   await renderArcadeCollection(ctx);
   if(!viewCurrent(ctx)||request!==arcadeRender)return;
@@ -1563,7 +1565,7 @@ async function startCrane() {
     const balance=await getAvailableCoins();
     if(!viewCurrent(ctx))return;
     if(profile!=="test" && balance<CRANE_COST)return;
-    if(profile!=="test" && !confirm(`100金貨を使ってUFOキャッチャーを1回遊びますか？\n現在の金貨：${balance}枚`))return;
+    if(profile!=="test" && !confirm(`コイン100枚を使ってUFOキャッチャーを1回遊びますか？\n現在のコイン：${balance}枚`))return;
     const play=newArcadePlay(profile);
     await purchaseCranePlay(play);
     if(!viewCurrent(ctx))return;
@@ -4124,7 +4126,7 @@ function showResult(newAward=null,coinAward=lastCoinAward,result=$("result")) {
       coin.classList.add("earned");
       const detail=coinAward.stages.includes("review") ? "復習ボーナス" : coinAward.stages.includes("correct") ? "正解ボーナス" : coinAward.stages.includes("master") && coinAward.stages.includes("first") ? "初正解＆初習得ボーナス" : coinAward.stages.includes("master") ? "初習得ボーナス" : "初正解ボーナス";
       const head=document.createElement("span");head.className="coin-reward-title";
-      const amount=document.createElement("span");amount.textContent=`+${coinAward.amount} コイン獲得！`;
+      const amount=document.createElement("span");amount.textContent=`コインを${coinAward.amount}枚獲得！`;
       head.append(createCoinIcon(),amount);
       const note=document.createElement("small");note.textContent=`${difficultyLabel(q)}問題・${detail}`;
       coin.append(head,note);

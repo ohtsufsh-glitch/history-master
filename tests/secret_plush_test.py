@@ -794,7 +794,7 @@ class SecretPlushTest(unittest.TestCase):
                     }""")
                     self.assert_result_cleared()
                     self.assertEqual(self.page.locator(f'.plush-item[data-prize-id="{prize}"] .owned').inner_text(), '×1')
-                    self.assertEqual(self.page.locator('#arcade-balance').inner_text(), str(balance))
+                    self.assertEqual(self.page.locator('#arcade-balance').inner_text(), f'{balance}枚')
                     self.assertEqual(self.snapshot(), saved)
 
     def wait_arcade_result_loaded(self):

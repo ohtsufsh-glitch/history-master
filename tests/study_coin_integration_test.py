@@ -87,9 +87,9 @@ class StudyCoinIntegrationTest(unittest.TestCase):
                         self.assertEqual(self.page.evaluate('getAvailableCoins()'),total)
                         text=self.result().inner_text()
                         if correct:
-                            self.assertIn(f'+{amount} コイン獲得！',text)
+                            self.assertIn(f'コインを{amount}枚獲得！',text)
                             self.assertIn(labels[stage],self.result().locator('small').inner_text())
-                        else:self.assertNotIn('コイン獲得',text)
+                        else:self.assertNotIn('枚獲得',text)
                         if i in [2,3,7]:
                             before=self.snapshot()
                             self.page.reload();self.ready()
@@ -196,7 +196,7 @@ class StudyCoinIntegrationTest(unittest.TestCase):
                     if i<9:self.page.evaluate('nextStudy()')
                 self.screen('study-finished')
                 self.assertIn('正解ボーナス',self.result().inner_text())
-                self.assertIn('+6 コイン獲得',self.result().inner_text())
+                self.assertIn('コインを6枚獲得',self.result().inner_text())
                 self.assertIn('回答数 10問 ｜ 正解数 10問',self.page.locator('#study-result-summary').inner_text())
                 before=self.snapshot()
                 self.assertEqual(len(before['answers']),10)
@@ -271,6 +271,7 @@ class StudyCoinIntegrationTest(unittest.TestCase):
         self.assertTrue(next(p for p in state['progress'] if p['profile']=='student')['mastered'])
 
     def test_pr36_v8_bonus_migrates_and_legacy_restore_keeps_reward(self):
+        current_version=self.page.evaluate('APP_VERSION')
         import subprocess
         source=subprocess.check_output(['git','show','439f7b887719d2ff1a2ecfd595c0d3299a1e048d:index.html'],text=True)
         context=self.browser.new_context()
@@ -296,7 +297,7 @@ class StudyCoinIntegrationTest(unittest.TestCase):
             legacy={'backupFormat':'history-master-backup','backupVersion':8,'data':before}
             page.unroute(self.url)
             page.reload();self.ready(page)
-            self.assertEqual(page.evaluate('[APP_VERSION,DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'),['v1.7.1',9,9,16])
+            self.assertEqual(page.evaluate('[APP_VERSION,DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'),[current_version,9,9,16])
             after=self.snapshot(page)
             for name in before:self.assertEqual(after[name],before[name],name)
             self.assertEqual(after['studySets'],[])
