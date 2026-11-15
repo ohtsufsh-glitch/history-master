@@ -1,4 +1,5 @@
-import { STAGES } from "./stages.js?v=1.7.19";
+import { STAGES } from "./stages.js?v=1.7.20";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.20";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -7,7 +8,7 @@ const STAGE_PREVIEW_ENABLED = true;
 // すべての描画はこの論理座標で行い、CSS表示サイズ・実ピクセル数と分離する。
 const WORLD = Object.freeze({ width: 960, height: 540 });
 const MAX_DPR = 2; // 最大1920×1080（RGBAで約8MiB）。表示を拡大しすぎない。
-const SCROLL_SPEED = 200; // 論理座標 px/秒。
+const SCROLL_SPEED = 200; // course[].atの基準速度。実際の走力はstate.speed。
 const JUMP_HEIGHT = 120;
 const JUMP_DURATION = 0.9;
 const JUMP = Object.freeze({ height: JUMP_HEIGHT, duration: JUMP_DURATION,
@@ -16,7 +17,6 @@ const JUMP = Object.freeze({ height: JUMP_HEIGHT, duration: JUMP_DURATION,
 const MAX_FRAME_SECONDS = 0.05; // 長い処理停止後の急な飛びを防ぐ。
 const COURSE_LENGTH = 6400; // 既存の独立コース用。各ステージの距離はstate.goalDistanceで扱う。
 const SIMULATION_STEP = 1 / 120;
-const INITIAL_LIVES = 2;
 const RESPAWN_INVINCIBLE_SECONDS = 1;
 const CHARACTER_X = 186;
 const GROUND_Y = 470;
@@ -60,15 +60,18 @@ const COURSE = Object.freeze([
   { at: 26, type: "platform" }, // 最後のスター取得後に乗れる任意の足場。
 ].map(entry => Object.freeze(entry)));
 
-function createRunnerState(course = COURSE) {
+function createRunnerState(course = COURSE, characterId = course?.characterId ?? "shiba") {
   // 旧COURSE配列APIを維持し、ステージ定義／前回stateからのリトライも受け付ける。
   const stage = Array.isArray(course) ? { course, goalDistance: COURSE_LENGTH } : course;
   if (!stage || !Array.isArray(stage.course) ||
       !Number.isFinite(stage.goalDistance) || stage.goalDistance <= 0) {
     throw new TypeError("コース配列と正のゴール距離が必要です。");
   }
+  const character = getCharacter(characterId);
   return { stageId: stage.stageId ?? null, goalDistance: stage.goalDistance,
-    mode: "ready", lives: INITIAL_LIVES, invincibleRemaining: 0, distance: 0, animationTime: 0,
+    characterId: character.characterId, speed: character.speed, jump: character.jump,
+    initialLives: character.initialLives,
+    mode: "ready", lives: character.initialLives, invincibleRemaining: 0, distance: 0, animationTime: 0,
     feetY: GROUND_Y, velocityY: 0, supportId: "ground", jumpOriginY: GROUND_Y, airAction: null,
     landingUntil: 0,
     elapsed: 0, score: 0, reason: null, objects: [], nextSpawn: 0,
@@ -105,11 +108,11 @@ function advanceMotion(state, seconds) {
     }
     if (state.supportId !== null) {
       const platform = state.objects.find(object => object.type === "platform" && object.id === state.supportId);
-      if (platform && overlapsPlatform(platform, platform.x + SCROLL_SPEED * remaining)) {
+      if (platform && overlapsPlatform(platform, platform.x + state.speed * remaining)) {
         const bounds = platformBounds(platform);
         state.feetY = bounds.top;
-        const untilEdge = (bounds.right + SCROLL_SPEED * remaining -
-          (CHARACTER_X - PLATFORM.footHalfWidth)) / SCROLL_SPEED;
+        const untilEdge = (bounds.right + state.speed * remaining -
+          (CHARACTER_X - PLATFORM.footHalfWidth)) / state.speed;
         if (untilEdge > remaining + PHYSICS_EPSILON) return;
         remaining = Math.max(0, remaining - Math.max(0, untilEdge));
       }
@@ -120,20 +123,22 @@ function advanceMotion(state, seconds) {
     }
 
     const startY = state.feetY, velocity = state.velocityY;
-    const endY = startY + velocity * remaining + JUMP.gravity * remaining * remaining / 2;
+    const endY = startY + velocity * remaining + state.jump.gravity * remaining * remaining / 2;
     let landing = null;
     function considerSurface(top, id, platform = null) {
       // 上面とほぼ同じ高さの頂点では、丸め誤差による小さな負値を0に戻す。
-      const discriminant = velocity * velocity + 2 * JUMP.gravity * (top - startY);
-      if (discriminant < -2 * JUMP.gravity * PHYSICS_EPSILON) return;
+      const discriminant = velocity * velocity + 2 * state.jump.gravity * (top - startY);
+      if (discriminant < -2 * state.jump.gravity * PHYSICS_EPSILON) return;
       // 下降側の根のみ。1ステップ内で頂点をまたぐ場合も取りこぼさない。
-      const crossing = (-velocity + Math.sqrt(Math.max(0, discriminant))) / JUMP.gravity;
+      const crossing = (-velocity + Math.sqrt(Math.max(0, discriminant))) / state.jump.gravity;
       if (crossing < -PHYSICS_EPSILON || crossing > remaining + PHYSICS_EPSILON) return;
       const time = Math.max(0, Math.min(remaining, crossing));
       if (platform) {
-        const at = state.elapsed - remaining + time;
-        if ((platform.at ?? -Infinity) > at + PHYSICS_EPSILON ||
-            !overlapsPlatform(platform, platform.x + SCROLL_SPEED * (remaining - time))) return;
+        const distance = state.distance - state.speed * (remaining - time);
+        const spawnDistance = platform.spawnDistance ??
+          (platform.at === undefined ? -Infinity : platform.at * SCROLL_SPEED);
+        if (spawnDistance > distance + PHYSICS_EPSILON ||
+            !overlapsPlatform(platform, platform.x + state.speed * (remaining - time))) return;
       }
       if (!landing || time < landing.time) landing = { time, top, id };
     }
@@ -143,7 +148,7 @@ function advanceMotion(state, seconds) {
     }
     if (!landing) {
       state.feetY = endY;
-      state.velocityY = velocity + JUMP.gravity * remaining;
+      state.velocityY = velocity + state.jump.gravity * remaining;
       return;
     }
     remaining = Math.max(0, remaining - landing.time);
@@ -206,16 +211,17 @@ function updateRunner(state, seconds) {
   let remaining = seconds;
   // 同じサブステップの接触はスター・ゴールより優先。前の取得得点は保持する。
   do {
-    const step = Math.min(SIMULATION_STEP, remaining, Math.max(0, state.goalDistance - state.distance) / SCROLL_SPEED);
-    state.distance += SCROLL_SPEED * step;
+    const step = Math.min(SIMULATION_STEP, remaining, Math.max(0, state.goalDistance - state.distance) / state.speed);
+    state.distance += state.speed * step;
     state.animationTime += step;
     state.elapsed += step;
     if (state.goalDistance - state.distance < 1e-9) state.distance = state.goalDistance;
-    for (const object of state.objects) object.x -= SCROLL_SPEED * step;
-    while (state.nextSpawn < state.course.length && state.course[state.nextSpawn].at <= state.elapsed + 1e-9) {
+    for (const object of state.objects) object.x -= state.speed * step;
+    while (state.nextSpawn < state.course.length && state.course[state.nextSpawn].at * SCROLL_SPEED <= state.distance + 1e-9) {
       const entry = state.course[state.nextSpawn];
-      state.objects.push({ ...entry, id: state.nextSpawn++,
-        x: SPAWN_X - SCROLL_SPEED * Math.max(0, state.elapsed - entry.at) });
+      const spawnDistance = entry.at * SCROLL_SPEED;
+      state.objects.push({ ...entry, spawnDistance, id: state.nextSpawn++,
+        x: SPAWN_X - Math.max(0, state.distance - spawnDistance) });
     }
     advanceMotion(state, step);
     // 実時間ではなく、走行した時間だけ保護を消費する。再開入力だけでは減らない。
@@ -257,7 +263,7 @@ function resumeRunner(state) {
 function startJump(state) {
   if (state.mode !== "running" || state.supportId === null) return false;
   state.jumpOriginY = state.feetY;
-  state.velocityY = -JUMP.initialVelocity;
+  state.velocityY = -state.jump.initialVelocity;
   state.supportId = null;
   state.airAction = "jump";
   state.landingUntil = 0;
@@ -267,7 +273,7 @@ function startJump(state) {
 function characterPose(state) {
   if (state.mode !== "running") return "idle";
   if (state.supportId === null) {
-    if (state.airAction === "jump" && Math.abs(state.velocityY) <= JUMP.gravity * CHARACTER_SET.apexHalfWindow + 1e-9)
+    if (state.airAction === "jump" && Math.abs(state.velocityY) <= state.jump.gravity * CHARACTER_SET.apexHalfWindow + 1e-9)
       return "jump_top";
     return state.velocityY < 0 ? "jump_up" : "jump_down";
   }
@@ -357,16 +363,19 @@ function drawFallbackCharacter(context, state) {
 }
 
 function drawCharacter(context, state, characterImages) {
+  const definition = getCharacter(state.characterId);
   const pose = characterPose(state);
   const frame = CHARACTER_SET.frames[pose];
-  const selectedImage = characterImages[pose];
+  const selectedImage = state.characterId === "shiba" ? characterImages[pose] : characterImages[state.characterId];
   const loaded = selectedImage?.complete && selectedImage.naturalWidth && selectedImage.naturalHeight;
-  const characterImage = loaded ? selectedImage : characterImages.fallback;
+  const characterImage = loaded ? selectedImage :
+    state.characterId === "shiba" ? characterImages.fallback : null;
   if (!characterImage?.complete || !characterImage.naturalWidth || !characterImage.naturalHeight) {
     drawFallbackCharacter(context, state);
     return;
   }
-  const feetRatio = loaded ? frame.feetRatio : CHARACTER_IMAGE.feetRatio;
+  const feetRatio = state.characterId === "shiba" ?
+    (loaded ? frame.feetRatio : CHARACTER_IMAGE.feetRatio) : definition.image.feetRatio;
   const scale = CHARACTER_SET.maxSize / Math.max(characterImage.naturalWidth, characterImage.naturalHeight);
   const width = characterImage.naturalWidth * scale;
   const height = characterImage.naturalHeight * scale;
@@ -521,6 +530,9 @@ function initializeRunner() {
   const preview = document.getElementById("runner-preview");
   const stageSelect = document.getElementById("runner-stage-select");
   const stageDetails = document.getElementById("runner-stage-details");
+  const characterSelect = document.getElementById("runner-character-select");
+  const characterDetails = document.getElementById("runner-character-details");
+  const characterIcon = document.getElementById("runner-character-image");
   const isStagePreview = STAGE_PREVIEW_ENABLED &&
     new URLSearchParams(window.location.search).get("stagePreview") === "1";
   let context;
@@ -542,7 +554,7 @@ function initializeRunner() {
   function describeStage(definition) {
     const count = type => definition.course.filter(entry => entry.type === type).length;
     return `${definition.stageId} ${definition.name} ｜ 難易度 ${definition.difficulty} ｜ ` +
-      `約${Math.ceil(definition.goalDistance / SCROLL_SPEED)}秒 ｜ ` +
+      `約${Math.ceil(definition.goalDistance / state.speed)}秒 ｜ ` +
       `トゲ岩 ${count("obstacle")}個・足場 ${count("platform")}個`;
   }
   if (isStagePreview) {
@@ -554,6 +566,13 @@ function initializeRunner() {
     }
     stageSelect.value = state.stageId;
     stageDetails.textContent = describeStage(STAGES[0]);
+    for (const definition of CHARACTERS) {
+      const option = document.createElement("option");
+      option.value = definition.characterId;
+      option.textContent = definition.name;
+      characterSelect.append(option);
+    }
+    characterSelect.value = state.characterId;
     preview.hidden = false;
     document.querySelector(".runner-app").classList.add("runner-app-preview");
   }
@@ -565,19 +584,47 @@ function initializeRunner() {
   let previousTimestamp = null;
   let sizeDirty = true;
 
+  function updateCharacterDetails() {
+    const definition = getCharacter(state.characterId);
+    characterDetails.textContent = `${definition.feature} ｜ ` +
+      `走力 ${definition.speed}px/秒・ジャンプ ${definition.jump.height}px・` +
+      `滞空 ${definition.jump.duration.toFixed(2)}秒・残機 ${definition.initialLives}機`;
+    characterIcon.src = new URL(definition.image.src, import.meta.url).href;
+    characterIcon.alt = definition.name;
+    // 読み込み失敗でも名前・能力と操作はそのまま使える。
+    characterIcon.onerror = () => { characterIcon.hidden = true; };
+    characterIcon.onload = () => { characterIcon.hidden = false; };
+    if (state.characterId !== "shiba" && !characterImages[state.characterId]) {
+      const image = new Image();
+      characterImages[state.characterId] = image;
+      image.onload = requestRedraw;
+      image.onerror = requestRedraw;
+      image.src = characterIcon.src;
+    }
+    canvas.setAttribute("aria-label", `地面を走る${definition.name}とトゲ岩、乗れる足場、スター、ゴールの旗。` +
+      "走行中にタップするとジャンプします。旗のラインを通過するとクリアです。");
+    for (const option of stageSelect.options) {
+      option.textContent = describeStage(STAGES.find(definition => definition.stageId === option.value));
+    }
+    stageDetails.textContent = describeStage(STAGES.find(definition => definition.stageId === state.stageId));
+  }
+
   function updateControls() {
-    if (isStagePreview) stageSelect.disabled = !active ||
-      (state.mode !== "ready" && state.mode !== "finished");
+    if (isStagePreview) {
+      stageSelect.disabled = !active || (state.mode !== "ready" && state.mode !== "finished");
+      characterSelect.disabled = stageSelect.disabled;
+    }
     const text = { ready: "ゲーム開始", running: "一時停止", paused: "再開", hurt: "つづける", finished: "もう一度" }[state.mode];
     if (toggle.textContent !== text) toggle.textContent = text;
     const jumpDisabled = !active || state.mode !== "running";
     if (jumpButton && jumpButton.disabled !== jumpDisabled) jumpButton.disabled = jumpDisabled;
-    const mode = { ready: "開始前", running: "走行中", paused: "一時停止中", hurt: "残り1機・停止中", finished: "終了" }[state.mode];
+    const mode = { ready: "開始前", running: "走行中", paused: "一時停止中", hurt: `残り${state.lives}機・停止中`, finished: "終了" }[state.mode];
     if (modeLabel.textContent !== mode) modeLabel.textContent = mode;
     if (scoreLabel.textContent !== String(state.score)) scoreLabel.textContent = state.score;
     if (livesLabel.textContent !== String(state.lives)) livesLabel.textContent = state.lives;
     protectionLabel.hidden = state.invincibleRemaining <= PHYSICS_EPSILON;
     continueMessage.hidden = state.mode !== "hurt";
+    document.getElementById("runner-continue-title").textContent = `残り${state.lives}機`;
     const progress = String(progressPercent(state));
     if (progressLabel.textContent !== progress) progressLabel.textContent = progress;
     const hideResult = state.mode !== "finished";
@@ -669,8 +716,24 @@ function initializeRunner() {
     if (pendingFrame !== null) cancelAnimationFrame(pendingFrame);
     pendingFrame = null;
     previousTimestamp = null;
-    state = createRunnerState(selected);
+    state = createRunnerState(selected, state.characterId);
     stageDetails.textContent = describeStage(selected);
+    updateControls();
+    requestRedraw();
+  });
+
+  characterSelect?.addEventListener("change", () => {
+    const selected = CHARACTERS.find(definition => definition.characterId === characterSelect.value);
+    if (!isStagePreview || !active || document.hidden ||
+        (state.mode !== "ready" && state.mode !== "finished") || !selected) {
+      characterSelect.value = state.characterId;
+      return;
+    }
+    if (pendingFrame !== null) cancelAnimationFrame(pendingFrame);
+    pendingFrame = null;
+    previousTimestamp = null;
+    state = createRunnerState(state, selected.characterId);
+    updateCharacterDetails();
     updateControls();
     requestRedraw();
   });
@@ -724,6 +787,7 @@ function initializeRunner() {
     const src = name === "fallback" ? CHARACTER_IMAGE.src : CHARACTER_SET.frames[name].src;
     image.src = new URL(src, import.meta.url).href;
   }
+  if (isStagePreview) updateCharacterDetails();
   obstacleImage.onload = requestRedraw;
   obstacleImage.onerror = requestRedraw;
   obstacleImage.src = new URL(OBSTACLE_IMAGE.src, import.meta.url).href;
@@ -735,6 +799,6 @@ function initializeRunner() {
 initializeRunner();
 
 // コースとゲーム状態はDOMから独立。配置の差し替えや決定的なルール検証に使う。
-export { COURSE, COLLISION, CHARACTER_X, SPAWN_X, CHARACTER_IMAGE, CHARACTER_SET, OBSTACLE_IMAGE, PLATFORM, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
+export { CHARACTERS, getCharacter, COURSE, COLLISION, CHARACTER_X, SPAWN_X, CHARACTER_IMAGE, CHARACTER_SET, OBSTACLE_IMAGE, PLATFORM, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
   createRunnerState, updateRunner, resumeRunner, startJump, progressPercent, goalX, characterCenter, characterPose,
   platformBounds, characterBob, shadowY };
