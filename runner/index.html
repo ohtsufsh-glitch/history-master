@@ -32,15 +32,22 @@
     <dl class="runner-hud" aria-label="ゲームの状況">
       <div><dt>現在の得点</dt><dd><span id="runner-score">0</span><span class="runner-unit">点</span></dd></div>
       <div><dt>進行度</dt><dd><span id="runner-progress">0</span><span class="runner-unit">%</span></dd></div>
+      <div><dt>残機</dt><dd aria-live="polite" aria-atomic="true"><span class="runner-unit">残り</span><span id="runner-lives">2</span><span class="runner-unit">機</span></dd></div>
     </dl>
 
     <section id="runner-viewport" class="runner-viewport" aria-label="ゲーム画面">
       <div id="runner-stage" class="runner-stage">
+        <p id="runner-protection" class="runner-protection" hidden role="status">シールド・無敵中</p>
         <canvas id="runner-canvas" width="960" height="540" role="img"
           aria-label="地面を走るしば犬とトゲ岩、乗れる足場、スター、ゴールの旗。走行中にタップするとジャンプします。旗のラインを通過するとクリアです。">
           このブラウザではゲーム画面を表示できません。Canvasに対応したSafariなどで開いてください。
         </canvas>
       </div>
+      <section id="runner-continue" class="runner-result" hidden role="status" aria-live="polite" aria-atomic="true">
+        <h2>残り1機</h2>
+        <p>トゲ岩にぶつかったよ。<br>「つづける」で同じ場所から再開！</p>
+        <p>再開して約1秒はシールドで守られるよ。</p>
+      </section>
       <section id="runner-result" class="runner-result" hidden role="status" aria-live="polite" aria-atomic="true" aria-labelledby="runner-result-title">
         <h2 id="runner-result-title"></h2>
         <p id="runner-result-message"></p>
