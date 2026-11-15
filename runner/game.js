@@ -14,11 +14,23 @@ const CHARACTER_X = 186;
 const GROUND_Y = 470;
 const CHARACTER_IMAGE = Object.freeze({ src: "../assets/plush/shiba.webp", maxSize: 100,
   feetRatio: 465 / 512 }); // 既存画像の透明余白を含む、足元の基準位置。
+const OBSTACLE_WIDTH = 80;
+// 元画像の下端2pxは透明。実体の底面Y=464を地面に合わせる。
+const OBSTACLE_IMAGE = Object.freeze({ src: "./assets/spike-rock.webp", width: OBSTACLE_WIDTH,
+  height: OBSTACLE_WIDTH * 466 / 640, feetRatio: 464 / 466 });
 const SPAWN_X = WORLD.width + 48;
-const COLLISION = Object.freeze({ characterRadius: 28, obstacleWidth: 52,
-  obstacleHeight: 64, obstacleInset: 6, starRadius: 20, starHitRadius: 18 });
+// 幅80pxの岩本体と3本のトゲの内側。座標は障害物中心X・地面Yからの論理px。
+// 全体を1つの矩形にせず、上部の透明な隙間は判定から外す。
+const COLLISION = Object.freeze({ characterRadius: 28, starRadius: 20, starHitRadius: 18,
+  obstacleRegions: Object.freeze([
+    { left: -34, right: 34, top: -20, bottom: -3 },
+    { left: -28, right: 28, top: -34, bottom: -18 },
+    { left: -4, right: 4, top: -53, bottom: -32 },
+    { left: -27, right: -20, top: -41, bottom: -32 },
+    { left: 20, right: 27, top: -41, bottom: -32 },
+  ].map(region => Object.freeze(region))) });
 // 時刻は右端での出現時刻。heightはスターの地上基準位置からの上昇量。
-// 木箱の初接触は約5.37秒後、以後3秒間隔。滞空0.9秒の後に着地猶予を残す。
+// トゲ岩の初接触は約5.34秒後、以後3秒間隔。滞空0.9秒の後に着地猶予を残す。
 const COURSE = Object.freeze([
   { at: 0.25, type: "star", height: 0 },
   ...Array.from({ length: 8 }, (_, index) => [
@@ -68,12 +80,14 @@ function touchesObject(state, object) {
     const radius = COLLISION.characterRadius + COLLISION.starHitRadius;
     return Math.hypot(character.x - object.x, character.y - (ground - 43 - (object.height ?? 0))) <= radius;
   }
-  const inset = COLLISION.obstacleInset;
-  const halfWidth = COLLISION.obstacleWidth / 2 - inset;
-  const closestX = Math.max(object.x - halfWidth, Math.min(character.x, object.x + halfWidth));
-  const closestY = Math.max(ground - COLLISION.obstacleHeight + inset,
-    Math.min(character.y, ground - inset));
-  return Math.hypot(character.x - closestX, character.y - closestY) <= COLLISION.characterRadius;
+  const scale = OBSTACLE_IMAGE.width / 80;
+  return COLLISION.obstacleRegions.some(region => {
+    const closestX = Math.max(object.x + region.left * scale,
+      Math.min(character.x, object.x + region.right * scale));
+    const closestY = Math.max(ground + region.top * scale,
+      Math.min(character.y, ground + region.bottom * scale));
+    return Math.hypot(character.x - closestX, character.y - closestY) <= COLLISION.characterRadius;
+  });
 }
 
 function progressPercent(state) {
@@ -102,7 +116,7 @@ function updateRunner(state, seconds) {
         x: SPAWN_X - SCROLL_SPEED * Math.max(0, state.elapsed - entry.at) });
     }
     state.objects = state.objects.filter(object => object.x +
-      (object.type === "star" ? COLLISION.starRadius : COLLISION.obstacleWidth / 2) >= 0);
+      (object.type === "star" ? COLLISION.starRadius : OBSTACLE_IMAGE.width / 2) >= 0);
     if (state.objects.some(object => object.type === "obstacle" && touchesObject(state, object))) {
       state.mode = "finished";
       state.reason = "collision";
@@ -248,27 +262,42 @@ function drawGoal(context, state) {
   context.fillText("GOAL", x + 8, top - 12);
 }
 
-function drawObjects(context, state) {
+function drawObstacle(context, object, obstacleImage) {
+  const { width, height, feetRatio } = OBSTACLE_IMAGE;
+  if (obstacleImage?.complete && obstacleImage.naturalWidth && obstacleImage.naturalHeight) {
+    context.drawImage(obstacleImage, object.x - width / 2,
+      GROUND_Y - height * feetRatio, width, height);
+    return;
+  }
+  // 読み込み中・404でも、同じ大きさのトゲ岩を図形で示してプレイを続ける。
+  const outline = [[-.5, 0], [-.46, -.33], [-.32, -.5], [-.32, -.78],
+    [-.18, -.62], [-.11, -.6], [0, -1], [.14, -.58], [.28, -.78],
+    [.34, -.48], [.47, -.29], [.5, 0]];
+  context.beginPath();
+  outline.forEach(([x, y], index) => {
+    const pointX = object.x + x * width, pointY = GROUND_Y + y * height;
+    if (index === 0) context.moveTo(pointX, pointY);
+    else context.lineTo(pointX, pointY);
+  });
+  context.closePath();
+  context.fillStyle = "#514650";
+  context.fill();
+  context.strokeStyle = "#ff4048";
+  context.lineWidth = 3;
+  context.beginPath();
+  context.moveTo(object.x - width * .2, GROUND_Y - height * .4);
+  context.lineTo(object.x - width * .05, GROUND_Y - height * .22);
+  context.lineTo(object.x + width * .15, GROUND_Y - height * .34);
+  context.stroke();
+}
+
+function drawObjects(context, state, obstacleImage) {
   for (const object of state.objects) {
-    const radius = object.type === "star" ? COLLISION.starRadius : COLLISION.obstacleWidth / 2;
+    const radius = object.type === "star" ? COLLISION.starRadius : OBSTACLE_IMAGE.width / 2;
     if (object.x + radius < 0 || object.x - radius > WORLD.width) continue;
     const ground = GROUND_Y;
     if (object.type === "obstacle") {
-      const left = object.x - COLLISION.obstacleWidth / 2;
-      const top = ground - COLLISION.obstacleHeight;
-      context.fillStyle = "#b98045";
-      context.fillRect(left, top, COLLISION.obstacleWidth, COLLISION.obstacleHeight);
-      context.fillStyle = "#e7b77a";
-      context.fillRect(left, top, COLLISION.obstacleWidth, 8);
-      context.strokeStyle = "#725033";
-      context.lineWidth = 2;
-      context.strokeRect(left + 1, top + 1, COLLISION.obstacleWidth - 2, COLLISION.obstacleHeight - 2);
-      context.beginPath();
-      context.moveTo(left + 7, top + 13);
-      context.lineTo(left + COLLISION.obstacleWidth - 7, ground - 7);
-      context.moveTo(left + COLLISION.obstacleWidth - 7, top + 13);
-      context.lineTo(left + 7, ground - 7);
-      context.stroke();
+      drawObstacle(context, object, obstacleImage);
     } else {
       context.beginPath();
       for (let point = 0; point < 10; point++) {
@@ -289,12 +318,12 @@ function drawObjects(context, state) {
   }
 }
 
-function renderScene(context, canvas, state, characterImage) {
+function renderScene(context, canvas, state, characterImage, obstacleImage) {
   // width/heightの変更でリセットされた変換も毎回復元する。
   context.setTransform(canvas.width / WORLD.width, 0, 0, canvas.height / WORLD.height, 0, 0);
   drawBackground(context, state);
   drawGround(context, state);
-  drawObjects(context, state);
+  drawObjects(context, state, obstacleImage);
   drawGoal(context, state);
   drawCharacter(context, state, characterImage);
 }
@@ -345,6 +374,7 @@ function initializeRunner() {
 
   let state = createRunnerState();
   const characterImage = new Image();
+  const obstacleImage = new Image();
   let active = !document.hidden;
   let pendingFrame = null;
   let previousTimestamp = null;
@@ -365,7 +395,7 @@ function initializeRunner() {
     if (state.mode === "finished") {
       document.getElementById("runner-result-title").textContent = state.reason === "clear" ? "クリア！" : "ゲームオーバー";
       document.getElementById("runner-result-message").textContent = state.reason === "clear" ?
-        "ゴールまで走りきったよ！" : "木箱にぶつかったよ。もう一度挑戦しよう！";
+        "ゴールまで走りきったよ！" : "トゲ岩にぶつかったよ。もう一度挑戦しよう！";
       document.getElementById("runner-result-score").textContent = state.score;
       document.getElementById("runner-result-progress").textContent = progress;
     }
@@ -391,7 +421,7 @@ function initializeRunner() {
       previousTimestamp = state.mode === "running" ? timestamp : null;
       updateControls();
     }
-    renderScene(context, canvas, state, characterImage);
+    renderScene(context, canvas, state, characterImage, obstacleImage);
     status.hidden = true;
     if (state.mode === "running") requestRedraw();
   }
@@ -470,6 +500,9 @@ function initializeRunner() {
   characterImage.onload = requestRedraw;
   characterImage.onerror = requestRedraw;
   characterImage.src = new URL(CHARACTER_IMAGE.src, import.meta.url).href;
+  obstacleImage.onload = requestRedraw;
+  obstacleImage.onerror = requestRedraw;
+  obstacleImage.src = new URL(OBSTACLE_IMAGE.src, import.meta.url).href;
   toggle.disabled = false;
   updateControls();
   requestRedraw();
@@ -478,5 +511,5 @@ function initializeRunner() {
 initializeRunner();
 
 // コースとゲーム状態はDOMから独立。配置の差し替えや決定的なルール検証に使う。
-export { COURSE, COLLISION, CHARACTER_X, CHARACTER_IMAGE, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
+export { COURSE, COLLISION, CHARACTER_X, CHARACTER_IMAGE, OBSTACLE_IMAGE, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
   createRunnerState, updateRunner, startJump, progressPercent, goalX, characterCenter };
