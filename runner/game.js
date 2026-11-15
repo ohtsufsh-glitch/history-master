@@ -8,7 +8,7 @@ const JUMP = Object.freeze({ height: JUMP_HEIGHT, duration: JUMP_DURATION,
   initialVelocity: 4 * JUMP_HEIGHT / JUMP_DURATION,
   gravity: 8 * JUMP_HEIGHT / (JUMP_DURATION * JUMP_DURATION) });
 const MAX_FRAME_SECONDS = 0.05; // 長い処理停止後の急な飛びを防ぐ。
-const COURSE_LENGTH = 6400; // スタートからゴールまでの走行距離（論理px）。
+const COURSE_LENGTH = 6400; // 既存の独立コース用。各ステージの距離はstate.goalDistanceで扱う。
 const SIMULATION_STEP = 1 / 120;
 const CHARACTER_X = 186;
 const GROUND_Y = 470;
@@ -53,11 +53,18 @@ const COURSE = Object.freeze([
 ].map(entry => Object.freeze(entry)));
 
 function createRunnerState(course = COURSE) {
-  return { mode: "ready", distance: 0, animationTime: 0,
+  // 旧COURSE配列APIを維持し、ステージ定義／前回stateからのリトライも受け付ける。
+  const stage = Array.isArray(course) ? { course, goalDistance: COURSE_LENGTH } : course;
+  if (!stage || !Array.isArray(stage.course) ||
+      !Number.isFinite(stage.goalDistance) || stage.goalDistance <= 0) {
+    throw new TypeError("コース配列と正のゴール距離が必要です。");
+  }
+  return { stageId: stage.stageId ?? null, goalDistance: stage.goalDistance,
+    mode: "ready", distance: 0, animationTime: 0,
     feetY: GROUND_Y, velocityY: 0, supportId: "ground", jumpOriginY: GROUND_Y, airAction: null,
     landingUntil: 0,
     elapsed: 0, score: 0, reason: null, objects: [], nextSpawn: 0,
-    course: course.map(entry => ({ ...entry })).sort((a, b) => a.at - b.at) };
+    course: stage.course.map(entry => ({ ...entry })).sort((a, b) => a.at - b.at) };
 }
 
 function platformBounds(object) {
@@ -178,12 +185,12 @@ function touchesObject(state, object) {
 }
 
 function progressPercent(state) {
-  if (state.distance >= COURSE_LENGTH) return 100;
-  return Math.min(99, Math.max(0, Math.floor(state.distance / COURSE_LENGTH * 100 + 1e-9)));
+  if (state.distance >= state.goalDistance) return 100;
+  return Math.min(99, Math.max(0, Math.floor(state.distance / state.goalDistance * 100 + 1e-9)));
 }
 
 function goalX(state) {
-  return CHARACTER_X + COURSE_LENGTH - state.distance;
+  return CHARACTER_X + state.goalDistance - state.distance;
 }
 
 function updateRunner(state, seconds) {
@@ -192,11 +199,11 @@ function updateRunner(state, seconds) {
   let gained = 0;
   // 同じ更新内に接触があれば、新たなスターの加点より障害物を優先する。
   do {
-    const step = Math.min(SIMULATION_STEP, remaining, Math.max(0, COURSE_LENGTH - state.distance) / SCROLL_SPEED);
+    const step = Math.min(SIMULATION_STEP, remaining, Math.max(0, state.goalDistance - state.distance) / SCROLL_SPEED);
     state.distance += SCROLL_SPEED * step;
     state.animationTime += step;
     state.elapsed += step;
-    if (COURSE_LENGTH - state.distance < 1e-9) state.distance = COURSE_LENGTH;
+    if (state.goalDistance - state.distance < 1e-9) state.distance = state.goalDistance;
     for (const object of state.objects) object.x -= SCROLL_SPEED * step;
     while (state.nextSpawn < state.course.length && state.course[state.nextSpawn].at <= state.elapsed + 1e-9) {
       const entry = state.course[state.nextSpawn];
@@ -219,7 +226,7 @@ function updateRunner(state, seconds) {
       return true;
     });
     // 同じ更新でゴールラインを越えても、直前の障害物判定を優先する。
-    if (state.distance >= COURSE_LENGTH) {
+    if (state.distance >= state.goalDistance) {
       state.mode = "finished";
       state.reason = "clear";
       break;
@@ -588,7 +595,7 @@ function initializeRunner() {
       if (sizeDirty) requestRedraw();
       else renderScene(context, canvas, state, characterImages, obstacleImage);
     } else {
-      if (state.mode === "finished") state = createRunnerState();
+      if (state.mode === "finished") state = createRunnerState(state);
       state.mode = "running";
       previousTimestamp = null;
       updateControls();
@@ -639,6 +646,6 @@ function initializeRunner() {
 initializeRunner();
 
 // コースとゲーム状態はDOMから独立。配置の差し替えや決定的なルール検証に使う。
-export { COURSE, COLLISION, CHARACTER_X, CHARACTER_IMAGE, CHARACTER_SET, OBSTACLE_IMAGE, PLATFORM, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
+export { COURSE, COLLISION, CHARACTER_X, SPAWN_X, CHARACTER_IMAGE, CHARACTER_SET, OBSTACLE_IMAGE, PLATFORM, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
   createRunnerState, updateRunner, startJump, progressPercent, goalX, characterCenter, characterPose,
   platformBounds, characterBob, shadowY };
