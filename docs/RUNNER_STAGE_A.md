@@ -62,6 +62,7 @@ python3 scripts/check_app_version.py --base origin/main --head HEAD
 全ランナーテストはストレージへのアクセスを禁止し、親アプリの読み込みがないことも監視する。
 
 Chromium結果：新規9テスト成功（更新処理24経路、実Canvas操作12プレイを含む）。既存ランナー29テストも成功。
+既存全体回帰は353テスト中352成功・1失敗。失敗は下記のmainでも再現する既存UFOアニメーション検証のみで、学習・コイン・保存／復元の検証は成功した。
 
 WebKitは環境未導入で、Playwrightの配布元への接続がHTTP 403 `Domain forbidden` となり導入できなかった。
 iPhone／iPad Safari実機の縦横表示、タップの操作感、アプリ切替・復帰は未確認。実機確認はブラウザ自動テストで代替したとは扱わない。
