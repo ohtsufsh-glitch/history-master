@@ -1,4 +1,4 @@
-"""独立Canvas画面・距離ゴール・しば犬描画。HTTPと一時ブラウザを使用する。
+"""独立Canvas画面・距離ゴール・しば犬とトゲ岩描画。HTTPと一時ブラウザを使用する。
 
 実行: python3 -m unittest discover -s tests -p 'runner_canvas_test.py' -v
 HISTORY_MASTER_ENGINE=webkit で、導入済みのPlaywright WebKitも選択できる。
@@ -65,16 +65,19 @@ MANUAL_FRAMES = """(() => {
     const id = ++next; frames.set(id, callback); return id;
   };
   window.cancelAnimationFrame = id => frames.delete(id);
-  const scene = {character: null, markers: [], feet: [], sprite:null, goal:null};
+  const scene = {character: null, markers: [], feet: [], sprite:null, goal:null,
+    rocks:[],fallbackRocks:0};
   const proto = CanvasRenderingContext2D.prototype;
   const transform = proto.setTransform, rectangle = proto.fillRect, arc = proto.arc;
-  const drawImage = proto.drawImage, fillText = proto.fillText;
+  const drawImage = proto.drawImage, fillText = proto.fillText, fill = proto.fill;
   proto.setTransform = function(...args) {
     scene.markers = [];
     scene.feet = [];
     scene.character = null;
     scene.sprite = null;
     scene.goal = null;
+    scene.rocks = [];
+    scene.fallbackRocks = 0;
     return transform.apply(this, args);
   };
   proto.fillRect = function(x, y, width, height) {
@@ -104,7 +107,16 @@ MANUAL_FRAMES = """(() => {
       scene.sprite={x,y,width,height,src:image.src,
         naturalWidth:image.naturalWidth,naturalHeight:image.naturalHeight};
     }
+    if (image.src?.endsWith('/runner/assets/spike-rock.webp') && args.length === 4) {
+      const [x,y,width,height] = args;
+      scene.rocks.push({x,y,width,height,src:image.src,
+        naturalWidth:image.naturalWidth,naturalHeight:image.naturalHeight});
+    }
     return drawImage.call(this,image,...args);
+  };
+  proto.fill = function(...args) {
+    if (this.fillStyle === '#514650') scene.fallbackRocks++;
+    return fill.apply(this,args);
   };
   proto.fillText = function(text, x, y, ...args) {
     if (text === 'GOAL') scene.goal={x,y};
@@ -133,7 +145,7 @@ MANUAL_FRAMES = """(() => {
       let background = 0;
       for (let i=0; i<pixels.length; i+=16) background = (background*31+pixels[i]) >>> 0;
       return {now, pending:frames.size, character:scene.character, feet:scene.feet,
-        sprite:scene.sprite,goal:scene.goal,
+        sprite:scene.sprite,goal:scene.goal,rocks:scene.rocks,fallbackRocks:scene.fallbackRocks,
         marker:scene.markers.find(x=>x>=0), background, image:c.toDataURL(),
         score:Number(document.querySelector('#runner-score').textContent),
         progress:Number(document.querySelector('#runner-progress').textContent)};
@@ -199,7 +211,8 @@ class RunnerCanvasTest(unittest.TestCase):
         cls.server.server_close()
         cls.thread.join()
 
-    def open_runner(self, width=390, height=844, dpr=3, setup=None, broken_image=False, probe=False):
+    def open_runner(self, width=390, height=844, dpr=3, setup=None, broken_image=False,
+                    probe=False, broken_obstacle_image=False):
         context = self.browser.new_context(
             viewport={'width': width, 'height': height},
             device_scale_factor=dpr, has_touch=True, is_mobile=True)
@@ -222,6 +235,8 @@ class RunnerCanvasTest(unittest.TestCase):
                 status=200, content_type='text/javascript', body=script))
         if broken_image:
             page.route('**/assets/plush/shiba.webp', lambda route: route.fulfill(status=404, body='missing'))
+        if broken_obstacle_image:
+            page.route('**/runner/assets/spike-rock.webp', lambda route: route.fulfill(status=404, body='missing'))
         response = page.goto(self.url)
         self.assertEqual(response.status, 200)
         return page, errors, requests
@@ -473,8 +488,10 @@ class RunnerCanvasTest(unittest.TestCase):
                 self.assertTrue(page.locator('#runner-jump').is_disabled())
                 self.assert_isolated(page, errors, requests)
 
-    def manual_runner(self, broken_image=False, probe=False):
-        page, errors, requests = self.open_runner(setup=MANUAL_FRAMES, broken_image=broken_image, probe=probe)
+    def manual_runner(self, broken_image=False, probe=False, broken_obstacle_image=False,
+                      width=390, height=844, dpr=3):
+        page, errors, requests = self.open_runner(width, height, dpr, setup=MANUAL_FRAMES,
+            broken_image=broken_image, probe=probe, broken_obstacle_image=broken_obstacle_image)
         page.wait_for_function('runnerImages.length > 0 && runnerImages.every(image=>image.complete)')
         page.evaluate('runnerClock.settle()')
         page.evaluate('runnerClock.step(0)')
@@ -748,21 +765,21 @@ class RunnerCanvasTest(unittest.TestCase):
                                   'delayedScore':20,'delayedReason':'collision'})
         self.assert_isolated(page, errors, requests)
 
-    def test_box_collision_uses_actual_height_and_a_jump_clears_the_box(self):
+    def test_rock_collision_uses_actual_height_and_a_jump_clears_the_rock(self):
         page, errors, requests = self.model_runner()
         actual = page.evaluate("""() => {
           const {createRunnerState,updateRunner,startJump}=runnerModel;
           const early=createRunnerState([]); early.mode='running'; startJump(early);
-          early.objects=[{id:'box',type:'obstacle',x:186}]; updateRunner(early,0);
+          early.objects=[{id:'rock',type:'obstacle',x:186}]; updateRunner(early,0);
           const over=createRunnerState([]); over.mode='running'; startJump(over);
           updateRunner(over,.45);
-          over.objects=[{id:'box',type:'obstacle',x:186}]; updateRunner(over,0);
+          over.objects=[{id:'rock',type:'obstacle',x:186}]; updateRunner(over,0);
           const apex={mode:over.mode,offset:over.jumpOffset};
           updateRunner(over,.45);
           const passed={mode:over.mode,offset:over.jumpOffset,jumping:over.jumping};
           const descending=createRunnerState([]); descending.mode='running'; startJump(descending);
           updateRunner(descending,.83);
-          descending.objects=[{id:'box',type:'obstacle',x:186}]; updateRunner(descending,0);
+          descending.objects=[{id:'rock',type:'obstacle',x:186}]; updateRunner(descending,0);
           return {early:early.mode,apex,passed,descending:{mode:descending.mode,
             offset:descending.jumpOffset,jumping:descending.jumping}};
         }""")
@@ -773,6 +790,28 @@ class RunnerCanvasTest(unittest.TestCase):
         self.assertEqual(actual['descending']['mode'], 'finished')
         self.assertGreater(actual['descending']['offset'], 0)
         self.assertTrue(actual['descending']['jumping'])
+        self.assert_isolated(page, errors, requests)
+
+    def test_spike_rock_transparent_corner_misses_but_body_and_tip_hit(self):
+        page, errors, requests = self.model_runner()
+        actual = page.evaluate("""() => {
+          const {createRunnerState,updateRunner,CHARACTER_X,GROUND_Y,COLLISION,OBSTACLE_IMAGE}=runnerModel;
+          function at(relativeX,relativeY) {
+            const state=createRunnerState([]); state.mode='running';
+            // 時刻0の実際の円中心を置き、透明な角と細い中央トゲを別々に検査する。
+            state.ground=GROUND_Y+relativeY+43;
+            state.objects=[{id:'rock',type:'obstacle',x:CHARACTER_X-relativeX}];
+            updateRunner(state,0);
+            return {mode:state.mode,reason:state.reason};
+          }
+          return {corner:at(51,-61),tip:at(0,-80),body:at(0,-20),outside:at(100,-20),
+            width:OBSTACLE_IMAGE.width,radius:COLLISION.characterRadius};
+        }""")
+        self.assertEqual(actual['corner'], {'mode':'running','reason':None})
+        self.assertEqual(actual['outside'], {'mode':'running','reason':None})
+        for part in ('tip', 'body'):
+            self.assertEqual(actual[part], {'mode':'finished','reason':'collision'}, part)
+        self.assertEqual((actual['width'], actual['radius']), (80,28))
         self.assert_isolated(page, errors, requests)
 
     def test_distance_spawn_and_jump_match_at_60_and_120_hz(self):
@@ -828,9 +867,9 @@ class RunnerCanvasTest(unittest.TestCase):
         ready=self.snapshot(page)
         self.assertEqual((ready['score'],ready['progress']),(0,0))
         self.toggle(page); page.evaluate('runnerClock.step(0)')
-        page.evaluate('runnerClock.advance(5350,60)')
+        page.evaluate('runnerClock.advance(5330,60)')
         self.assertEqual(self.snapshot(page)['score'],10)
-        self.tap(page) # 木箱の直前では間に合わず、空中のままゲームオーバーになる。
+        self.tap(page) # トゲ岩の直前では間に合わず、空中のままゲームオーバーになる。
         page.evaluate('runnerClock.advance(500,60)')
         stopped=self.snapshot(page)
         self.assertEqual((stopped['progress'],stopped['pending']),(16,0))
@@ -857,36 +896,43 @@ class RunnerCanvasTest(unittest.TestCase):
         self.assert_isolated(page,errors,requests)
 
     def test_full_fixed_course_can_clear_and_finished_screen_keeps_layout(self):
-        page,errors,requests=self.model_runner()
-        obstacles=page.evaluate("runnerModel.COURSE.filter(item=>item.type==='obstacle')")
-        self.assertGreaterEqual(obstacles[0]['at']+(1008-234)/200,5)
-        self.toggle(page); page.evaluate('runnerClock.step(0)')
-        for obstacle in obstacles:
-            # 右端出現からキャラ中心到達まで4.11秒。0.45秒前に跳ぶ。
-            target_time=(obstacle['at']+3.66)*1000
-            now=self.snapshot(page)['now']
-            page.evaluate('ms=>runnerClock.advance(ms,60)',target_time-now)
-            self.tap(page)
-        now=self.snapshot(page)['now']
-        page.evaluate('ms=>runnerClock.advance(ms,60)',32000-now)
-        finished=self.snapshot(page)
-        self.assertEqual((finished['progress'],finished['pending']),(100,0))
-        self.assertEqual(page.locator('#runner-result-title').inner_text(),'クリア！')
-        self.assertEqual(page.locator('#runner-result-score').inner_text(),str(finished['score']))
-        self.assertEqual(page.locator('#runner-result-progress').inner_text(),'100')
-        self.assertIsNotNone(finished['goal'])
-        self.assertGreater(finished['score'],0)
-        self.assertEqual(page.evaluate('runnerClock.advance(10000)'),0)
-        self.assertTrue(self.snapshot(page)['image']==finished['image'])
-        for width,height in ((844,390),(768,1024),(1024,768)):
-            page.set_viewport_size({'width':width,'height':height})
-            page.evaluate('runnerClock.settle()')
-            page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
-            self.assert_geometry(page)
-            self.assertEqual(self.snapshot(page)['pending'],0)
-            self.assertTrue(page.locator('#runner-result').is_visible())
-            self.assertGreaterEqual(page.locator('#runner-toggle').bounding_box()['height'],44)
-        self.assert_isolated(page,errors,requests)
+        for hz in (60,120):
+            with self.subTest(hz=hz):
+                page,errors,requests=self.model_runner()
+                obstacles=page.evaluate("runnerModel.COURSE.filter(item=>item.type==='obstacle')")
+                # 画像全体の幅まで含めた保守的な見積もりでも、最初の接触は5秒以降。
+                earliest=page.evaluate("""() => {const m=runnerModel;
+                  return m.COURSE.find(item=>item.type==='obstacle').at+
+                    (1008-m.CHARACTER_X-m.OBSTACLE_IMAGE.width/2-m.COLLISION.characterRadius)/m.SCROLL_SPEED;
+                }""")
+                self.assertGreaterEqual(earliest,5)
+                self.toggle(page); page.evaluate('runnerClock.step(0)')
+                for obstacle in obstacles:
+                    # 右端出現からキャラ中心到達まで4.11秒。0.45秒前に跳ぶ。
+                    target_time=(obstacle['at']+3.66)*1000
+                    now=self.snapshot(page)['now']
+                    page.evaluate('args=>runnerClock.advance(...args)',[target_time-now,hz])
+                    self.tap(page)
+                now=self.snapshot(page)['now']
+                page.evaluate('args=>runnerClock.advance(...args)',[32000-now,hz])
+                finished=self.snapshot(page)
+                self.assertEqual((finished['progress'],finished['pending']),(100,0))
+                self.assertEqual(page.locator('#runner-result-title').inner_text(),'クリア！')
+                self.assertEqual(page.locator('#runner-result-score').inner_text(),str(finished['score']))
+                self.assertEqual(page.locator('#runner-result-progress').inner_text(),'100')
+                self.assertIsNotNone(finished['goal'])
+                self.assertEqual(finished['score'],100)
+                self.assertEqual(page.evaluate('runnerClock.advance(10000)'),0)
+                self.assertTrue(self.snapshot(page)['image']==finished['image'])
+                for width,height in ((844,390),(768,1024),(1024,768)):
+                    page.set_viewport_size({'width':width,'height':height})
+                    page.evaluate('runnerClock.settle()')
+                    page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
+                    self.assert_geometry(page)
+                    self.assertEqual(self.snapshot(page)['pending'],0)
+                    self.assertTrue(page.locator('#runner-result').is_visible())
+                    self.assertGreaterEqual(page.locator('#runner-toggle').bounding_box()['height'],44)
+                self.assert_isolated(page,errors,requests)
 
     def test_goal_depends_on_distance_and_collision_wins_at_the_finish(self):
         page,errors,requests=self.model_runner()
@@ -963,6 +1009,78 @@ class RunnerCanvasTest(unittest.TestCase):
                 self.assertEqual(jumped['pending'],1)
                 self.assertEqual(page.locator('#runner-toggle').inner_text(),'一時停止')
                 self.assert_isolated(page,errors,requests)
+
+    def test_spike_rock_image_loads_with_alpha_and_stays_grounded_in_phone_tablet_layouts(self):
+        for width,height in ((375,667),(390,844),(667,375),(844,390),(768,1024),(1024,768)):
+            with self.subTest(width=width,height=height):
+                page,errors,requests=self.manual_runner(width=width,height=height)
+                self.toggle(page); page.evaluate('runnerClock.step(0)')
+                page.evaluate('runnerClock.advance(3500,20)')
+                before=self.snapshot(page)
+                self.assertEqual(len(before['rocks']),1)
+                rock=before['rocks'][0]
+                self.assertTrue(rock['src'].endswith('/runner/assets/spike-rock.webp'))
+                self.assertEqual((rock['naturalWidth'],rock['naturalHeight']),(640,466))
+                self.assertEqual((rock['width'],rock['height']),(80,58.25))
+                self.assertAlmostEqual(rock['width']/rock['height'],640/466,delta=.000001)
+                self.assertAlmostEqual(rock['y']+rock['height']*464/466,470,delta=.000001)
+                self.assertGreaterEqual(rock['x'],0)
+                self.assertLessEqual(rock['x']+rock['width'],960)
+                self.assertEqual(before['fallbackRocks'],0)
+                page.evaluate('runnerClock.advance(250,20)')
+                after=self.snapshot(page)['rocks'][0]
+                self.assertAlmostEqual(rock['x']-after['x'],50,delta=.000001)
+                self.assertAlmostEqual(rock['y'],after['y'],delta=.000001)
+                self.assert_geometry(page)
+                if width == 375:
+                    alpha=page.evaluate("""() => {
+                      const image=runnerImages.find(image=>image.src.endsWith('/runner/assets/spike-rock.webp'));
+                      const canvas=document.createElement('canvas');
+                      canvas.width=image.naturalWidth; canvas.height=image.naturalHeight;
+                      const ctx=canvas.getContext('2d'); ctx.drawImage(image,0,0);
+                      const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+                      let left=canvas.width,top=canvas.height,right=-1,bottom=-1;
+                      for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++)
+                        if(pixels[(y*canvas.width+x)*4+3]) {
+                          left=Math.min(left,x);top=Math.min(top,y);
+                          right=Math.max(right,x);bottom=Math.max(bottom,y);
+                        }
+                      return {corner:pixels[3],bounds:[left,top,right+1,bottom+1]};
+                    }""")
+                    self.assertEqual(alpha,{'corner':0,'bounds':[1,3,638,464]})
+                self.assert_isolated(page,errors,requests)
+
+    def test_missing_spike_rock_uses_fallback_and_preserves_motion_jump_collision_and_retry(self):
+        page,errors,requests=self.manual_runner(broken_obstacle_image=True,probe=True)
+        self.assertEqual(page.evaluate("runnerImages.find(image=>image.src.endsWith('/runner/assets/spike-rock.webp')).naturalWidth"),0)
+        self.toggle(page); page.evaluate('runnerClock.step(0)')
+        page.evaluate('runnerClock.advance(3500,20)')
+        before=self.snapshot(page)
+        self.assertEqual(before['rocks'],[])
+        self.assertEqual(before['fallbackRocks'],1)
+        self.assertIsNotNone(before['sprite'])
+        page.locator('#runner-jump').tap()
+        page.evaluate('runnerClock.advance(450,60)')
+        airborne=self.snapshot(page)
+        self.assertAlmostEqual(airborne['character']['y'],307,delta=.001)
+        self.assertEqual(airborne['fallbackRocks'],1)
+        self.assert_marker_advance(before,airborne,90)
+        page.evaluate('runnerClock.advance(2000,60)')
+        stopped=self.snapshot(page)
+        self.assertEqual((stopped['score'],stopped['progress'],stopped['pending']),(10,16,0))
+        self.assertEqual(page.locator('#runner-result-title').inner_text(),'ゲームオーバー')
+        self.assertAlmostEqual(page.evaluate(JUMP_PROBE)['elapsed'],0,delta=.000001)
+        self.assertEqual(page.evaluate('runnerClock.advance(10000)'),0)
+        self.assertEqual(self.snapshot(page)['image'],stopped['image'])
+        self.toggle(page); page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
+        restarted=self.snapshot(page)
+        self.assertEqual((restarted['score'],restarted['progress'],restarted['rocks']),(0,0,[]))
+        self.assertEqual(restarted['pending'],1)
+        self.assertAlmostEqual(restarted['character']['y'],427,delta=.001)
+        page.locator('#runner-jump').tap()
+        page.evaluate('runnerClock.advance(450,60)')
+        self.assertAlmostEqual(self.snapshot(page)['character']['y'],307,delta=.001)
+        self.assert_isolated(page,errors,requests)
 
 
 if __name__ == '__main__':
