@@ -255,10 +255,10 @@ class RunnerCanvasTest(unittest.TestCase):
                 script = script.replace('function startJump(state) {',
                     'function startJump(state) { runnerJumpProbe.calls++; runnerJumpProbe.state=state;', 1)
             if course is not None:
-                signature='function createRunnerState(course = COURSE) {'
+                signature='function createRunnerState(course = COURSE, characterId = course?.characterId ?? "shiba") {'
                 self.assertIn(signature,script)
                 script=script.replace(signature,
-                    'function createRunnerState(course = '+json.dumps(course)+') {',1)
+                    'function createRunnerState(course = '+json.dumps(course)+', characterId = course?.characterId ?? "shiba") {',1)
             page.route('**/runner/game.js*', lambda route: route.fulfill(
                 status=200, content_type='text/javascript', body=script))
         if broken_image:
