@@ -83,7 +83,8 @@ class RunnerStagesTest(unittest.TestCase):
             ...[0,-1,NaN,Infinity,'100'].map(goalDistance=>({goalDistance,course:[]}))];
           return {half,finish,retry:{stageId:retry.stageId,goalDistance:retry.goalDistance,
               mode:retry.mode,distance:retry.distance,score:retry.score,elapsed:retry.elapsed,
-              course:retry.course,distinct:retry.course!==state.course},
+              course:retry.course,distinct:retry.course!==state.course,
+              lives:retry.lives,invincibleRemaining:retry.invincibleRemaining},
             legacy:{stageId:legacy.stageId,goalDistance:legacy.goalDistance},
             rejected:invalid.map(value=>{try{m.createRunnerState(value);return false;}
               catch(error){return error instanceof TypeError;}})};
@@ -97,7 +98,8 @@ class RunnerStagesTest(unittest.TestCase):
         self.assertAlmostEqual(actual['finish']['elapsed'], 1234 / 200, delta=1e-6)
         self.assertAlmostEqual(actual['finish']['goal'], 186, delta=1e-6)
         self.assertEqual(actual['retry'], {'stageId': 'S99', 'goalDistance': 1234,
-            'mode': 'ready', 'distance': 0, 'score': 0, 'elapsed': 0, 'course': [], 'distinct': True})
+            'mode': 'ready', 'distance': 0, 'score': 0, 'elapsed': 0, 'course': [], 'distinct': True,
+            'lives': 2, 'invincibleRemaining': 0})
         self.assertEqual(actual['legacy'], {'stageId': None, 'goalDistance': 6400})
         self.assertTrue(all(actual['rejected']))
         self.assertEqual(len(actual['rejected']), 10)
@@ -186,7 +188,8 @@ class RunnerStagesTest(unittest.TestCase):
           collision.distance=stage.goalDistance-1;
           collision.objects=[{id:'final-rock',type:'obstacle',x:186}];m.updateRunner(collision,.005);
           return {id:stage.stageId,goalDistance:state.goalDistance,halfway,before,complete,
-            collision:{reason:collision.reason,progress:m.progressPercent(collision)}};
+            collision:{mode:collision.mode,lives:collision.lives,reason:collision.reason,
+              progress:m.progressPercent(collision)}};
         })""")
         for result in outcomes:
             with self.subTest(stage=result['id']):
@@ -204,7 +207,8 @@ class RunnerStagesTest(unittest.TestCase):
                 self.assertAlmostEqual(complete['distance'], length, delta=1e-6)
                 self.assertAlmostEqual(complete['elapsed'], length / 200, delta=1e-6)
                 self.assertAlmostEqual(complete['goal'], 186, delta=1e-6)
-                self.assertEqual(result['collision'], {'reason': 'collision', 'progress': 100})
+                self.assertEqual(result['collision'],
+                    {'mode': 'hurt', 'lives': 1, 'reason': 'collision', 'progress': 100})
         self.assert_isolated(page, errors, requests)
 
     def test_all_stages_clear_and_score_100_using_legal_inputs_at_60_and_120_hz(self):
@@ -243,30 +247,85 @@ class RunnerStagesTest(unittest.TestCase):
                     self.assertGreaterEqual(result['landings'], len(EXPECTED[result['id']]['upper']))
         self.assert_isolated(page, errors, requests)
 
-    def test_one_rock_hit_ends_each_stage_and_pause_does_not_advance(self):
+    def test_two_rock_hits_resume_and_freeze_on_every_stage_at_60_and_120_hz(self):
         page, errors, requests = self.stage_runner()
-        results = page.evaluate("""() => runnerStages.map(stage => {
-          const m=runnerModel,state=m.createRunnerState(stage),ready=JSON.stringify(state);
-          m.updateRunner(state,100);m.startJump(state);const readyFrozen=ready===JSON.stringify(state);
-          state.mode='running';m.updateRunner(state,1);
-          state.mode='paused';const paused=JSON.stringify(state);
-          m.updateRunner(state,100);m.startJump(state);const pauseFrozen=paused===JSON.stringify(state);
-          state.mode='running';
-          while(state.mode==='running')m.updateRunner(state,1/120);
-          const ended=JSON.stringify(state);m.updateRunner(state,100);const jump=m.startJump(state);
-          return {id:stage.stageId,readyFrozen,pauseFrozen,reason:state.reason,mode:state.mode,
-            elapsed:state.elapsed,distance:state.distance,jump,frozen:ended===JSON.stringify(state)};
-        })""")
+        results = page.evaluate("""() => {
+          const results=[],m=runnerModel;
+          const progress=s=>JSON.stringify({stageId:s.stageId,goalDistance:s.goalDistance,
+            distance:s.distance,elapsed:s.elapsed,animationTime:s.animationTime,score:s.score,
+            feetY:s.feetY,velocityY:s.velocityY,supportId:s.supportId,
+            jumpOriginY:s.jumpOriginY,airAction:s.airAction,landingUntil:s.landingUntil,
+            objects:s.objects,nextSpawn:s.nextSpawn,course:s.course});
+          for(const stage of runnerStages)for(const hz of [60,120]) {
+            const state=m.createRunnerState(stage),ready=JSON.stringify(state);
+            m.updateRunner(state,100);m.startJump(state);
+            const readyFrozen=ready===JSON.stringify(state),initialLives=state.lives;
+            state.mode='running';m.updateRunner(state,1);
+            state.mode='paused';const paused=JSON.stringify(state);
+            m.updateRunner(state,100);m.startJump(state);
+            const pauseFrozen=paused===JSON.stringify(state);
+            m.resumeRunner(state);
+            while(state.mode==='running')m.updateRunner(state,1/hz);
+            const first={mode:state.mode,reason:state.reason,lives:state.lives,
+              elapsed:state.elapsed,distance:state.distance,score:state.score};
+            const hurt=JSON.stringify(state),checkpoint=progress(state);
+            m.updateRunner(state,100);const hurtJump=m.startJump(state);
+            const hurtFrozen=hurt===JSON.stringify(state);
+            const resumed=m.resumeRunner(state),preserved=checkpoint===progress(state);
+            const invincible=state.invincibleRemaining;
+            const started=JSON.stringify(state),doubleResume=m.resumeRunner(state);
+            const doubleStable=started===JSON.stringify(state);
+            for(let i=0;i<hz*.9;i++)m.updateRunner(state,1/hz);
+            const protectedState={mode:state.mode,lives:state.lives,
+              invincibleRemaining:state.invincibleRemaining};
+            state.mode='paused';const shieldPause=JSON.stringify(state);
+            m.updateRunner(state,100);
+            const shieldFrozen=shieldPause===JSON.stringify(state);
+            m.resumeRunner(state);
+            while(state.mode==='running')m.updateRunner(state,1/hz);
+            const ended=JSON.stringify(state);m.updateRunner(state,100);const endJump=m.startJump(state);
+            const final={mode:state.mode,reason:state.reason,lives:state.lives,
+              elapsed:state.elapsed,distance:state.distance,score:state.score};
+            const retry=m.createRunnerState(state);
+            results.push({id:stage.stageId,hz,initialLives,readyFrozen,pauseFrozen,first,
+              hurtJump,hurtFrozen,resumed,preserved,invincible,doubleResume,doubleStable,
+              protectedState,shieldFrozen,final,endJump,endFrozen:ended===JSON.stringify(state),
+              retry:{id:retry.stageId,lives:retry.lives,invincibleRemaining:retry.invincibleRemaining,
+                score:retry.score,distance:retry.distance,elapsed:retry.elapsed}});
+          }
+          return results;
+        }""")
+        self.assertEqual(len(results), 12)
         for result in results:
-            with self.subTest(stage=result['id']):
-                self.assertTrue(result['readyFrozen'])
-                self.assertTrue(result['pauseFrozen'])
-                self.assertEqual((result['mode'], result['reason']), ('finished', 'collision'))
-                first = EXPECTED[result['id']]['rocks'][0]
-                self.assertLess(result['elapsed'], first)
-                self.assertGreater(result['elapsed'], first - .5)
-                self.assertFalse(result['jump'])
-                self.assertTrue(result['frozen'])
+            with self.subTest(stage=result['id'], hz=result['hz']):
+                self.assertEqual(result['initialLives'], 2)
+                for frozen in ('readyFrozen', 'pauseFrozen', 'hurtFrozen', 'preserved',
+                               'doubleStable', 'shieldFrozen', 'endFrozen'):
+                    self.assertTrue(result[frozen], (frozen, result))
+                first, final = result['first'], result['final']
+                self.assertEqual((first['mode'], first['reason'], first['lives']),
+                                 ('hurt', 'collision', 1))
+                self.assertGreater(first['score'], 0)
+                self.assertFalse(result['hurtJump'])
+                self.assertTrue(result['resumed'])
+                self.assertFalse(result['doubleResume'])
+                self.assertAlmostEqual(result['invincible'], 1, delta=1e-9)
+                self.assertEqual((result['protectedState']['mode'], result['protectedState']['lives']),
+                                 ('running', 1))
+                self.assertAlmostEqual(result['protectedState']['invincibleRemaining'], .1, delta=1e-6)
+                self.assertEqual((final['mode'], final['reason'], final['lives']),
+                                 ('finished', 'collision', 0))
+                self.assertFalse(result['endJump'])
+                rocks = EXPECTED[result['id']]['rocks']
+                for collision, arrival in ((first, rocks[0]), (final, rocks[1])):
+                    self.assertLess(collision['elapsed'], arrival)
+                    self.assertGreater(collision['elapsed'], arrival - .5)
+                self.assertEqual(result['retry'], {'id': result['id'], 'lives': 2,
+                    'invincibleRemaining': 0, 'score': 0, 'distance': 0, 'elapsed': 0})
+        for stage_id in EXPECTED:
+            pair = [r for r in results if r['id'] == stage_id]
+            for moment in ('first', 'final'):
+                self.assertEqual(pair[0][moment], pair[1][moment])
         self.assert_isolated(page, errors, requests)
 
     def test_states_copy_course_without_mutating_stage_or_other_plays(self):
@@ -348,7 +407,15 @@ class RunnerStagesTest(unittest.TestCase):
                 self.toggle(page)
                 page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
                 page.evaluate('runnerClock.advance(7000,60)')
+                self.assertEqual(page.locator('#runner-toggle').inner_text(), 'つづける')
+                self.assertEqual(self.snapshot(page)['pending'], 0)
+                first = page.evaluate('JSON.parse(JSON.stringify(runnerJumpProbe.state))')
+                self.assertEqual((first['mode'], first['lives']), ('hurt', 1))
+                self.toggle(page)
+                page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
+                page.evaluate('runnerClock.advance(7000,60)')
                 self.assertEqual(page.locator('#runner-result-title').inner_text(), 'ゲームオーバー')
+                self.assertEqual(page.evaluate('runnerJumpProbe.state.lives'), 0)
                 self.assertEqual(self.snapshot(page)['pending'], 0)
                 self.toggle(page)
                 page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
@@ -356,10 +423,12 @@ class RunnerStagesTest(unittest.TestCase):
                 fresh = page.evaluate("""() => {
                   const s=runnerJumpProbe.state;
                   return {id:s.stageId,goalDistance:s.goalDistance,distance:s.distance,
-                    elapsed:s.elapsed,score:s.score,feet:s.feetY,origin:s.jumpOriginY};
+                    elapsed:s.elapsed,score:s.score,feet:s.feetY,origin:s.jumpOriginY,
+                    lives:s.lives,invincibleRemaining:s.invincibleRemaining};
                 }""")
                 self.assertEqual(fresh, {'id': stage['stageId'], 'goalDistance': stage['goalDistance'],
-                    'distance': 0, 'elapsed': 0, 'score': 0, 'feet': 470, 'origin': 470})
+                    'distance': 0, 'elapsed': 0, 'score': 0, 'feet': 470, 'origin': 470,
+                    'lives': 2, 'invincibleRemaining': 0})
                 self.assertEqual((self.snapshot(page)['score'], self.snapshot(page)['progress']), (0, 0))
                 self.assertTrue(page.locator('#runner-result').is_hidden())
                 self.assert_isolated(page, errors, requests)
