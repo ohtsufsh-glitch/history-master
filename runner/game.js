@@ -14,6 +14,15 @@ const CHARACTER_X = 186;
 const GROUND_Y = 470;
 const CHARACTER_IMAGE = Object.freeze({ src: "../assets/plush/shiba.webp", maxSize: 100,
   feetRatio: 465 / 512 }); // 既存画像の透明余白を含む、足元の基準位置。
+// 素材は右向きのまま使用。足元の透明余白だけをコマごとに補正する。
+const CHARACTER_SET = Object.freeze({ maxSize: 100, runFrameSeconds: 0.1,
+  landingSeconds: 0.12, apexHalfWindow: 0.06,
+  frames: Object.freeze(Object.fromEntries([
+    ["idle", 465], ["run_1", 464], ["run_2", 465], ["run_3", 466], ["run_4", 464],
+    ["jump_up", 465], ["jump_top", 465], ["jump_down", 464], ["land", 466],
+  ].map(([name, feet]) => [name, Object.freeze({
+    src: `./assets/shiba/${name}.webp`, feetRatio: feet / 512,
+  })]))) });
 const OBSTACLE_WIDTH = 80;
 // 元画像の下端2pxは透明。実体の底面Y=464を地面に合わせる。
 const OBSTACLE_IMAGE = Object.freeze({ src: "./assets/spike-rock.webp", width: OBSTACLE_WIDTH,
@@ -43,6 +52,7 @@ const COURSE = Object.freeze([
 function createRunnerState(course = COURSE) {
   return { mode: "ready", distance: 0, animationTime: 0,
     ground: GROUND_Y, jumping: false, jumpElapsed: 0, jumpOffset: 0, jumpVelocity: 0,
+    landingUntil: 0,
     elapsed: 0, score: 0, reason: null, objects: [], nextSpawn: 0,
     course: course.map(entry => ({ ...entry })).sort((a, b) => a.at - b.at) };
 }
@@ -59,6 +69,7 @@ function advanceMotion(state, seconds) {
     state.jumpOffset = 0;
     state.jumpVelocity = 0;
     state.ground = GROUND_Y;
+    state.landingUntil = state.animationTime + CHARACTER_SET.landingSeconds;
     return;
   }
   const time = state.jumpElapsed;
@@ -145,7 +156,20 @@ function startJump(state) {
   state.jumping = true;
   state.jumpElapsed = 0;
   state.jumpVelocity = JUMP.initialVelocity;
+  state.landingUntil = 0;
   return true;
+}
+
+function characterPose(state) {
+  if (state.mode !== "running") return "idle";
+  if (state.jumping) {
+    if (Math.abs(state.jumpElapsed - JUMP.duration / 2) <= CHARACTER_SET.apexHalfWindow + 1e-9)
+      return "jump_top";
+    return state.jumpVelocity > 0 ? "jump_up" : "jump_down";
+  }
+  if (state.animationTime < state.landingUntil - 1e-9) return "land";
+  const frame = Math.floor((state.animationTime + 1e-9) / CHARACTER_SET.runFrameSeconds) % 4 + 1;
+  return `run_${frame}`;
 }
 
 function drawBackground(context, state) {
@@ -228,12 +252,18 @@ function drawFallbackCharacter(context, state) {
   context.fill();
 }
 
-function drawCharacter(context, state, characterImage) {
+function drawCharacter(context, state, characterImages) {
+  const pose = characterPose(state);
+  const frame = CHARACTER_SET.frames[pose];
+  const selectedImage = characterImages[pose];
+  const loaded = selectedImage?.complete && selectedImage.naturalWidth && selectedImage.naturalHeight;
+  const characterImage = loaded ? selectedImage : characterImages.fallback;
   if (!characterImage?.complete || !characterImage.naturalWidth || !characterImage.naturalHeight) {
     drawFallbackCharacter(context, state);
     return;
   }
-  const scale = CHARACTER_IMAGE.maxSize / Math.max(characterImage.naturalWidth, characterImage.naturalHeight);
+  const feetRatio = loaded ? frame.feetRatio : CHARACTER_IMAGE.feetRatio;
+  const scale = CHARACTER_SET.maxSize / Math.max(characterImage.naturalWidth, characterImage.naturalHeight);
   const width = characterImage.naturalWidth * scale;
   const height = characterImage.naturalHeight * scale;
   const bob = state.jumping ? 0 : Math.abs(Math.sin(state.animationTime * Math.PI * 6)) * 4;
@@ -242,7 +272,7 @@ function drawCharacter(context, state, characterImage) {
   context.ellipse(CHARACTER_X, GROUND_Y, 38, 9, 0, 0, Math.PI * 2);
   context.fill();
   context.drawImage(characterImage, CHARACTER_X - width / 2,
-    state.ground - height * CHARACTER_IMAGE.feetRatio - bob, width, height);
+    state.ground - height * feetRatio - bob, width, height);
 }
 
 function drawGoal(context, state) {
@@ -318,14 +348,14 @@ function drawObjects(context, state, obstacleImage) {
   }
 }
 
-function renderScene(context, canvas, state, characterImage, obstacleImage) {
+function renderScene(context, canvas, state, characterImages, obstacleImage) {
   // width/heightの変更でリセットされた変換も毎回復元する。
   context.setTransform(canvas.width / WORLD.width, 0, 0, canvas.height / WORLD.height, 0, 0);
   drawBackground(context, state);
   drawGround(context, state);
   drawObjects(context, state, obstacleImage);
   drawGoal(context, state);
-  drawCharacter(context, state, characterImage);
+  drawCharacter(context, state, characterImages);
 }
 
 function resizeCanvas(canvas, stage, viewport) {
@@ -373,7 +403,8 @@ function initializeRunner() {
   }
 
   let state = createRunnerState();
-  const characterImage = new Image();
+  const characterImages = { fallback: new Image() };
+  for (const name of Object.keys(CHARACTER_SET.frames)) characterImages[name] = new Image();
   const obstacleImage = new Image();
   let active = !document.hidden;
   let pendingFrame = null;
@@ -421,7 +452,7 @@ function initializeRunner() {
       previousTimestamp = state.mode === "running" ? timestamp : null;
       updateControls();
     }
-    renderScene(context, canvas, state, characterImage, obstacleImage);
+    renderScene(context, canvas, state, characterImages, obstacleImage);
     status.hidden = true;
     if (state.mode === "running") requestRedraw();
   }
@@ -461,7 +492,9 @@ function initializeRunner() {
     if (!active || document.hidden) return;
     if (state.mode === "running") {
       pauseRunning();
+      // 走行位置を進めず、停止中のidleを1回だけ表示する。
       if (sizeDirty) requestRedraw();
+      else renderScene(context, canvas, state, characterImages, obstacleImage);
     } else {
       if (state.mode === "finished") state = createRunnerState();
       state.mode = "running";
@@ -497,9 +530,12 @@ function initializeRunner() {
     else resumeRendering();
   });
   // 画像を待ってゲームを止めない。復帰・静止中も必要な1フレームだけ更新する。
-  characterImage.onload = requestRedraw;
-  characterImage.onerror = requestRedraw;
-  characterImage.src = new URL(CHARACTER_IMAGE.src, import.meta.url).href;
+  for (const [name, image] of Object.entries(characterImages)) {
+    image.onload = requestRedraw;
+    image.onerror = requestRedraw;
+    const src = name === "fallback" ? CHARACTER_IMAGE.src : CHARACTER_SET.frames[name].src;
+    image.src = new URL(src, import.meta.url).href;
+  }
   obstacleImage.onload = requestRedraw;
   obstacleImage.onerror = requestRedraw;
   obstacleImage.src = new URL(OBSTACLE_IMAGE.src, import.meta.url).href;
@@ -511,5 +547,5 @@ function initializeRunner() {
 initializeRunner();
 
 // コースとゲーム状態はDOMから独立。配置の差し替えや決定的なルール検証に使う。
-export { COURSE, COLLISION, CHARACTER_X, CHARACTER_IMAGE, OBSTACLE_IMAGE, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
-  createRunnerState, updateRunner, startJump, progressPercent, goalX, characterCenter };
+export { COURSE, COLLISION, CHARACTER_X, CHARACTER_IMAGE, CHARACTER_SET, OBSTACLE_IMAGE, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
+  createRunnerState, updateRunner, startJump, progressPercent, goalX, characterCenter, characterPose };

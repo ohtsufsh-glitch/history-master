@@ -7,6 +7,7 @@ Safari実機の検証を置き換えるものではない。
 
 import functools
 import http.server
+import math
 import os
 from pathlib import Path
 import re
@@ -18,6 +19,8 @@ from playwright.sync_api import sync_playwright
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SHIBA_FRAMES = ('idle','run_1','run_2','run_3','run_4',
+                'jump_up','jump_top','jump_down','land')
 
 BUTTON_STYLE = """button => {
   const r=button.getBoundingClientRect(), s=getComputedStyle(button);
@@ -100,11 +103,17 @@ MANUAL_FRAMES = """(() => {
     return arc.call(this, x, y, radius, ...rest);
   };
   proto.drawImage = function(image, ...args) {
-    if (image.src?.endsWith('/assets/plush/shiba.webp') && args.length === 4) {
+    const pose=image.src?.includes('/runner/assets/shiba/') ?
+      image.src.split('/').pop().replace('.webp','') : null;
+    if ((pose || image.src?.endsWith('/assets/plush/shiba.webp')) && args.length === 4) {
       const [x,y,width,height] = args;
-      const point=this.getTransform().transformPoint({x:x+width/2,y:y+height*465/512-43});
+      const feet={idle:465,run_1:464,run_2:465,run_3:466,run_4:464,
+        jump_up:465,jump_top:465,jump_down:464,land:466};
+      const feetRatio=(feet[pose]??465)/512, matrix=this.getTransform();
+      const point=matrix.transformPoint({x:x+width/2,y:y+height*feetRatio-43});
       scene.character={x:point.x*960/this.canvas.width,y:point.y*540/this.canvas.height};
-      scene.sprite={x,y,width,height,src:image.src,
+      scene.sprite={x,y,width,height,src:image.src,pose:pose??'fallback',feetRatio,
+        horizontalScale:matrix.a/(this.canvas.width/960),
         naturalWidth:image.naturalWidth,naturalHeight:image.naturalHeight};
     }
     if (image.src?.endsWith('/runner/assets/spike-rock.webp') && args.length === 4) {
@@ -212,7 +221,7 @@ class RunnerCanvasTest(unittest.TestCase):
         cls.thread.join()
 
     def open_runner(self, width=390, height=844, dpr=3, setup=None, broken_image=False,
-                    probe=False, broken_obstacle_image=False):
+                    probe=False, broken_obstacle_image=False, broken_frames=(), delayed_frames=None):
         context = self.browser.new_context(
             viewport={'width': width, 'height': height},
             device_scale_factor=dpr, has_touch=True, is_mobile=True)
@@ -237,7 +246,16 @@ class RunnerCanvasTest(unittest.TestCase):
             page.route('**/assets/plush/shiba.webp', lambda route: route.fulfill(status=404, body='missing'))
         if broken_obstacle_image:
             page.route('**/runner/assets/spike-rock.webp', lambda route: route.fulfill(status=404, body='missing'))
-        response = page.goto(self.url)
+        for frame in broken_frames:
+            page.route(f'**/runner/assets/shiba/{frame}.webp',
+                lambda route: route.fulfill(status=404, body='missing'))
+        def defer_frame(frame):
+            def hold(route):
+                delayed_frames[frame]=route
+            return hold
+        for frame in delayed_frames or ():
+            page.route(f'**/runner/assets/shiba/{frame}.webp',defer_frame(frame))
+        response = page.goto(self.url, wait_until='domcontentloaded' if delayed_frames else 'load')
         self.assertEqual(response.status, 200)
         return page, errors, requests
 
@@ -489,9 +507,10 @@ class RunnerCanvasTest(unittest.TestCase):
                 self.assert_isolated(page, errors, requests)
 
     def manual_runner(self, broken_image=False, probe=False, broken_obstacle_image=False,
-                      width=390, height=844, dpr=3):
+                      width=390, height=844, dpr=3, broken_frames=()):
         page, errors, requests = self.open_runner(width, height, dpr, setup=MANUAL_FRAMES,
-            broken_image=broken_image, probe=probe, broken_obstacle_image=broken_obstacle_image)
+            broken_image=broken_image, probe=probe, broken_obstacle_image=broken_obstacle_image,
+            broken_frames=broken_frames)
         page.wait_for_function('runnerImages.length > 0 && runnerImages.every(image=>image.complete)')
         page.evaluate('runnerClock.settle()')
         page.evaluate('runnerClock.step(0)')
@@ -873,6 +892,7 @@ class RunnerCanvasTest(unittest.TestCase):
         page.evaluate('runnerClock.advance(500,60)')
         stopped=self.snapshot(page)
         self.assertEqual((stopped['progress'],stopped['pending']),(16,0))
+        self.assertEqual(stopped['sprite']['pose'],'idle')
         self.assertEqual(page.locator('#runner-toggle').inner_text(),'もう一度')
         self.assertEqual(page.locator('#runner-result-title').inner_text(),'ゲームオーバー')
         self.assertTrue(page.locator('#runner-result').is_visible())
@@ -921,6 +941,7 @@ class RunnerCanvasTest(unittest.TestCase):
                 self.assertEqual(page.locator('#runner-result-score').inner_text(),str(finished['score']))
                 self.assertEqual(page.locator('#runner-result-progress').inner_text(),'100')
                 self.assertIsNotNone(finished['goal'])
+                self.assertEqual(finished['sprite']['pose'],'idle')
                 self.assertEqual(finished['score'],100)
                 self.assertEqual(page.evaluate('runnerClock.advance(10000)'),0)
                 self.assertTrue(self.snapshot(page)['image']==finished['image'])
@@ -978,37 +999,197 @@ class RunnerCanvasTest(unittest.TestCase):
     def test_shiba_sprite_follows_run_and_jump_and_missing_image_uses_fallback(self):
         for broken in (False,True):
             with self.subTest(broken=broken):
-                page,errors,requests=self.manual_runner(broken_image=broken)
+                page,errors,requests=self.manual_runner(broken_image=broken,
+                    broken_frames=SHIBA_FRAMES if broken else ())
                 initial=self.snapshot(page)
+                def pose(expected):
+                    scene=self.snapshot(page)
+                    if broken:
+                        self.assertIsNone(scene['sprite'])
+                    else:
+                        sprite=scene['sprite']
+                        self.assertEqual(sprite['pose'],expected)
+                        self.assertEqual((sprite['naturalWidth'],sprite['naturalHeight']),(512,512))
+                        self.assertEqual((sprite['width'],sprite['height']),(100,100))
+                        self.assertAlmostEqual(sprite['horizontalScale'],1,delta=.000001)
+                        self.assertAlmostEqual(sprite['x']+sprite['width']/2,186,delta=.001)
+                    return scene
                 if broken:
                     self.assertIsNone(initial['sprite'])
                     self.assertEqual(page.evaluate('runnerImages[0].naturalWidth'),0)
                 else:
-                    sprite=initial['sprite']
-                    self.assertIsNotNone(sprite)
-                    self.assertTrue(sprite['src'].endswith('/assets/plush/shiba.webp'))
-                    self.assertEqual((sprite['naturalWidth'],sprite['naturalHeight']),(512,512))
-                    self.assertAlmostEqual(sprite['width']/sprite['height'],1,delta=.000001)
-                    self.assertGreater(sprite['width'],0)
-                    self.assertLessEqual(sprite['width'],100)
-                    self.assertLessEqual(sprite['height'],100)
+                    pose('idle')
+                    alpha=page.evaluate("""() => runnerImages.filter(image=>image.src.includes('/runner/assets/shiba/')).map(image=>{
+                      const canvas=document.createElement('canvas');canvas.width=canvas.height=512;
+                      const context=canvas.getContext('2d');context.drawImage(image,0,0);
+                      const pixels=context.getImageData(0,0,512,512).data;
+                      let bottom=0;for(let i=3;i<pixels.length;i+=4)
+                        if(pixels[i])bottom=Math.max(bottom,Math.floor((i-3)/4/512)+1);
+                      return {name:image.src.split('/').pop().replace('.webp',''),corner:pixels[3],bottom};
+                    })""")
+                    self.assertEqual({frame['name'] for frame in alpha},set(SHIBA_FRAMES))
+                    feet={'idle':465,'run_1':464,'run_2':465,'run_3':466,'run_4':464,
+                          'jump_up':465,'jump_top':465,'jump_down':464,'land':466}
+                    for frame in alpha:
+                        self.assertEqual((frame['corner'],frame['bottom']),(0,feet[frame['name']]))
                 self.assertAlmostEqual(initial['character']['x'],186,delta=.001)
                 self.assertAlmostEqual(initial['character']['y'],427,delta=.001)
                 self.toggle(page); page.evaluate('runnerClock.step(0)')
-                page.evaluate('runnerClock.advance(1000/12,60)')
-                running=self.snapshot(page)
-                self.assertAlmostEqual(running['character']['y'],423,delta=.001)
-                self.tap(page); page.evaluate('runnerClock.advance(450,60)')
-                jumped=self.snapshot(page)
+                pose('run_1')
+                for frame in ('run_2','run_3','run_4','run_1'):
+                    page.evaluate('runnerClock.advance(100,60)')
+                    scene=pose(frame)
+                    self.assertAlmostEqual(scene['character']['y'],
+                        427-abs(math.sin(scene['now']/1000*math.pi*6))*4,
+                        delta=.001)
+                self.tap(page); page.evaluate('runnerClock.advance(225,60)')
+                rising=pose('jump_up')
+                self.assertAlmostEqual(rising['character']['y'],337,delta=.001)
+                self.toggle(page)
+                paused=pose('idle')
+                self.assert_same_scene(rising,paused)
+                self.assertEqual(paused['pending'],0)
+                self.assertEqual(page.evaluate('runnerClock.advance(5000)'),0)
+                self.assertEqual(self.snapshot(page)['image'],paused['image'])
+                self.toggle(page); page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
+                pose('jump_up')
+                page.evaluate('runnerClock.advance(225,60)')
+                jumped=pose('jump_top')
                 self.assertAlmostEqual(jumped['character']['x'],186,delta=.001)
                 self.assertAlmostEqual(jumped['character']['y'],307,delta=.001)
                 if not broken:
                     self.assertAlmostEqual(jumped['sprite']['y'],
                       350-jumped['sprite']['height']*465/512,delta=.001)
                     self.assertEqual(jumped['sprite']['width'],initial['sprite']['width'])
+                page.evaluate('runnerClock.advance(225,60)')
+                self.assertAlmostEqual(pose('jump_down')['character']['y'],337,delta=.001)
+                page.evaluate('runnerClock.advance(225,60)')
+                landed=pose('land')
+                self.assertAlmostEqual(landed['character']['y'],427,delta=4)
+                page.evaluate('runnerClock.advance(100,60)')
+                pose('land')
+                page.evaluate('runnerClock.advance(20,60)')
+                pose('run_3')
                 self.assertEqual(jumped['pending'],1)
                 self.assertEqual(page.locator('#runner-toggle').inner_text(),'一時停止')
                 self.assert_isolated(page,errors,requests)
+
+    def test_shiba_pose_timing_freezes_and_matches_at_60_and_120_hz(self):
+        page,errors,requests=self.model_runner()
+        outcomes=page.evaluate("""() => [60,120].map(hz=>{
+          const {createRunnerState,updateRunner,startJump,characterPose,CHARACTER_SET}=runnerModel;
+          const state=createRunnerState([]), poses=[characterPose(state)];
+          function advance(seconds,target=state) {
+            const count=Math.max(1,Math.round(seconds*hz));
+            for(let i=0;i<count;i++)updateRunner(target,seconds/count);
+          }
+          state.mode='running'; poses.push(characterPose(state));
+          for(let i=0;i<4;i++){advance(.1);poses.push(characterPose(state));}
+          startJump(state);
+          for(let i=0;i<4;i++){advance(.225);poses.push(characterPose(state));}
+          const landed={time:state.animationTime,until:state.landingUntil,offset:state.jumpOffset};
+          advance(.1); poses.push(characterPose(state));
+          state.mode='paused';const paused=JSON.stringify(state);
+          advance(10);startJump(state);
+          const frozen=JSON.stringify(state)===paused,pausedPose=characterPose(state);
+          state.mode='running';const resumedPose=characterPose(state);
+          const immediateJump=startJump(state),landingCleared=state.landingUntil===0;
+          advance(.45);const secondPeak={pose:characterPose(state),height:state.jumpOffset};
+          const duration=createRunnerState([]);duration.mode='running';startJump(duration);
+          advance(.9,duration);advance(.119,duration);const beforeEnd=characterPose(duration);
+          advance(.002,duration);const afterEnd=characterPose(duration);
+          state.mode='finished';const finishedPose=characterPose(state);
+          const retry=createRunnerState([]);
+          return {poses,landed,frozen,pausedPose,resumedPose,immediateJump,landingCleared,secondPeak,
+            beforeEnd,afterEnd,finishedPose,config:{run:CHARACTER_SET.runFrameSeconds,
+              landing:CHARACTER_SET.landingSeconds},retry:{pose:characterPose(retry),
+              time:retry.animationTime,until:retry.landingUntil,jumping:retry.jumping,
+              distance:retry.distance,score:retry.score}};
+        })""")
+        expected=['idle','run_1','run_2','run_3','run_4','run_1',
+                  'jump_up','jump_top','jump_down','land','land']
+        for outcome in outcomes:
+            self.assertEqual(outcome['poses'],expected)
+            self.assertAlmostEqual(outcome['landed']['until']-outcome['landed']['time'],.12,delta=.000001)
+            self.assertEqual(outcome['landed']['offset'],0)
+            self.assertTrue(outcome['frozen'])
+            self.assertEqual((outcome['pausedPose'],outcome['resumedPose']),('idle','land'))
+            self.assertTrue(outcome['immediateJump'])
+            self.assertTrue(outcome['landingCleared'])
+            self.assertEqual(outcome['secondPeak']['pose'],'jump_top')
+            self.assertAlmostEqual(outcome['secondPeak']['height'],120,delta=.000001)
+            self.assertEqual(outcome['beforeEnd'],'land')
+            self.assertTrue(outcome['afterEnd'].startswith('run_'))
+            self.assertEqual(outcome['finishedPose'],'idle')
+            self.assertEqual(outcome['config'],{'run':.1,'landing':.12})
+            self.assertEqual(outcome['retry'],{'pose':'idle','time':0,'until':0,
+                                              'jumping':False,'distance':0,'score':0})
+        self.assert_isolated(page,errors,requests)
+
+    def test_each_missing_shiba_frame_uses_old_shiba_without_changing_jump(self):
+        times={'run_1':0,'run_2':100,'run_3':200,'run_4':300,
+               'jump_up':225,'jump_top':450,'jump_down':675,'land':900}
+        for frame in SHIBA_FRAMES:
+            with self.subTest(frame=frame):
+                page,errors,requests=self.manual_runner(broken_frames=(frame,))
+                if frame != 'idle':
+                    self.assertEqual(self.snapshot(page)['sprite']['pose'],'idle')
+                    self.toggle(page);page.evaluate('runnerClock.step(0)')
+                    if frame.startswith('jump_') or frame == 'land':
+                        self.tap(page)
+                    if times[frame]:
+                        page.evaluate('ms=>runnerClock.advance(ms,60)',times[frame])
+                scene=self.snapshot(page)
+                self.assertEqual(scene['sprite']['pose'],'fallback')
+                self.assertTrue(scene['sprite']['src'].endswith('/assets/plush/shiba.webp'))
+                self.assertEqual((scene['sprite']['width'],scene['sprite']['height']),(100,100))
+                if frame in ('jump_up','jump_down'):
+                    self.assertAlmostEqual(scene['character']['y'],337,delta=.001)
+                elif frame == 'jump_top':
+                    self.assertAlmostEqual(scene['character']['y'],307,delta=.001)
+                if frame == 'idle':
+                    self.toggle(page);page.evaluate('runnerClock.step(0)')
+                    self.assertEqual(self.snapshot(page)['sprite']['pose'],'run_1')
+                self.assert_isolated(page,errors,requests)
+
+    def test_delayed_shiba_frame_loads_while_hidden_without_advancing_or_auto_resuming(self):
+        delayed={'run_2':None}
+        page,errors,requests=self.open_runner(setup=MANUAL_FRAMES,delayed_frames=delayed)
+        page.wait_for_function("""() => runnerImages.length>=11 &&
+          runnerImages.filter(image=>!image.src.endsWith('/shiba/run_2.webp')).every(image=>image.complete)""")
+        page.evaluate('runnerClock.settle()');page.evaluate('runnerClock.step(0)')
+        page.evaluate('runnerClock.settle()');page.evaluate('runnerClock.step(0)')
+        self.assert_geometry(page)
+        self.assertEqual(self.snapshot(page)['sprite']['pose'],'idle')
+        self.toggle(page);page.evaluate('runnerClock.step(0)')
+        page.evaluate('runnerClock.advance(100,60)')
+        running=self.snapshot(page)
+        self.assertEqual(running['sprite']['pose'],'fallback')
+        page.evaluate("""() => {
+          Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});
+          document.dispatchEvent(new Event('visibilitychange'));
+        }""")
+        self.assertEqual(self.snapshot(page)['pending'],0)
+        self.assertIsNotNone(delayed['run_2'])
+        delayed['run_2'].fulfill(path=str(ROOT/'runner/assets/shiba/run_2.webp'))
+        page.wait_for_function("runnerImages.find(image=>image.src.endsWith('/shiba/run_2.webp')).complete")
+        self.assertEqual(self.snapshot(page)['pending'],0)
+        self.assertEqual(page.evaluate('runnerClock.advance(10000)'),0)
+        page.evaluate("""() => {
+          delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));
+          window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));
+        }""")
+        page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
+        restored=self.snapshot(page)
+        self.assertEqual((restored['sprite']['pose'],restored['pending']),('idle',0))
+        self.assert_same_scene(running,restored)
+        self.assertEqual((restored['score'],restored['progress']),(running['score'],running['progress']))
+        self.assertEqual(page.locator('#runner-toggle').inner_text(),'再開')
+        self.toggle(page);page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
+        self.assertEqual(self.snapshot(page)['sprite']['pose'],'run_2')
+        page.evaluate('runnerClock.advance(100,60)')
+        self.assertEqual(self.snapshot(page)['sprite']['pose'],'run_3')
+        self.assert_isolated(page,errors,requests)
 
     def test_spike_rock_image_loads_with_alpha_and_stays_grounded_in_phone_tablet_layouts(self):
         for width,height in ((375,667),(390,844),(667,375),(844,390),(768,1024),(1024,768)):
