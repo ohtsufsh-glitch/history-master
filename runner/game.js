@@ -27,6 +27,8 @@ const OBSTACLE_WIDTH = 80;
 // 元画像の下端2pxは透明。実体の底面Y=464を地面に合わせる。
 const OBSTACLE_IMAGE = Object.freeze({ src: "./assets/spike-rock.webp", width: OBSTACLE_WIDTH,
   height: OBSTACLE_WIDTH * 466 / 640, feetRatio: 464 / 466 });
+const PLATFORM = Object.freeze({ width: 190, thickness: 32, height: 80, footHalfWidth: 20 });
+const PHYSICS_EPSILON = 1e-9;
 const SPAWN_X = WORLD.width + 48;
 // 幅80pxの岩本体と3本のトゲの内側。座標は障害物中心X・地面Yからの論理px。
 // 全体を1つの矩形にせず、上部の透明な隙間は判定から外す。
@@ -47,41 +49,114 @@ const COURSE = Object.freeze([
     { at: 1.5 + index * 3, type: "star", height: JUMP.height },
   ]).flat(),
   { at: 24.25, type: "star", height: 0 },
+  { at: 26, type: "platform" }, // 最後のスター取得後に乗れる任意の足場。
 ].map(entry => Object.freeze(entry)));
 
 function createRunnerState(course = COURSE) {
   return { mode: "ready", distance: 0, animationTime: 0,
-    ground: GROUND_Y, jumping: false, jumpElapsed: 0, jumpOffset: 0, jumpVelocity: 0,
+    feetY: GROUND_Y, velocityY: 0, supportId: "ground", jumpOriginY: GROUND_Y, airAction: null,
     landingUntil: 0,
     elapsed: 0, score: 0, reason: null, objects: [], nextSpawn: 0,
     course: course.map(entry => ({ ...entry })).sort((a, b) => a.at - b.at) };
 }
 
+function platformBounds(object) {
+  const width = object.width ?? PLATFORM.width;
+  const thickness = object.thickness ?? PLATFORM.thickness;
+  const top = GROUND_Y - (object.height ?? PLATFORM.height);
+  return { left: object.x - width / 2, right: object.x + width / 2,
+    top, bottom: top + thickness, width, thickness };
+}
+
+function overlapsPlatform(object, x = object.x) {
+  const halfWidth = (object.width ?? PLATFORM.width) / 2;
+  return x + halfWidth > CHARACTER_X - PLATFORM.footHalfWidth + PHYSICS_EPSILON &&
+    x - halfWidth < CHARACTER_X + PLATFORM.footHalfWidth - PHYSICS_EPSILON;
+}
+
+function objectHalfWidth(object) {
+  if (object.type === "platform") return (object.width ?? PLATFORM.width) / 2;
+  return object.type === "star" ? COLLISION.starRadius : OBSTACLE_IMAGE.width / 2;
+}
+
 function advanceMotion(state, seconds) {
-  state.distance += SCROLL_SPEED * seconds;
-  state.animationTime += seconds;
-  if (!state.jumping) return;
-  state.jumpElapsed = Math.min(state.jumpElapsed + seconds, JUMP.duration);
-  if (JUMP.duration - state.jumpElapsed < 1e-9) {
-    // 着地は丸め誤差を残さず、次のタップで再び跳べる状態に戻す。
-    state.jumping = false;
-    state.jumpElapsed = 0;
-    state.jumpOffset = 0;
-    state.jumpVelocity = 0;
-    state.ground = GROUND_Y;
-    state.landingUntil = state.animationTime + CHARACTER_SET.landingSeconds;
-    return;
+  let remaining = seconds;
+  // objectsはサブステップ終了位置。途中の接地・端離脱時刻へXを戻して判定する。
+  while (remaining > PHYSICS_EPSILON) {
+    if (state.supportId === "ground") {
+      state.feetY = GROUND_Y;
+      state.velocityY = 0;
+      return;
+    }
+    if (state.supportId !== null) {
+      const platform = state.objects.find(object => object.type === "platform" && object.id === state.supportId);
+      if (platform && overlapsPlatform(platform, platform.x + SCROLL_SPEED * remaining)) {
+        const bounds = platformBounds(platform);
+        state.feetY = bounds.top;
+        const untilEdge = (bounds.right + SCROLL_SPEED * remaining -
+          (CHARACTER_X - PLATFORM.footHalfWidth)) / SCROLL_SPEED;
+        if (untilEdge > remaining + PHYSICS_EPSILON) return;
+        remaining = Math.max(0, remaining - Math.max(0, untilEdge));
+      }
+      state.supportId = null;
+      state.airAction = "fall";
+      state.jumpOriginY = state.feetY;
+      state.velocityY = 0;
+    }
+
+    const startY = state.feetY, velocity = state.velocityY;
+    const endY = startY + velocity * remaining + JUMP.gravity * remaining * remaining / 2;
+    let landing = null;
+    function considerSurface(top, id, platform = null) {
+      // 上面とほぼ同じ高さの頂点では、丸め誤差による小さな負値を0に戻す。
+      const discriminant = velocity * velocity + 2 * JUMP.gravity * (top - startY);
+      if (discriminant < -2 * JUMP.gravity * PHYSICS_EPSILON) return;
+      // 下降側の根のみ。1ステップ内で頂点をまたぐ場合も取りこぼさない。
+      const crossing = (-velocity + Math.sqrt(Math.max(0, discriminant))) / JUMP.gravity;
+      if (crossing < -PHYSICS_EPSILON || crossing > remaining + PHYSICS_EPSILON) return;
+      const time = Math.max(0, Math.min(remaining, crossing));
+      if (platform) {
+        const at = state.elapsed - remaining + time;
+        if ((platform.at ?? -Infinity) > at + PHYSICS_EPSILON ||
+            !overlapsPlatform(platform, platform.x + SCROLL_SPEED * (remaining - time))) return;
+      }
+      if (!landing || time < landing.time) landing = { time, top, id };
+    }
+    considerSurface(GROUND_Y, "ground");
+    for (const object of state.objects) {
+      if (object.type === "platform") considerSurface(platformBounds(object).top, object.id, object);
+    }
+    if (!landing) {
+      state.feetY = endY;
+      state.velocityY = velocity + JUMP.gravity * remaining;
+      return;
+    }
+    remaining = Math.max(0, remaining - landing.time);
+    state.feetY = landing.top;
+    state.velocityY = 0;
+    state.supportId = landing.id;
+    state.airAction = null;
+    state.jumpOriginY = landing.top;
+    state.landingUntil = state.animationTime - remaining + CHARACTER_SET.landingSeconds;
   }
-  const time = state.jumpElapsed;
-  // 解析式なので、更新回数に依存せず上昇は減速、下降は加速する。
-  state.jumpOffset = Math.max(0, JUMP.initialVelocity * time - JUMP.gravity * time * time / 2);
-  state.jumpVelocity = JUMP.initialVelocity - JUMP.gravity * time;
-  state.ground = GROUND_Y - state.jumpOffset;
+}
+
+function characterBob(state) {
+  return state.supportId === "ground" ? Math.abs(Math.sin(state.animationTime * Math.PI * 6)) * 4 : 0;
+}
+
+function shadowY(state) {
+  let surface = GROUND_Y;
+  for (const object of state.objects) {
+    if (object.type !== "platform" || !overlapsPlatform(object)) continue;
+    const top = platformBounds(object).top;
+    if (top >= state.feetY - PHYSICS_EPSILON) surface = Math.min(surface, top);
+  }
+  return surface;
 }
 
 function characterCenter(state) {
-  const bob = state.jumping ? 0 : Math.abs(Math.sin(state.animationTime * Math.PI * 6)) * 4;
-  return { x: CHARACTER_X, y: state.ground - 43 - bob };
+  return { x: CHARACTER_X, y: state.feetY - 43 - characterBob(state) };
 }
 
 function touchesObject(state, object) {
@@ -91,6 +166,7 @@ function touchesObject(state, object) {
     const radius = COLLISION.characterRadius + COLLISION.starHitRadius;
     return Math.hypot(character.x - object.x, character.y - (ground - 43 - (object.height ?? 0))) <= radius;
   }
+  if (object.type !== "obstacle") return false;
   const scale = OBSTACLE_IMAGE.width / 80;
   return COLLISION.obstacleRegions.some(region => {
     const closestX = Math.max(object.x + region.left * scale,
@@ -117,7 +193,8 @@ function updateRunner(state, seconds) {
   // 同じ更新内に接触があれば、新たなスターの加点より障害物を優先する。
   do {
     const step = Math.min(SIMULATION_STEP, remaining, Math.max(0, COURSE_LENGTH - state.distance) / SCROLL_SPEED);
-    advanceMotion(state, step);
+    state.distance += SCROLL_SPEED * step;
+    state.animationTime += step;
     state.elapsed += step;
     if (COURSE_LENGTH - state.distance < 1e-9) state.distance = COURSE_LENGTH;
     for (const object of state.objects) object.x -= SCROLL_SPEED * step;
@@ -126,8 +203,9 @@ function updateRunner(state, seconds) {
       state.objects.push({ ...entry, id: state.nextSpawn++,
         x: SPAWN_X - SCROLL_SPEED * Math.max(0, state.elapsed - entry.at) });
     }
+    advanceMotion(state, step);
     state.objects = state.objects.filter(object => object.x +
-      (object.type === "star" ? COLLISION.starRadius : OBSTACLE_IMAGE.width / 2) >= 0);
+      objectHalfWidth(object) >= 0);
     if (state.objects.some(object => object.type === "obstacle" && touchesObject(state, object))) {
       state.mode = "finished";
       state.reason = "collision";
@@ -152,20 +230,21 @@ function updateRunner(state, seconds) {
 }
 
 function startJump(state) {
-  if (state.mode !== "running" || state.jumping) return false;
-  state.jumping = true;
-  state.jumpElapsed = 0;
-  state.jumpVelocity = JUMP.initialVelocity;
+  if (state.mode !== "running" || state.supportId === null) return false;
+  state.jumpOriginY = state.feetY;
+  state.velocityY = -JUMP.initialVelocity;
+  state.supportId = null;
+  state.airAction = "jump";
   state.landingUntil = 0;
   return true;
 }
 
 function characterPose(state) {
   if (state.mode !== "running") return "idle";
-  if (state.jumping) {
-    if (Math.abs(state.jumpElapsed - JUMP.duration / 2) <= CHARACTER_SET.apexHalfWindow + 1e-9)
+  if (state.supportId === null) {
+    if (state.airAction === "jump" && Math.abs(state.velocityY) <= JUMP.gravity * CHARACTER_SET.apexHalfWindow + 1e-9)
       return "jump_top";
-    return state.jumpVelocity > 0 ? "jump_up" : "jump_down";
+    return state.velocityY < 0 ? "jump_up" : "jump_down";
   }
   if (state.animationTime < state.landingUntil - 1e-9) return "land";
   const frame = Math.floor((state.animationTime + 1e-9) / CHARACTER_SET.runFrameSeconds) % 4 + 1;
@@ -226,12 +305,12 @@ function drawGround(context, state) {
 // 読み込み中・失敗時にも表示とプレイを継続できる仮キャラクター。
 function drawFallbackCharacter(context, state) {
   const x = CHARACTER_X;
-  const ground = state.ground;
-  const stride = state.jumping ? 0 : Math.sin(state.animationTime * Math.PI * 6);
-  const bob = Math.abs(stride) * 4;
+  const ground = state.feetY;
+  const stride = state.supportId === null ? 0 : Math.sin(state.animationTime * Math.PI * 6);
+  const bob = characterBob(state);
   context.fillStyle = "#705c4930";
   context.beginPath();
-  context.ellipse(x, GROUND_Y, 38, 9, 0, 0, Math.PI * 2);
+  context.ellipse(x, shadowY(state), 38, 9, 0, 0, Math.PI * 2);
   context.fill();
 
   context.fillStyle = "#344e47";
@@ -266,13 +345,13 @@ function drawCharacter(context, state, characterImages) {
   const scale = CHARACTER_SET.maxSize / Math.max(characterImage.naturalWidth, characterImage.naturalHeight);
   const width = characterImage.naturalWidth * scale;
   const height = characterImage.naturalHeight * scale;
-  const bob = state.jumping ? 0 : Math.abs(Math.sin(state.animationTime * Math.PI * 6)) * 4;
+  const bob = characterBob(state);
   context.fillStyle = "#705c4930";
   context.beginPath();
-  context.ellipse(CHARACTER_X, GROUND_Y, 38, 9, 0, 0, Math.PI * 2);
+  context.ellipse(CHARACTER_X, shadowY(state), 38, 9, 0, 0, Math.PI * 2);
   context.fill();
   context.drawImage(characterImage, CHARACTER_X - width / 2,
-    state.ground - height * feetRatio - bob, width, height);
+    state.feetY - height * feetRatio - bob, width, height);
 }
 
 function drawGoal(context, state) {
@@ -321,14 +400,27 @@ function drawObstacle(context, object, obstacleImage) {
   context.stroke();
 }
 
+function drawPlatform(context, object) {
+  const { left, top, width, thickness } = platformBounds(object);
+  context.fillStyle = "#79c9d4";
+  context.fillRect(left, top, width, thickness);
+  context.fillStyle = "#d9f6b0";
+  context.fillRect(left, top, width, Math.min(6, thickness));
+  context.strokeStyle = "#397b85";
+  context.lineWidth = 2;
+  context.strokeRect(left + 1, top + 1, width - 2, thickness - 2);
+}
+
 function drawObjects(context, state, obstacleImage) {
   for (const object of state.objects) {
-    const radius = object.type === "star" ? COLLISION.starRadius : OBSTACLE_IMAGE.width / 2;
+    const radius = objectHalfWidth(object);
     if (object.x + radius < 0 || object.x - radius > WORLD.width) continue;
     const ground = GROUND_Y;
     if (object.type === "obstacle") {
       drawObstacle(context, object, obstacleImage);
-    } else {
+    } else if (object.type === "platform") {
+      drawPlatform(context, object);
+    } else if (object.type === "star") {
       context.beginPath();
       for (let point = 0; point < 10; point++) {
         const angle = -Math.PI / 2 + point * Math.PI / 5;
@@ -547,5 +639,6 @@ function initializeRunner() {
 initializeRunner();
 
 // コースとゲーム状態はDOMから独立。配置の差し替えや決定的なルール検証に使う。
-export { COURSE, COLLISION, CHARACTER_X, CHARACTER_IMAGE, CHARACTER_SET, OBSTACLE_IMAGE, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
-  createRunnerState, updateRunner, startJump, progressPercent, goalX, characterCenter, characterPose };
+export { COURSE, COLLISION, CHARACTER_X, CHARACTER_IMAGE, CHARACTER_SET, OBSTACLE_IMAGE, PLATFORM, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
+  createRunnerState, updateRunner, startJump, progressPercent, goalX, characterCenter, characterPose,
+  platformBounds, characterBob, shadowY };
