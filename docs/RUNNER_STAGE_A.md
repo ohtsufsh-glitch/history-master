@@ -70,6 +70,11 @@ iPhone／iPad Safari実機の縦横表示、タップの操作感、アプリ切
 全体回帰の既知の不安定箇所：`arcade_board_test.py` の `test_crane_grip_and_lift_stay_together_across_widths_and_prize_sizes` は、CSSアニメーション終端の透明度を文字列 `0` と厳密比較する。
 今回のブランチで微小値（約0.00042）が残る失敗を観測し、元のmainをそのまま配信した同じテストでも再現した。無関係なアニメーションやテストは変更しない。
 
+切り分けの詳細：失敗箇所は `tests/arcade_board_test.py:627`。全体回帰での実値は `0.000418036`、mainの同一テストでは3ケースが `0.000419557`／`0.000421207`／`0.00538157` で失敗した。
+比較用に配信したHTMLのSHA-256は `a0cfc913806d96e62de6480987d3ad51704c6d8a599b1736b7fa9f89ef997794` で、基点main（`661a305`）の `index.html` と一致する。
+コードでは `.delivered` のCSS遷移時間に `releaseMs=480` を設定し、JavaScriptは同じ時間を `setTimeout` で待つ。CSS遷移終了イベントは待たず、テストは関数終了直後の `getComputedStyle(...).opacity` を厳密比較するため、描画タイミングの差が失敗に現れる。
+今回追加したランナーによる回帰とは切り分けられたが、既存の描画完了とテストの同期の不安定性自体は**未修正**であり、全体回帰の全件成功には未達。段階AではUFO実装・既存テストを変更しない。
+
 ## 変更範囲
 
 `runner/stages.js`、`runner/game.js`、`runner/index.html`、`tests/runner_stages_test.py`、本書、`index.html` のAPP_VERSIONのみ。
