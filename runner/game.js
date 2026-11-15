@@ -1,3 +1,9 @@
+import { STAGES } from "./stages.js?v=1.7.19";
+
+// 正式な50コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
+// この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
+const STAGE_PREVIEW_ENABLED = true;
+
 // すべての描画はこの論理座標で行い、CSS表示サイズ・実ピクセル数と分離する。
 const WORLD = Object.freeze({ width: 960, height: 540 });
 const MAX_DPR = 2; // 最大1920×1080（RGBAで約8MiB）。表示を拡大しすぎない。
@@ -486,6 +492,11 @@ function initializeRunner() {
   const scoreLabel = document.getElementById("runner-score");
   const progressLabel = document.getElementById("runner-progress");
   const result = document.getElementById("runner-result");
+  const preview = document.getElementById("runner-preview");
+  const stageSelect = document.getElementById("runner-stage-select");
+  const stageDetails = document.getElementById("runner-stage-details");
+  const isStagePreview = STAGE_PREVIEW_ENABLED &&
+    new URLSearchParams(window.location.search).get("stagePreview") === "1";
   let context;
   try {
     context = canvas.getContext("2d", { alpha: false });
@@ -501,7 +512,25 @@ function initializeRunner() {
     return;
   }
 
-  let state = createRunnerState();
+  let state = isStagePreview ? createRunnerState(STAGES[0]) : createRunnerState();
+  function describeStage(definition) {
+    const count = type => definition.course.filter(entry => entry.type === type).length;
+    return `${definition.stageId} ${definition.name} ｜ 難易度 ${definition.difficulty} ｜ ` +
+      `約${Math.ceil(definition.goalDistance / SCROLL_SPEED)}秒 ｜ ` +
+      `トゲ岩 ${count("obstacle")}個・足場 ${count("platform")}個`;
+  }
+  if (isStagePreview) {
+    for (const definition of STAGES) {
+      const option = document.createElement("option");
+      option.value = definition.stageId;
+      option.textContent = describeStage(definition);
+      stageSelect.append(option);
+    }
+    stageSelect.value = state.stageId;
+    stageDetails.textContent = describeStage(STAGES[0]);
+    preview.hidden = false;
+    document.querySelector(".runner-app").classList.add("runner-app-preview");
+  }
   const characterImages = { fallback: new Image() };
   for (const name of Object.keys(CHARACTER_SET.frames)) characterImages[name] = new Image();
   const obstacleImage = new Image();
@@ -511,6 +540,8 @@ function initializeRunner() {
   let sizeDirty = true;
 
   function updateControls() {
+    if (isStagePreview) stageSelect.disabled = !active ||
+      (state.mode !== "ready" && state.mode !== "finished");
     const text = { ready: "ゲーム開始", running: "一時停止", paused: "再開", finished: "もう一度" }[state.mode];
     if (toggle.textContent !== text) toggle.textContent = text;
     const jumpDisabled = !active || state.mode !== "running";
@@ -521,6 +552,7 @@ function initializeRunner() {
     const progress = String(progressPercent(state));
     if (progressLabel.textContent !== progress) progressLabel.textContent = progress;
     const hideResult = state.mode !== "finished";
+    const resetResult = hideResult && !result.hidden;
     if (result.hidden !== hideResult) result.hidden = hideResult;
     if (state.mode === "finished") {
       document.getElementById("runner-result-title").textContent = state.reason === "clear" ? "クリア！" : "ゲームオーバー";
@@ -528,6 +560,11 @@ function initializeRunner() {
         "ゴールまで走りきったよ！" : "トゲ岩にぶつかったよ。もう一度挑戦しよう！";
       document.getElementById("runner-result-score").textContent = state.score;
       document.getElementById("runner-result-progress").textContent = progress;
+    } else if (resetResult) {
+      document.getElementById("runner-result-title").textContent = "";
+      document.getElementById("runner-result-message").textContent = "";
+      document.getElementById("runner-result-score").textContent = "0";
+      document.getElementById("runner-result-progress").textContent = "0";
     }
   }
 
@@ -578,6 +615,7 @@ function initializeRunner() {
     // 復帰は画面だけを戻す。走行はユーザーの「再開」を待つ。
     pauseRunning();
     active = !document.hidden;
+    updateControls();
     sizeDirty = true;
     requestRedraw();
   }
@@ -586,6 +624,22 @@ function initializeRunner() {
     sizeDirty = true;
     requestRedraw();
   }
+
+  stageSelect?.addEventListener("change", () => {
+    const selected = STAGES.find(definition => definition.stageId === stageSelect.value);
+    if (!isStagePreview || !active || document.hidden ||
+        (state.mode !== "ready" && state.mode !== "finished") || !selected) {
+      stageSelect.value = state.stageId ?? "";
+      return;
+    }
+    if (pendingFrame !== null) cancelAnimationFrame(pendingFrame);
+    pendingFrame = null;
+    previousTimestamp = null;
+    state = createRunnerState(selected);
+    stageDetails.textContent = describeStage(selected);
+    updateControls();
+    requestRedraw();
+  });
 
   toggle.addEventListener("click", () => {
     if (!active || document.hidden) return;
