@@ -1,5 +1,6 @@
-import { STAGES } from "./stages.js?v=1.7.29";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.29";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.30";
+import { STAGES } from "./stages.js?v=1.7.30";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.30";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -683,9 +684,7 @@ function initializeRunner(session = null) {
 
   function updateCharacterDetails() {
     const definition = getCharacter(state.characterId);
-    characterDetails.textContent = `${definition.feature} ｜ ` +
-      `走力 ${definition.speed}px/秒・ジャンプ ${definition.jump.height}px・` +
-      `滞空 ${definition.jump.duration.toFixed(2)}秒・残機 ${definition.initialLives}機`;
+    characterDetails.textContent = describeCharacter(definition);
     characterIcon.src = new URL(definition.image.src, import.meta.url).href;
     characterIcon.alt = definition.name;
     // 読み込み失敗でも名前・能力と操作はそのまま使える。
@@ -706,10 +705,21 @@ function initializeRunner(session = null) {
     stageDetails.textContent = describeStage(STAGES.find(definition => definition.stageId === state.stageId));
   }
 
+  function updatePreviewCards() {
+    if (!isStagePreview) return;
+    const items=selectionItems(STAGES,CHARACTERS,STAGES.map(s=>s.stageId),true);
+    for(const [kind,select] of [["stage",stageSelect],["character",characterSelect]]) {
+      renderSelectionCards(document.getElementById(`runner-${kind}-cards`),items[kind==="stage"?"stages":"characters"],select.value,select.disabled,id=>{
+        select.value=id; select.dispatchEvent(new Event("change"));
+      });
+    }
+  }
   function updateControls() {
     if (isStagePreview) {
       stageSelect.disabled = !active || (state.mode !== "ready" && state.mode !== "finished");
       characterSelect.disabled = stageSelect.disabled;
+      stageSelect.value = state.stageId; characterSelect.value = state.characterId;
+      updatePreviewCards();
     }
     const text = { ready: "ゲーム開始", running: "一時停止", paused: "再開", finished: "もう一度" }[state.mode];
     if (toggle.textContent !== text) toggle.textContent = text;
@@ -724,7 +734,7 @@ function initializeRunner(session = null) {
     if (modeLabel.textContent !== mode) modeLabel.textContent = mode;
     if (scoreLabel.textContent !== String(state.score)) scoreLabel.textContent = state.score;
     const hearts = "♥".repeat(state.lives) + "♡".repeat(state.initialLives - state.lives);
-    const livesDescription = `残機${state.initialLives}機中あと${state.lives}機`;
+    const livesDescription = `ハートはあと${state.lives}個（全部で${state.initialLives}個）`;
     if (heartsLabel.textContent !== hearts) heartsLabel.textContent = hearts;
     if (livesLabel.getAttribute("aria-label") !== livesDescription) livesLabel.setAttribute("aria-label", livesDescription);
     const progress = String(progressPercent(state));
@@ -998,6 +1008,6 @@ function restoreRunner(play) {
 export {snapshotRunner,restoreRunner,STAGES};
 
 // コースとゲーム状態はDOMから独立。配置の差し替えや決定的なルール検証に使う。
-export { CHARACTERS, getCharacter, COURSE, COLLISION, CHARACTER_X, SPAWN_X, CHARACTER_IMAGE, CHARACTER_SET, OBSTACLE_IMAGE, PLATFORM, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
+export { describeCharacter, selectionItems, renderSelectionCards, CHARACTERS, getCharacter, COURSE, COLLISION, CHARACTER_X, SPAWN_X, CHARACTER_IMAGE, CHARACTER_SET, OBSTACLE_IMAGE, PLATFORM, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
   createRunnerState, updateRunner, resumeRunner, startJump, progressPercent, goalX, characterCenter, characterPose,
   platformBounds, wallBounds, characterBob, shadowY };

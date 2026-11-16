@@ -606,6 +606,7 @@
       .runner-formal-frame { height:90vh; height:90dvh; }
     }
   </style>
+  <link rel="stylesheet" href="./runner/selection.css?v=1.7.30">
 </head>
 <body>
 <!-- 立体的な金貨イラスト：ホーム・正解時に共用 -->
@@ -696,10 +697,12 @@
     <p id="runner-info" role="status" aria-live="polite"></p>
     <div id="runner-frame-host"></div>
     <div id="runner-choices">
-      <label for="formal-stage">ステージ</label><select id="formal-stage" style="width:100%;min-height:48px"></select>
+      <h3 id="formal-stage-heading">ステージをえらぶ</h3><select id="formal-stage" hidden aria-hidden="true" tabindex="-1"></select>
+      <div id="formal-stage-cards" class="runner-choice-grid" role="group" aria-labelledby="formal-stage-heading"></div>
       <p>🔒のステージは、ひとつ前のステージを正式クリアすると遊べるよ。</p>
-      <label for="formal-character">キャラクター</label><select id="formal-character" style="width:100%;min-height:48px"></select>
-      <p id="formal-character-info"></p>
+      <h3 id="formal-character-heading">キャラクターをえらぶ</h3><select id="formal-character" hidden aria-hidden="true" tabindex="-1"></select>
+      <div id="formal-character-cards" class="runner-choice-grid" role="group" aria-labelledby="formal-character-heading"></div>
+      <p id="formal-character-info" role="status" aria-live="polite" aria-atomic="true"></p>
       <section aria-labelledby="runner-records-heading">
         <h3 id="runner-records-heading">このステージの最高得点</h3>
         <p id="runner-stage-best" role="status" aria-live="polite"></p>
@@ -959,7 +962,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.29";
+const APP_VERSION = "v1.7.30";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3195,7 +3198,7 @@ function summarizeRunnerPlays(records, who) {
 // C3-B 内部API。無料試遊のURL/選択UIからは呼ばない。
 let runnerModelPromise;
 function loadRunnerModel() {
-  return runnerModelPromise ||= import('./runner/game.js?v=1.7.29');
+  return runnerModelPromise ||= import('./runner/game.js?v=1.7.30');
 }
 function runnerTransaction(names, action) {
   return new Promise((resolve,reject)=>{
@@ -3358,6 +3361,19 @@ async function refreshRunnerHome(ctx) {
   const d=await runnerLobbyData(ctx.who);
   if(viewCurrent(ctx))$('runner-home-info').textContent=runnerPrice(ctx.who,d);
 }
+// selectは既存IDの選択状態だけを保持し、操作はボタンへ集約する。
+function renderFormalRunnerChoices(d,m) {
+  const stages=$('formal-stage'), characters=$('formal-character');
+  const available=[...m.CHARACTERS,...(d.secret?[m.getCharacter('secret_yuniko')]:[])];
+  const items=m.selectionItems(m.STAGES,available,d.unlocked,d.secret);
+  for(const [kind,select] of [['stage',stages],['character',characters]]) {
+    m.renderSelectionCards($(`formal-${kind}-cards`),items[kind==='stage'?'stages':'characters'],select.value,select.disabled,id=>{
+      if(select.disabled)return;
+      select.value=id;select.dispatchEvent(new Event('change'));
+    });
+  }
+  $('formal-character-info').textContent=m.describeCharacter(m.getCharacter(characters.value));
+}
 async function renderRunnerLobby() {
   const ctx=viewContext();
   await closeFormalRunner();
@@ -3373,7 +3389,7 @@ async function renderRunnerLobby() {
     option.disabled=!d.unlocked.includes(stage.stageId);stages.add(option);
   }
   for(const c of [...m.CHARACTERS,...(d.secret?[m.getCharacter('secret_yuniko')]:[])])characters.add(new Option(c.name,c.characterId));
-  function describe(){const c=m.getCharacter(characters.value);$('formal-character-info').textContent=`${c.feature} ／ ハート${c.initialLives}個`;}
+  function describe(){renderFormalRunnerChoices(d,m);}
   if(d.active){
     if(m.STAGES.some(s=>s.stageId===d.active.stageId))stages.value=d.active.stageId;
     if([...characters.options].some(c=>c.value===d.active.characterId))characters.value=d.active.characterId;
@@ -3382,7 +3398,7 @@ async function renderRunnerLobby() {
     if(!formalRunner?.select(stages.value,characters.value)) {
       if(formalRunner){stages.value=formalRunner.bridge.view.state.stageId;characters.value=formalRunner.bridge.view.state.characterId;}
     }
-    describe();
+    renderFormalRunnerChoices(formalRunner?.data||d,m);
   }
   stages.onchange=select;characters.onchange=select;describe();renderRunnerRecords(d,m);
   await startFormalRunner(ctx,d,m);
@@ -3399,14 +3415,15 @@ async function closeFormalRunner() {
 // このbridgeのreadyは表示専用。正式sessionがない間はadvance/jumpを実行しない。
 async function startFormalRunner(ctx,d,m) {
   let waiting=m.createRunnerState(m.STAGES.find(s=>s.stageId===$('formal-stage').value),$('formal-character').value);
-  let localError=null, closed=false, latestData=d, resultData=null;
+  let localError=null, closed=false, latestData=d, resultData=null, selectionBlocked=false;
   const current={session:null,frame:document.createElement('iframe')};
   const choices=()=>{
     const state=current.bridge.view.state;
-    const locked=!!current.session&&(state.mode!=='finished'||current.session.view.dirty||!!current.session.view.error);
+    const locked=selectionBlocked||(!current.session&&!!latestData.active)||!!current.session&&(state.mode!=='finished'||current.session.view.dirty||!!current.session.view.error||!resultData);
     $('formal-stage').disabled=locked||runnerStarting;
     $('formal-character').disabled=locked||runnerStarting;
     if(locked){$('formal-stage').value=state.stageId;$('formal-character').value=state.characterId;}
+    renderFormalRunnerChoices(latestData,m);
   };
   async function refresh(){
     const latest=await runnerLobbyData(ctx.who);
@@ -3420,8 +3437,7 @@ async function startFormalRunner(ctx,d,m) {
       $('formal-character').replaceChildren(...[...m.CHARACTERS,...(latest.secret?[m.getCharacter('secret_yuniko')]:[])].map(c=>new Option(c.name,c.characterId)));
       if([...$('formal-character').options].some(o=>o.value===character))$('formal-character').value=character;
       if(!latest.secret&&waiting.characterId==='secret_yuniko')waiting=m.createRunnerState(m.STAGES.find(s=>s.stageId===waiting.stageId),'shiba');
-      const selected=m.getCharacter($('formal-character').value);
-      $('formal-character-info').textContent=`${selected.feature} ／ ハート${selected.initialLives}個`;
+      renderFormalRunnerChoices(latest,m);
       renderRunnerRecords(latest,m);
       current.frame.contentWindow?.refreshFormalRunner?.();
       for(const option of $('formal-stage').options){
@@ -3429,6 +3445,8 @@ async function startFormalRunner(ctx,d,m) {
         const stage=m.STAGES.find(s=>s.stageId===option.value);
         option.textContent=`${stage.stageId} ${stage.name}${option.disabled?' 🔒 前のステージをクリアしてね':''}`;
       }
+      if(!current.session&&!latest.unlocked.includes(waiting.stageId)) {waiting=m.createRunnerState(m.STAGES[0],waiting.characterId);$('formal-stage').value=waiting.stageId;}
+      choices();renderRunnerRecords(latest,m);
     }
   }
   current.bridge={
@@ -3441,7 +3459,7 @@ async function startFormalRunner(ctx,d,m) {
         if(current.session?.view.error){
           await current.session.close().catch(()=>{});current.session=null;resultData=null;
           const recovery=await runnerLobbyData(ctx.who);
-          if(!recovery.active)throw new Error('途中のプレイが見つかりません。記録を確認して選び直してください。');
+          if(!recovery.active){selectionBlocked=true;throw new Error('途中のプレイが見つかりません。学習ホームから開き直してください。');}
           current.session=await openRunnerSession(ctx.who,recovery.active.id);
         }
         if(current.session&&current.session.view.state.mode!=='finished')return await current.session.resume();
@@ -3465,7 +3483,7 @@ async function startFormalRunner(ctx,d,m) {
       finally{runnerStarting=false;if(!closed){await refresh();choices();current.frame.contentWindow?.refreshFormalRunner?.();}}
     },
     async advance(seconds){
-      if(!current.session)return;
+      if(!current.session||current.session.view.state.mode!=='running')return;
       const wasFinished=current.session.view.state.mode==='finished';
       try{await current.session.advance(seconds);}
       finally{
@@ -3477,22 +3495,23 @@ async function startFormalRunner(ctx,d,m) {
     async pause(){if(current.session)await current.session.pause();}
   };
   current.select=(stageId,characterId)=>{
-    if(runnerStarting||current.session&&(current.session.view.state.mode!=='finished'||current.session.view.dirty||current.session.view.error))return false;
+    if(closed||!viewCurrent(ctx)||selectionBlocked||!current.session&&latestData.active||runnerStarting||!latestData.unlocked.includes(stageId)||!m.STAGES.some(s=>s.stageId===stageId)||![...m.CHARACTERS,...(latestData.secret?[m.getCharacter('secret_yuniko')]:[])].some(c=>c.characterId===characterId)||current.session&&(current.session.view.state.mode!=='finished'||current.session.view.dirty||current.session.view.error||!resultData))return false;
     waiting=m.createRunnerState(m.STAGES.find(s=>s.stageId===stageId),characterId);
     // 終了記録は確定済み。新しい選択は未購入の待機状態へ戻す。
     if(current.session){current.session.close().catch(e=>{$('runner-info').textContent=e.message;});current.session=null;}
     localError=null;resultData=null;renderRunnerRecords(latestData,m);current.frame.contentWindow?.refreshFormalRunner?.();return true;
   };
+  Object.defineProperty(current,"data",{get:()=>latestData});
   current.refresh=refresh;
   current.stop=()=>{closed=true;};
   formalRunner=current;
   try{if(d.active)current.session=await openRunnerSession(ctx.who,d.active.id);}
-  catch(e){localError=e.message;$('runner-info').textContent=e.message;}
+  catch(e){selectionBlocked=true;localError=e.message;$('runner-info').textContent=e.message;}
   if(!viewCurrent(ctx)||closed){await current.session?.close();return;}
   const frame=current.frame;
   frame.title='わくわくランナー';frame.className='runner-formal-frame';
   frame.onload=()=>{if(formalRunner===current){frame.contentWindow.mountFormalRunner(current.bridge);choices();frame.scrollIntoView({block:'start'});}};
-  frame.src='./runner/?embedded=1&v=1.7.29';
+  frame.src='./runner/?embedded=1&v=1.7.30';
   $('runner-frame-host').replaceChildren(frame);choices();
 }
 $('open-runner').addEventListener('click',()=>navigate('runner').catch(err));

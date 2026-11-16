@@ -6,8 +6,9 @@
   <meta name="theme-color" content="#eef6f1">
   <title>ランナーゲーム</title>
   <!-- 配信更新時は両方の識別子を揃え、古いCSS・JSとの混在を避ける。 -->
-  <link rel="stylesheet" href="./style.css?v=1.7.29">
-  <script type="module" src="./game.js?v=1.7.29"></script>
+  <link rel="stylesheet" href="./style.css?v=1.7.30">
+  <link rel="stylesheet" href="./selection.css?v=1.7.30">
+  <script type="module" src="./game.js?v=1.7.30"></script>
 </head>
 <body>
   <main class="runner-app" aria-labelledby="runner-title">
@@ -19,25 +20,7 @@
       <span id="runner-mode" class="runner-badge" role="status" aria-live="polite">開始前</span>
     </header>
 
-    <section id="runner-preview" class="runner-preview" hidden aria-label="ステージ試遊">
-      <p class="runner-preview-notice">試遊モード・無料・記録されません</p>
-      <div class="runner-stage-choice">
-        <label for="runner-stage-select">ステージを選ぶ</label>
-        <select id="runner-stage-select" aria-describedby="runner-stage-details runner-stage-help" disabled></select>
-      </div>
-      <p id="runner-stage-details" aria-live="polite" aria-atomic="true"></p>
-      <div class="runner-character-choice">
-        <div class="runner-stage-choice">
-          <label for="runner-character-select">キャラクターをえらぶ</label>
-          <select id="runner-character-select" aria-describedby="runner-character-details runner-stage-help" disabled></select>
-        </div>
-        <div class="runner-character-summary">
-          <img id="runner-character-image" width="48" height="48" alt="">
-          <p id="runner-character-details" aria-live="polite" aria-atomic="true"></p>
-        </div>
-      </div>
-      <p id="runner-stage-help">開始前・終了後だけ変更できます。</p>
-    </section>
+
 
     <dl class="runner-hud" aria-label="ゲームの状況">
       <div><dt>現在の得点</dt><dd><span id="runner-score">0</span><span class="runner-unit">点</span></dd></div>
@@ -46,7 +29,7 @@
 
     <section id="runner-viewport" class="runner-viewport" aria-label="ゲーム画面">
       <div id="runner-stage" class="runner-stage">
-        <div id="runner-lives" class="runner-lives" role="status" aria-live="polite" aria-atomic="true" aria-label="残機2機中あと2機">
+        <div id="runner-lives" class="runner-lives" role="status" aria-live="polite" aria-atomic="true" aria-label="ハートはあと2個（全部で2個）">
           <span id="runner-hearts" aria-hidden="true">♥♥</span>
         </div>
         <canvas id="runner-canvas" width="960" height="540" role="img"
@@ -79,6 +62,27 @@
         <button id="runner-toggle" class="runner-start" type="button" disabled>ゲーム開始</button>
       </div>
     </footer>
+    <section id="runner-preview" class="runner-preview" hidden aria-label="ステージ試遊">
+      <p class="runner-preview-notice">試遊モード・無料・記録されません</p>
+      <div class="runner-stage-choice">
+        <label for="runner-stage-select">ステージを選ぶ</label>
+        <div id="runner-stage-cards" class="runner-choice-grid" role="group" aria-label="ステージを選ぶ"></div>
+        <select hidden id="runner-stage-select" aria-describedby="runner-stage-details runner-stage-help" disabled></select>
+      </div>
+      <p id="runner-stage-details" aria-live="polite" aria-atomic="true"></p>
+      <div class="runner-character-choice">
+        <div class="runner-stage-choice">
+          <label for="runner-character-select">キャラクターをえらぶ</label>
+          <div id="runner-character-cards" class="runner-choice-grid" role="group" aria-label="キャラクターをえらぶ"></div>
+          <select hidden id="runner-character-select" aria-describedby="runner-character-details runner-stage-help" disabled></select>
+        </div>
+        <div class="runner-character-summary">
+          <img id="runner-character-image" width="48" height="48" alt="">
+          <p id="runner-character-details" aria-live="polite" aria-atomic="true"></p>
+        </div>
+      </div>
+      <p id="runner-stage-help">開始前・終了後だけ変更できます。</p>
+    </section>
   </main>
 <script>
 if(new URLSearchParams(location.search).get('embedded')==='1'){

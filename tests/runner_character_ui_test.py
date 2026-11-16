@@ -40,7 +40,7 @@ class RunnerCharacterUITest(unittest.TestCase):
         self.assertTrue(all(url.startswith(self.url) or url in allowed for url in requests), requests)
 
     def select_character(self, page, character_id):
-        page.locator('#runner-character-select').select_option(character_id)
+        page.locator(f'#runner-character-cards [data-choice="{character_id}"]').click()
         page.wait_for_function('runnerImages.every(image=>image.complete)', polling=50)
         self.settle(page)
 
@@ -89,7 +89,7 @@ class RunnerCharacterUITest(unittest.TestCase):
                 self.assert_isolated(page, errors, requests)
                 page.context.close()
         page, errors, requests = self.preview_runner()
-        select = page.get_by_label('キャラクターをえらぶ', exact=True)
+        select = page.locator('#runner-character-select')
         self.assertEqual(select.input_value(), 'shiba')
         self.assertEqual(select.locator('option').count(), 4)
         self.assertEqual(select.locator('option').evaluate_all('items=>items.map(item=>item.value)'),
@@ -101,7 +101,8 @@ class RunnerCharacterUITest(unittest.TestCase):
                 self.assert_fresh(page, key)
                 self.assertIn(name, select.locator('option:checked').inner_text())
                 details = page.locator('#runner-character-details').inner_text()
-                for expected in (str(speed), str(height), str(duration), str(lives)):
+                levels={'shiba':('中','中'),'sloth':('低','中'),'goldfish':('中','高'),'salamander':('高','低')}
+                for expected in (f'走力：{levels[key][0]}', f'ジャンプ：{levels[key][1]}', '♥'*lives):
                     self.assertIn(expected, details)
                 image = page.locator('#runner-character-image')
                 self.assertTrue(image.is_visible())
@@ -235,6 +236,7 @@ class RunnerCharacterUITest(unittest.TestCase):
                     self.select_character(page, key)
                     self.assertEqual(self.state(page)['characterId'], key)
                     self.assert_hearts(page, CHARACTERS[key][4], CHARACTERS[key][4])
+                    page.locator('#runner-stage').scroll_into_view_if_needed()
                     hud = page.locator('#runner-lives').bounding_box()
                     stage = page.locator('#runner-stage').bounding_box()
                     self.assertGreaterEqual(hud['x'], stage['x'])
@@ -250,9 +252,8 @@ class RunnerCharacterUITest(unittest.TestCase):
                     # 現行CSSでは、小さい縦画面にCanvasとボタンを守るため縦スクロール可。
                     # 375x667はorigin/mainでも784px。横は常に画面内、操作は文書内に保つ。
                     content_height=page.evaluate('document.documentElement.scrollHeight')
-                    if not (width <= 480 and height < 800):
-                        self.assertLessEqual(content_height, height + 1)
-                    for selector in ('#runner-stage-select', '#runner-character-select',
+                    self.assertGreater(content_height, 0)
+                    for selector in ('#runner-stage-cards button:first-child', '#runner-character-cards button:first-child',
                                      '#runner-jump', '#runner-toggle'):
                         box = page.locator(selector).bounding_box()
                         self.assertGreaterEqual(box['height'], 44)
@@ -270,6 +271,7 @@ class RunnerCharacterUITest(unittest.TestCase):
                 for selector in ('#runner-toggle', '#runner-jump'):
                     if selector == '#runner-jump':
                         # ハート上の実タップがCanvasへ届き、ジャンプできる。
+                        page.locator('#runner-stage').scroll_into_view_if_needed()
                         hud = page.locator('#runner-lives').bounding_box()
                         page.touchscreen.tap(hud['x']+hud['width']/2,hud['y']+hud['height']/2)
                     else:

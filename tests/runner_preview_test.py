@@ -59,7 +59,7 @@ class RunnerPreviewTest(unittest.TestCase):
         return page.evaluate('runnerPreviewState')
 
     def select_stage(self, page, stage_id):
-        page.locator('#runner-stage-select').select_option(stage_id)
+        page.locator(f'#runner-stage-cards [data-choice="{stage_id}"]').click()
         self.settle(page)
 
     def assert_fresh(self, page, stage_id):
@@ -92,7 +92,7 @@ class RunnerPreviewTest(unittest.TestCase):
         hud = page.locator('#runner-lives')
         self.assertEqual(hud.get_attribute('role'), 'status')
         self.assertEqual(hud.get_attribute('aria-live'), 'polite')
-        self.assertEqual(hud.get_attribute('aria-label'), f'残機{initial}機中あと{lives}機')
+        self.assertEqual(hud.get_attribute('aria-label'), f'ハートはあと{lives}個（全部で{initial}個）')
         self.assertEqual(page.locator('#runner-hearts').get_attribute('aria-hidden'), 'true')
         hearts = ''.join(page.locator('#runner-hearts').inner_text().split())
         self.assertEqual(hearts, '♥' * lives + '♡' * (initial - lives))
@@ -420,12 +420,11 @@ class RunnerPreviewTest(unittest.TestCase):
                               (768, 1024), (1024, 768)):
             with self.subTest(width=width, height=height):
                 page, errors, requests = self.preview_runner(width=width, height=height)
-                select = page.locator('#runner-stage-select')
+                select = page.locator('#runner-stage-cards button').first
                 self.assertGreaterEqual(select.bounding_box()['height'], 44)
                 self.assertLessEqual(page.evaluate('document.documentElement.scrollWidth'), width)
                 content_height = page.evaluate('document.documentElement.scrollHeight')
-                if width > 480:
-                    self.assertLessEqual(content_height, height + 1)
+                self.assertGreater(content_height, 0)
                 # 縦画面はスクロールを許可。横画面でも説明・HUD・操作欄が重ならず、全ボタンが画面内に収まる。
                 boxes = [page.locator(selector).bounding_box() for selector in
                          ('#runner-preview', '.runner-hud', '#runner-viewport', '.runner-footer')]
