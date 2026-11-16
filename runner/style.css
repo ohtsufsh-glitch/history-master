@@ -119,8 +119,8 @@ h1 { margin: 0; font-size: clamp(1.2rem, 3vw, 1.65rem); line-height: 1.3; }
   .runner-controls, .runner-start { width: 100%; }
   .runner-app-preview { gap: 8px; }
   .runner-app-preview .runner-stage-choice { flex-direction: row; align-items: center; gap: 6px; }
-  .runner-app-preview .runner-controls { flex-direction: row; gap: 8px; }
-  .runner-app-preview .runner-jump, .runner-app-preview .runner-start { width: calc(50% - 4px); min-width: 0; min-height: 58px; padding: 8px 4px; font-size: 1rem; }
+  .runner-app-preview .runner-controls { gap: 8px; }
+  .runner-app-preview .runner-jump, .runner-app-preview .runner-start { width: 100%; min-width: 0; min-height: 58px; padding: 8px; font-size: 1rem; }
 }
 
 @media (max-width: 640px) {
@@ -170,4 +170,13 @@ h1 { margin: 0; font-size: clamp(1.2rem, 3vw, 1.65rem); line-height: 1.3; }
 /* 大きな文字や拡大表示では、内容を切らずに縦スクロールを許可する。 */
 @media (max-height: 260px) {
   .runner-app { height: auto; min-height: 100vh; min-height: 100dvh; grid-template-rows: auto auto minmax(120px, 1fr) auto; }
+}
+
+/* iPhone縦: 文字拡大でもゲーム枠を潰さず、必要な高さはスクロールで確保する。 */
+@media (max-width: 480px) and (orientation: portrait) {
+  .runner-app { height: auto; min-height: 100vh; min-height: 100dvh;
+    grid-template-rows: auto auto minmax(160px, 1fr) auto; }
+  .runner-app-preview { grid-template-rows: auto auto auto minmax(160px, 1fr) auto; }
+  .runner-controls { flex-direction: column; }
+  .runner-jump, .runner-start { width: 100%; min-width: 0; overflow-wrap: anywhere; }
 }
