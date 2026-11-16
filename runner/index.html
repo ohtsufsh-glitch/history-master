@@ -6,9 +6,10 @@
   <meta name="theme-color" content="#eef6f1">
   <title>ランナーゲーム</title>
   <!-- 配信更新時は両方の識別子を揃え、古いCSS・JSとの混在を避ける。 -->
-  <link rel="stylesheet" href="./style.css?v=1.7.37">
-  <link rel="stylesheet" href="./selection.css?v=1.7.37">
-  <script type="module" src="./game.js?v=1.7.37"></script>
+  <link rel="stylesheet" href="./balance.css?v=1.7.38">
+  <link rel="stylesheet" href="./style.css?v=1.7.38">
+  <link rel="stylesheet" href="./selection.css?v=1.7.38">
+  <script type="module" src="./game.js?v=1.7.38"></script>
 </head>
 <body>
   <main class="runner-app" aria-labelledby="runner-title">
@@ -16,6 +17,7 @@
       <div>
         <p id="runner-demo-note" class="runner-eyebrow">無料デモ・記録なし <a href="../">正式版へ</a></p>
         <h1 id="runner-title">ランナーゲーム</h1>
+        <div id="runner-balance-status" class="arcade-balance runner-balance" hidden role="status" aria-live="polite" aria-atomic="true"><img src="../assets/coins/crown-gold.webp" alt="" width="33" height="33"><span>コイン <strong id="runner-balance">確認中…</strong></span></div>
       </div>
       <span id="runner-mode" class="runner-badge" role="status" aria-live="polite">開始前</span>
     </header>

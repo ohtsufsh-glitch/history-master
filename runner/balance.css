@@ -1,0 +1,5 @@
+/* キャッチャーと正式ランナーで同じ残高デザインを使用する。 */
+.arcade-balance { display:flex; align-items:center; gap:7px; font-weight:800; color:#805315; background:#fff3ce; border-radius:999px; padding:7px 12px; min-width:0; max-width:100%; }
+.arcade-balance img { flex:0 0 auto; }
+.runner-balance { width:fit-content; min-height:47px; }
+.runner-balance > span { min-width:0; overflow-wrap:anywhere; }
