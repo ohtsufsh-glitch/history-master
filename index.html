@@ -615,8 +615,8 @@
       #runner-frame-host { height:90vh; height:90dvh; }
     }
   </style>
-  <link rel="stylesheet" href="./runner/balance.css?v=1.7.38">
-  <link rel="stylesheet" href="./runner/selection.css?v=1.7.38">
+  <link rel="stylesheet" href="./runner/balance.css?v=1.7.39">
+  <link rel="stylesheet" href="./runner/selection.css?v=1.7.39">
 </head>
 <body>
 <!-- 立体的な金貨イラスト：ホーム・正解時に共用 -->
@@ -974,7 +974,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.38";
+const APP_VERSION = "v1.7.39";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3210,7 +3210,7 @@ function summarizeRunnerPlays(records, who) {
 // C3-B 内部API。無料試遊のURL/選択UIからは呼ばない。
 let runnerModelPromise;
 function loadRunnerModel() {
-  return runnerModelPromise ||= import('./runner/game.js?v=1.7.38');
+  return runnerModelPromise ||= import('./runner/game.js?v=1.7.39');
 }
 function runnerTransaction(names, action, {mode='readwrite', keys={}}={}) {
   return new Promise((resolve,reject)=>{
@@ -3393,11 +3393,8 @@ function renderFormalRunnerChoices(d,m) {
   $('formal-character-info').textContent=m.describeCharacter(m.getCharacter(characters.value));
 }
 // 表示専用。残高の計算・保存はrunnerLobbyData/getAvailableCoinsだけが担当する。
-let runnerBalanceText='確認中…';
 function showRunnerBalance(text) {
-  runnerBalanceText=text;
   $('runner-balance').textContent=text;
-  formalRunner?.frame.contentWindow?.refreshFormalRunner?.();
 }
 function savedRunnerBalance(who,data) {
   return who==='test'?'∞（無料）':`${data.balance.toLocaleString('ja-JP')}枚`;
@@ -3507,7 +3504,7 @@ async function startFormalRunner(ctx,d,m) {
     }
   }
   current.bridge={
-    get view(){return {...(current.session?.view||{state:structuredClone(waiting),dirty:false,error:null}),message:localError,result:resultData,balanceText:runnerBalanceText};},
+    get view(){return {...(current.session?.view||{state:structuredClone(waiting),dirty:false,error:null}),message:localError,result:resultData};},
     async resume(){
       if(closed||runnerStarting||!viewCurrent(ctx))return;
       if(current.session?.view.state.mode==='finished'&&!current.session.view.error&&(current.session.view.dirty||!resultData))return;
@@ -3572,7 +3569,7 @@ async function startFormalRunner(ctx,d,m) {
   const frame=current.frame;
   frame.title='わくわくランナー';frame.className='runner-formal-frame';
   frame.onload=()=>{if(formalRunner===current){frame.contentWindow.mountFormalRunner(current.bridge);choices();}};
-  frame.src='./runner/?embedded=1&v=1.7.38';
+  frame.src='./runner/?embedded=1&v=1.7.39';
   $('runner-frame-host').replaceChildren(frame);choices();
 }
 $('open-runner').addEventListener('click',()=>navigate('runner').catch(err));
