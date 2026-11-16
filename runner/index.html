@@ -6,14 +6,14 @@
   <meta name="theme-color" content="#eef6f1">
   <title>ランナーゲーム</title>
   <!-- 配信更新時は両方の識別子を揃え、古いCSS・JSとの混在を避ける。 -->
-  <link rel="stylesheet" href="./style.css?v=1.7.26">
-  <script type="module" src="./game.js?v=1.7.26"></script>
+  <link rel="stylesheet" href="./style.css?v=1.7.27">
+  <script type="module" src="./game.js?v=1.7.27"></script>
 </head>
 <body>
   <main class="runner-app" aria-labelledby="runner-title">
     <header class="runner-header">
       <div>
-        <p class="runner-eyebrow">わくわくランナー</p>
+        <p id="runner-demo-note" class="runner-eyebrow">無料デモ・記録なし <a href="../">正式版へ</a></p>
         <h1 id="runner-title">ランナーゲーム</h1>
       </div>
       <span id="runner-mode" class="runner-badge" role="status" aria-live="polite">開始前</span>
@@ -72,5 +72,8 @@
       </div>
     </footer>
   </main>
+<script>
+if(new URLSearchParams(location.search).get('embedded')==='1')document.getElementById('runner-demo-note').textContent='わくわくランナー・正式プレイ';
+</script>
 </body>
 </html>

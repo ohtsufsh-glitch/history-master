@@ -1,5 +1,5 @@
-import { STAGES } from "./stages.js?v=1.7.26";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.26";
+import { STAGES } from "./stages.js?v=1.7.27";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.27";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -607,7 +607,7 @@ function resizeCanvas(canvas, stage, viewport) {
   return true;
 }
 
-function initializeRunner() {
+function initializeRunner(session = null) {
   const canvas = document.getElementById("runner-canvas");
   const stage = document.getElementById("runner-stage");
   const viewport = document.getElementById("runner-viewport");
@@ -626,8 +626,9 @@ function initializeRunner() {
   const characterSelect = document.getElementById("runner-character-select");
   const characterDetails = document.getElementById("runner-character-details");
   const characterIcon = document.getElementById("runner-character-image");
-  const isStagePreview = STAGE_PREVIEW_ENABLED &&
+  const isStagePreview = !session && STAGE_PREVIEW_ENABLED &&
     new URLSearchParams(window.location.search).get("stagePreview") === "1";
+  if(session){status.removeAttribute('role');status.removeAttribute('aria-live');document.querySelector('.runner-footer').prepend(status);}
   let context;
   try {
     context = canvas.getContext("2d", { alpha: false });
@@ -643,7 +644,10 @@ function initializeRunner() {
     return;
   }
 
-  let state = isStagePreview ? createRunnerState(STAGES[0]) : createRunnerState();
+  let state = session ? session.view.state : isStagePreview ? createRunnerState(STAGES[0]) : createRunnerState();
+  let controlBusy=false, stopped=false;
+  function syncSession(){if(session)state=session.view.state;}
+  function saveFailure(){syncSession();updateControls();requestRedraw();}
   function describeStage(definition) {
     const count = type => definition.course.filter(entry => entry.type === type).length;
     return `${definition.stageId} ${definition.name} ｜ 難易度 ${definition.difficulty} ｜ ` +
@@ -709,6 +713,10 @@ function initializeRunner() {
     }
     const text = { ready: "ゲーム開始", running: "一時停止", paused: "再開", finished: "もう一度" }[state.mode];
     if (toggle.textContent !== text) toggle.textContent = text;
+    if(session) {
+      toggle.disabled=controlBusy||!!session.view.error||state.mode==='finished';
+      if(state.mode==='finished')toggle.textContent='終了（学習ホームへ戻ってね）';
+    }
     const jumpDisabled = !active || state.mode !== "running";
     if (jumpButton && jumpButton.disabled !== jumpDisabled) jumpButton.disabled = jumpDisabled;
     const mode = { ready: "開始前", running: "走行中", paused: "一時停止中", finished: "終了" }[state.mode];
@@ -753,21 +761,32 @@ function initializeRunner() {
     if (state.mode === "running") {
       const seconds = previousTimestamp === null ? 0 :
         Math.min(Math.max((timestamp - previousTimestamp) / 1000, 0), MAX_FRAME_SECONDS);
-      updateRunner(state, seconds);
+      if(session) {
+        // advanceは同期的にモデルを進め、保存だけ非同期。フレームの待機キューは作らない。
+        session.advance(seconds).then(()=>{if(state.mode!=='running')requestRedraw();}).catch(saveFailure);
+        syncSession();
+      } else updateRunner(state, seconds);
       previousTimestamp = state.mode === "running" ? timestamp : null;
       updateControls();
     }
     renderScene(context, canvas, state, characterImages, obstacleImage);
-    status.hidden = true;
+    if(session) {
+      const view=session.view;
+      status.hidden=false;
+      status.textContent=view.error?'保存に失敗しました。最後の保存地点から再開してください。':
+        view.dirty?'プレイ中の状態はまだ保存されていません。':'ここまで保存しました。';
+      status.style.position='static';
+    } else status.hidden = true;
     if (state.mode === "running") requestRedraw();
   }
 
   // 通常描画・リサイズ・走行が共通の1枠を使い、ループを二重起動しない。
   function requestRedraw() {
-    if (active && pendingFrame === null) pendingFrame = requestAnimationFrame(redraw);
+    if (!stopped && active && pendingFrame === null) pendingFrame = requestAnimationFrame(redraw);
   }
 
   function pauseRunning() {
+    if(session&&!stopped){session.pause().catch(saveFailure);syncSession();}
     if (state.mode === "running") state.mode = "paused";
     previousTimestamp = null;
     if (pendingFrame !== null) cancelAnimationFrame(pendingFrame);
@@ -831,8 +850,17 @@ function initializeRunner() {
     requestRedraw();
   });
 
-  toggle.addEventListener("click", () => {
-    if (!active || document.hidden) return;
+  toggle.addEventListener("click", async () => {
+    if (!active || document.hidden || controlBusy) return;
+    if(session) {
+      controlBusy=true;
+      try {
+        if(state.mode==='running')await session.pause();
+        else await session.resume();
+      } catch {saveFailure();}
+      finally {controlBusy=false;syncSession();previousTimestamp=null;updateControls();requestRedraw();}
+      return;
+    }
     if (state.mode === "running") {
       pauseRunning();
       // 走行位置を進めず、停止中のidleを1回だけ表示する。
@@ -849,11 +877,15 @@ function initializeRunner() {
   });
   function requestJump() {
     if (!active || document.hidden || state.mode !== "running") return;
-    startJump(state);
+    if(session){session.jump().catch(saveFailure);syncSession();requestRedraw();}
+    else startJump(state);
   }
   // 既存のclickを維持。タップ・マウス・キーボードを二重登録しない。
   // 古いHTMLが残ってボタンがない場合にも、Canvas操作は維持する。
-  jumpButton?.addEventListener("click", requestJump);
+  jumpButton?.addEventListener("pointerdown", event=>{
+    if(event.isPrimary&&event.button===0){event.preventDefault();requestJump();}
+  });
+  jumpButton?.addEventListener("click", event=>{if(event.detail===0)requestJump();});
   canvas.addEventListener("pointerdown", event => {
     if (!active || document.hidden || !event.isPrimary || event.button !== 0 || state.mode !== "running") return;
     event.preventDefault();
@@ -880,16 +912,29 @@ function initializeRunner() {
     const src = name === "fallback" ? CHARACTER_IMAGE.src : CHARACTER_SET.frames[name].src;
     image.src = new URL(src, import.meta.url).href;
   }
-  if (isStagePreview) updateCharacterDetails();
+  if (isStagePreview || session) updateCharacterDetails();
   obstacleImage.onload = requestRedraw;
   obstacleImage.onerror = requestRedraw;
   obstacleImage.src = new URL(OBSTACLE_IMAGE.src, import.meta.url).href;
+  if(session)window.stopFormalRunner=()=>{
+    stopped=true;active=false;
+    if(pendingFrame!==null)cancelAnimationFrame(pendingFrame);
+  };
   toggle.disabled = false;
   updateControls();
   requestRedraw();
 }
 
-if (typeof document !== "undefined" && document.getElementById("runner-canvas")) initializeRunner();
+if (typeof document !== "undefined" && document.getElementById("runner-canvas")) {
+  // embeddedは無料エンジンを止める指示のみ。正式な権限は親の検証済みセッション。
+  if(new URLSearchParams(location.search).get('embedded')==='1') {
+    let mounted=false;
+    window.mountFormalRunner=session=>{
+      if(mounted||window.parent===window)return;
+      mounted=true;initializeRunner(session);
+    };
+  } else initializeRunner();
+}
 
 // snapshot v2: 定義は再生成し、実行中に変化する値は丸めず保持する。
 const SNAPSHOT_KEYS = ['distance','elapsed','lives','score','invincibleRemaining',

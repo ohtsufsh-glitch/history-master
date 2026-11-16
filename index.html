@@ -665,6 +665,11 @@
       </div>
       <button id="open-arcade" class="primary arcade-entry" type="button">キャッチャーで遊ぶ →</button>
     </div>
+    <section class="card" aria-labelledby="runner-home-title">
+      <h2 id="runner-home-title">わくわくランナー</h2>
+      <p id="runner-home-info">1プレイ30コイン・残高を確認中…</p>
+      <button id="open-runner" class="primary" type="button">ランナーで遊ぶ →</button>
+    </section>
 
     <div id="collection" class="home-panel collection-panel">
       <div class="panel-head"><div><span class="section-kicker">COLLECTION</span><h3>🏆 時代制覇カード</h3></div><span id="card-total" class="rank-pill"></span></div>
@@ -673,6 +678,19 @@
     </div>
   </section>
 
+  <section id="runner" class="hidden card" aria-labelledby="runner-heading">
+    <h2 id="runner-heading">わくわくランナー</h2>
+    <p id="runner-info" role="status" aria-live="polite"></p>
+    <div id="runner-choices">
+      <label for="formal-stage">ステージ</label><select id="formal-stage" style="width:100%;min-height:48px"></select>
+      <p>🔒のステージは、ひとつ前のステージを正式クリアすると遊べるよ。</p>
+      <label for="formal-character">キャラクター</label><select id="formal-character" style="width:100%;min-height:48px"></select>
+      <p id="formal-character-info"></p>
+    </div>
+    <button id="runner-purchase" class="primary" type="button">30コインで開始</button>
+    <div id="runner-frame-host"></div>
+    <button id="runner-home" class="secondary" type="button" style="min-height:48px">学習ホームへ戻る</button>
+  </section>
   <section id="arcade" class="card arcade-screen hidden" aria-label="ぬいぐるみキャッチャー">
     <button id="arcade-back" type="button" class="nav">← 学習ホームに戻る</button>
     <div class="arcade-title-row"><div><span class="section-kicker">PLUSH CATCHER</span><h2>🧸 ぬいぐるみキャッチャー</h2></div><div class="arcade-balance"><img src="assets/coins/crown-gold.webp" alt="" width="33" height="33">コイン <strong id="arcade-balance">0枚</strong></div></div>
@@ -922,7 +940,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.26";
+const APP_VERSION = "v1.7.27";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3158,7 +3176,7 @@ function summarizeRunnerPlays(records, who) {
 // C3-B 内部API。無料試遊のURL/選択UIからは呼ばない。
 let runnerModelPromise;
 function loadRunnerModel() {
-  return runnerModelPromise ||= import('./runner/game.js?v=1.7.26');
+  return runnerModelPromise ||= import('./runner/game.js?v=1.7.27');
 }
 function runnerTransaction(names, action) {
   return new Promise((resolve,reject)=>{
@@ -3226,23 +3244,36 @@ async function saveRunnerState(who,id,expectedUpdatedAt,snapshot) {
 // 正式画面への接続用。状態は外へ公開せず、操作と確定済み保存情報を返す。
 async function openRunnerSession(who,id,{lifecycle=true}={}) {
   const model=await loadRunnerModel();
-  const records=await new Promise((resolve,reject)=>{
-    const r=db.transaction('runnerPlays','readonly').objectStore('runnerPlays').get(id);
-    r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);
+  const records=await runnerTransaction(['runnerPlays','coinSpends','arcadePrizes'],(tx,d)=>{
+    const p=d.runnerPlays.find(p=>p.id===id&&p.profile===who&&p.status==='active');
+    const spend=d.coinSpends.find(s=>s.id===id);
+    if(!p||!spend||spend.game!=='runner'||spend.profile!==who||
+      spend.amount!==(who==='test'?0:30)||spend.at!==p.startedAt)
+      throw new Error('購入記録と料金記録が一致しません。記録を残して保護者に確認してください。');
+    validateRunnerPlays([p]);
+    if(p.characterId==='secret_yuniko'&&!d.arcadePrizes.some(a=>a.profile===who&&a.prizeId==='secret_yuniko'))
+      throw new Error('キャラクターの獲得記録を確認できません。購入記録は保持しています。');
+    return p;
   });
-  if(!records||records.profile!==who||records.status!=='active')throw new Error('再開できる購入済みプレイがありません。');
   let play=records,state=model.restoreRunner(play),error=null,dirty=false,queue=Promise.resolve(),disposed=false;
   let lastCheckpoint=state.elapsed, suspended=lifecycle&&document.hidden;
+  let pendingSnapshot=null, savingCheckpoint=null;
   function checkpoint() {
-    const snap=model.snapshotRunner(state);dirty=true;
-    const task=queue.then(async()=>{
-      if(error)throw error;
+    pendingSnapshot=model.snapshotRunner(state);dirty=true;
+    if(savingCheckpoint)return savingCheckpoint;
+    savingCheckpoint=(async()=>{
       try {
-        play=await saveRunnerState(who,id,play.updatedAt,snap);
-        dirty=JSON.stringify(model.snapshotRunner(state))!==JSON.stringify(snap);return structuredClone(play);
-      } catch(e) {error=e;if(state.mode==='running')state.mode='paused';throw e;}
-    });
-    queue=task.catch(()=>{});return task;
+        while(pendingSnapshot) {
+          const snap=pendingSnapshot;pendingSnapshot=null;
+          if(error)throw error;
+          play=await saveRunnerState(who,id,play.updatedAt,snap);
+          dirty=JSON.stringify(model.snapshotRunner(state))!==JSON.stringify(snap);
+        }
+        return structuredClone(play);
+      } catch(e) {error=e;dirty=true;if(state.mode==='running')state.mode='paused';throw e;}
+      finally {savingCheckpoint=null;}
+    })();
+    queue=savingCheckpoint.catch(()=>{});return savingCheckpoint;
   }
   function usable() {if(disposed||error||suspended)throw error||new Error('セッションは停止しています。');}
   function pause() {if(state.mode==='running')state.mode='paused';return checkpoint();}
@@ -3253,9 +3284,9 @@ async function openRunnerSession(who,id,{lifecycle=true}={}) {
   return {
     get view(){return {state:structuredClone(state),savedPlay:structuredClone(play),dirty,error:error?.message||null};},
     async resume(){usable();await queue;usable();if(state.mode==='paused'){await checkpoint();if(!suspended&&!disposed)model.resumeRunner(state);}},
-    async jump(){usable();await queue;usable();if(model.startJump(state)){dirty=true;await checkpoint();}},
+    async jump(){usable();if(model.startJump(state))dirty=true;},
     async advance(seconds){
-      usable();await queue;usable();const lives=state.lives,score=state.score;
+      usable();const lives=state.lives,score=state.score;
       model.updateRunner(state,seconds);dirty=true;
       if(state.mode==='finished'||state.lives!==lives||state.score!==score||state.elapsed-lastCheckpoint>=2){lastCheckpoint=state.elapsed;await checkpoint();}
     },
@@ -3263,6 +3294,76 @@ async function openRunnerSession(who,id,{lifecycle=true}={}) {
     async close(){try{await pause();}finally{disposed=true;window.removeEventListener('pagehide',hide);window.removeEventListener('pageshow',show);document.removeEventListener('visibilitychange',visibility);}}
   };
 }
+
+// 親だけが購入・保存を所有。iframeはURLで正式セッションを取得できない。
+let formalRunner=null, runnerStarting=false;
+async function runnerLobbyData(who) {
+  return runnerTransaction(['runnerPlays','arcadePrizes','coinEvents','reviewEvents','coinSpends'],(tx,d)=>({
+    active:d.runnerPlays.find(p=>p.profile===who&&p.status==='active'),
+    unlocked:summarizeRunnerPlays(d.runnerPlays,who).unlockedStageIds,
+    secret:d.arcadePrizes.some(p=>p.profile===who&&p.prizeId==='secret_yuniko'),
+    balance:availableCoins(d.coinEvents,d.reviewEvents,d.coinSpends,who)
+  }));
+}
+function runnerPrice(who,d) {return `${who==='test'?'テスト用：無料':'1プレイ30コイン'} ／ コイン ${d.balance}枚 ／ ${d.active?'購入済みの続きあり（追加料金なし）':'再開するプレイなし'}`;}
+async function refreshRunnerHome(ctx) {
+  const d=await runnerLobbyData(ctx.who);
+  if(viewCurrent(ctx))$('runner-home-info').textContent=runnerPrice(ctx.who,d);
+}
+async function renderRunnerLobby() {
+  const ctx=viewContext(), [d,m]=await Promise.all([runnerLobbyData(profile),loadRunnerModel()]);
+  if(!viewCurrent(ctx))return;
+  $('runner-info').textContent=runnerPrice(ctx.who,d);
+  $('runner-choices').hidden=!!d.active;
+  $('runner-purchase').hidden=false;
+  $('runner-purchase').disabled=!d.active&&ctx.who!=='test'&&d.balance<30;
+  $('runner-purchase').textContent=d.active?'購入済みの続きから':ctx.who==='test'?'無料で開始':d.balance<30?`あと${30-d.balance}コイン必要`:'30コインで開始';
+  const stages=$('formal-stage'), characters=$('formal-character');
+  stages.replaceChildren();characters.replaceChildren();
+  for(const stage of m.STAGES) {
+    const option=new Option(`${stage.stageId} ${stage.name}${d.unlocked.includes(stage.stageId)?'':' 🔒 前のステージをクリアしてね'}`,stage.stageId);
+    option.disabled=!d.unlocked.includes(stage.stageId);stages.add(option);
+  }
+  for(const c of [...m.CHARACTERS,...(d.secret?[m.getCharacter('secret_yuniko')]:[])])characters.add(new Option(c.name,c.characterId));
+  function describe(){const c=m.getCharacter(characters.value);$('formal-character-info').textContent=`${c.feature} ／ ハート${c.initialLives}個`;}
+  characters.onchange=describe;describe();
+}
+async function closeFormalRunner() {
+  const current=formalRunner;formalRunner=null;
+  if(current) {
+    current.frame.contentWindow.stopFormalRunner?.();
+    try {await current.session.close();} catch(e) {notice('保存できませんでした。最後の保存地点から再開してください。');}
+    current.frame.remove();
+  }
+}
+async function startFormalRunner() {
+  if(runnerStarting||formalRunner)return;
+  runnerStarting=true;$('runner-purchase').disabled=true;
+  const ctx=viewContext();
+  let session;
+  try {
+    const d=await runnerLobbyData(ctx.who);
+    if(!viewCurrent(ctx))return;
+    const play=d.active||await purchaseRunnerPlay({profile:ctx.who,stageId:$('formal-stage').value,characterId:$('formal-character').value});
+    if(!viewCurrent(ctx))return;
+    session=await openRunnerSession(ctx.who,play.id);
+    if(!viewCurrent(ctx)){await session.close();return;}
+    const frame=document.createElement('iframe');
+    frame.title='わくわくランナー 正式プレイ';
+    frame.style='width:100%;height:85vh;height:85dvh;min-height:520px;border:0;display:block';
+    // onloadで親がセッションを渡す。URLやpostMessageを権限にしない。
+    frame.onload=()=>{if(formalRunner?.frame===frame)frame.contentWindow.mountFormalRunner(session);};
+    frame.src='./runner/?embedded=1&v=1.7.27';
+    formalRunner={session,frame};$('runner-frame-host').replaceChildren(frame);
+    $('runner-choices').hidden=true;$('runner-purchase').hidden=true;
+    $('runner-info').textContent='購入済みプレイ（追加料金なし）。続けるにはゲーム画面の「再開」を押してね。';
+  } catch(e) {
+    $('runner-info').textContent=`${e.message} 購入済み記録は消しません。再購入せず、バックアップを保存して保護者に確認してください。旧状態・ステージ版の不一致は対応版での再開を待ちます。`;
+  } finally {runnerStarting=false;$('runner-purchase').disabled=false;}
+}
+$('open-runner').addEventListener('click',()=>navigate('runner').catch(err));
+$('runner-purchase').addEventListener('click',()=>startFormalRunner().catch(err));
+$('runner-home').addEventListener('click',()=>navigateHome().catch(err));
 
 function runnerRestoreNote(data) {
   return (backupSourceVersions.get(data)||BACKUP_VERSION)<10
@@ -3692,7 +3793,7 @@ async function applyRestore() {
 // 履歴は画面の入口だけ。進行・選択肢・報酬の正本はsessions / studySets。
 function historyRoute(state) {
   if(state?.app!=="history-master" || state.version!==1 ||
-    !["home","quiz","study","admin","arcade"].includes(state.screen) ||
+    !["home","quiz","study","admin","arcade","runner"].includes(state.screen) ||
     !["student","test"].includes(state.profile) ||
     (state.screen==="quiz"&&!ERAS.some(([id])=>id===state.era)) ||
     (state.screen==="study"&&!validStudyMode(state.mode,state.genre))) return null;
@@ -3707,7 +3808,11 @@ function navigate(screen, who=profile, era=null) {
 }
 // アプリ内ホームは必ず同じ文書内に追加。外部履歴へhistory.back()しない。
 function navigateHome(who=profile) { return navigate("home",who); }
+let runnerRouteGeneration=0;
 async function restoreRoute(target,{allowCreate=false}={}) {
+  const runnerRouteRequest=++runnerRouteGeneration;
+  await closeFormalRunner();
+  if(runnerRouteRequest!==runnerRouteGeneration)return;
   closeFeedback();
   closePlushDetail(false);
   if(target.profile!==profile)clearArcadeResult();
@@ -3749,6 +3854,7 @@ async function restoreRoute(target,{allowCreate=false}={}) {
   }
   else if(target.screen==="home") await renderHome();
   else if(target.screen==="arcade") await renderArcade();
+  else if(target.screen==="runner") await renderRunnerLobby();
   else await refreshCoinDisplay();
 }
 function reconcilePage() {
@@ -3779,7 +3885,7 @@ function show(sectionId) {
   if(sectionId!=="arcade")clearArcadeResult();
   // どの画面へ移っても、プレイ中のアーム位置を一度保存する。
   if(sectionId!=="arcade" && !$("arcade").classList.contains("hidden")) stopCraneSweep(true);
-  for (const id of ["home", "admin", "quiz", "finished", "study-finished", "arcade"]) $(id).classList.toggle("hidden", id !== sectionId);
+  for (const id of ["home", "admin", "quiz", "finished", "study-finished", "arcade", "runner"]) $(id).classList.toggle("hidden", id !== sectionId);
   const inAdmin = sectionId === "admin";
   $("header-mode").textContent = inAdmin ? "🔧 保護者用" : profile === "test" ? "🔧 テスト中" : "📖 学習用";
   $("header-mode").classList.toggle("testtag", inAdmin || profile === "test");
@@ -3814,6 +3920,7 @@ async function returnToStudentHome() {
 async function renderHome({stay=false}={}) {
   const ctx=viewContext(),request=++homeRender;
   await refreshCoinDisplay().catch(error=>{if(viewCurrent(ctx))err(error);});
+  await refreshRunnerHome(ctx);
   const allProgress=await readAll("progress");
   const records=new Map(allProgress.filter(x=>x.profile===ctx.who).map(x=>[x.questionId,x]));
   const awards=await readAll("awards");
