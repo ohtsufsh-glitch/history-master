@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.32";
-import { STAGES } from "./stages.js?v=1.7.32";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.32";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.33";
+import { STAGES } from "./stages.js?v=1.7.33";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.33";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -774,7 +774,6 @@ function initializeRunner(session = null) {
     const hideResult = state.mode !== "finished";
     const resetResult = hideResult && !result.hidden;
     if (result.hidden !== hideResult) result.hidden = hideResult;
-    viewport.classList.toggle('runner-show-result',!!session&&!hideResult);
     document.getElementById('runner-formal-result').hidden=!session||hideResult;
     if (state.mode === "finished") {
       document.getElementById("runner-result-title").textContent = state.reason === "clear" ? "クリア！" : "ゲームオーバー";
@@ -910,7 +909,6 @@ function initializeRunner(session = null) {
     requestRedraw();
   });
 
-  document.getElementById('runner-result-home').addEventListener('click',()=>session?.home());
   toggle.addEventListener("click", async () => {
     if (!active || document.hidden || controlBusy) return;
     if(session) {
