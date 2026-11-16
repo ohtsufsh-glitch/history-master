@@ -290,9 +290,18 @@ class RunnerCharacterUITest(unittest.TestCase):
     def test_broken_existing_plush_images_do_not_block_play(self):
         page, errors, requests = self.preview_runner()
         page.route('**/assets/plush/*.webp', lambda route: route.fulfill(status=404, body='missing'))
+        page.evaluate("""()=>{
+          window.missingArtLabels=[];
+          const original=CanvasRenderingContext2D.prototype.fillText;
+          CanvasRenderingContext2D.prototype.fillText=function(text,...args){missingArtLabels.push(text);return original.call(this,text,...args);};
+        }""")
         for key in ('sloth', 'goldfish', 'salamander'):
             with self.subTest(character=key):
                 self.select_character(page, key)
+                # 選択カードで先読み済みの成功画像も、Canvas側だけ確実に失敗させる。
+                page.evaluate("""id=>runnerImages.filter(image=>image.src.endsWith('/'+id+'.webp')).forEach(image=>image.src='data:image/webp,broken')""",key)
+                page.wait_for_function('runnerImages.every(image=>image.complete)',polling=50)
+                self.settle(page)
                 self.assertEqual(self.state(page)['characterId'], key)
                 self.assertEqual(page.locator('#runner-character-select').input_value(), key)
                 self.assertFalse(page.locator('#runner-toggle').is_disabled())
@@ -303,7 +312,10 @@ class RunnerCharacterUITest(unittest.TestCase):
         self.assertEqual(self.state(page)['mode'], 'running')
         self.assertLess(self.state(page)['feetY'], 470)
         self.assertGreater(self.state(page)['distance'], 0)
-        self.assertIsNotNone(self.snapshot(page)['character'])
+        page.locator('#runner-canvas').scroll_into_view_if_needed()
+        self.settle(page)
+        self.assertIsNone(self.snapshot(page)['character'])
+        self.assertIn('オオサンショウウオ',page.evaluate('missingArtLabels'))
         self.assert_isolated(page, errors, requests)
 
 

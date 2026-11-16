@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.30";
-import { STAGES } from "./stages.js?v=1.7.30";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.30";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.31";
+import { STAGES } from "./stages.js?v=1.7.31";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.31";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -404,13 +404,19 @@ function drawCharacter(context, state, characterImages) {
   const selectedImage = state.characterId === "shiba" ? characterImages[pose] : characterImages[state.characterId];
   const loaded = selectedImage?.complete && selectedImage.naturalWidth && selectedImage.naturalHeight;
   const characterImage = loaded ? selectedImage :
-    state.characterId === "shiba" ? characterImages.fallback : null;
+    state.characterId === "shiba" ? (characterImages.lastShiba?.image || characterImages.fallback) : null;
   if (!characterImage?.complete || !characterImage.naturalWidth || !characterImage.naturalHeight) {
-    drawFallbackCharacter(context, state);
+    // 別キャラの仮絵には置換しない。ロード失敗でも操作・保存は継続できる。
+    context.fillStyle = "#344e47";
+    context.font = "16px sans-serif";
+    context.textAlign = "center";
+    context.fillText(definition.name, CHARACTER_X, state.feetY - 35);
+    context.textAlign = "start";
     return;
   }
   const feetRatio = state.characterId === "shiba" ?
-    (loaded ? frame.feetRatio : CHARACTER_IMAGE.feetRatio) : definition.image.feetRatio;
+    (loaded ? frame.feetRatio : (characterImages.lastShiba?.feetRatio || CHARACTER_IMAGE.feetRatio)) : definition.image.feetRatio;
+  if(state.characterId === "shiba" && loaded)characterImages.lastShiba={image:selectedImage,feetRatio:frame.feetRatio};
   const scale = CHARACTER_SET.maxSize / Math.max(characterImage.naturalWidth, characterImage.naturalHeight);
   const width = characterImage.naturalWidth * scale;
   const height = characterImage.naturalHeight * scale;
@@ -674,7 +680,7 @@ function initializeRunner(session = null) {
     preview.hidden = false;
     document.querySelector(".runner-app").classList.add("runner-app-preview");
   }
-  const characterImages = { fallback: new Image() };
+  const characterImages = { fallback: new Image(), lastShiba: null };
   for (const name of Object.keys(CHARACTER_SET.frames)) characterImages[name] = new Image();
   const obstacleImage = new Image();
   let active = !document.hidden;
@@ -685,7 +691,8 @@ function initializeRunner(session = null) {
   function updateCharacterDetails() {
     const definition = getCharacter(state.characterId);
     characterDetails.textContent = describeCharacter(definition);
-    characterIcon.src = new URL(definition.image.src, import.meta.url).href;
+    const iconURL = new URL(definition.image.src, import.meta.url).href;
+    if(characterIcon.src !== iconURL)characterIcon.src = iconURL;
     characterIcon.alt = definition.name;
     // 読み込み失敗でも名前・能力と操作はそのまま使える。
     characterIcon.onerror = () => { characterIcon.hidden = true; };
@@ -936,6 +943,7 @@ function initializeRunner(session = null) {
   });
   // 画像を待ってゲームを止めない。復帰・静止中も必要な1フレームだけ更新する。
   for (const [name, image] of Object.entries(characterImages)) {
+    if(!image)continue;
     image.onload = requestRedraw;
     image.onerror = requestRedraw;
     const src = name === "fallback" ? CHARACTER_IMAGE.src : CHARACTER_SET.frames[name].src;
