@@ -14,10 +14,12 @@ class RunnerHeaderTest(unittest.TestCase):
     def tearDown(self):
         self.context.close()
     enter = layout.RunnerLayoutTest.enter
+    settle = layout.RunnerLayoutTest.settle
 
     def balance(self, text):
         self.page.wait_for_function('t=>document.querySelector("#runner-balance").textContent===t', arg=text)
-        self.assertEqual(self.page.frame_locator('iframe').locator('#runner-balance').inner_text(), text)
+        self.assertEqual(self.page.locator('#runner-balance').count(), 1)
+        self.assertEqual(self.page.frame_locator('iframe').locator('#runner-balance, #runner-balance-status, .arcade-balance').count(), 0)
 
     def test_saved_balances_cancel_purchase_resume_retry_and_profiles(self):
         for amount in [0,29,30,100]:
@@ -121,14 +123,13 @@ class RunnerHeaderTest(unittest.TestCase):
             frame=self.page.frames[-1]
             child=frame.evaluate('''()=>{
               const box=s=>{const b=document.querySelector(s).getBoundingClientRect();return {x:b.x,y:b.y,width:b.width,height:b.height,bottom:b.bottom};};
-              return {header:box('.runner-header'),balance:box('#runner-balance-status'),mode:box('#runner-mode'),title:box('#runner-title'),name:document.querySelector('main').getAttribute('aria-labelledby')};
+              return {header:box('.runner-header'),mode:box('#runner-mode'),title:box('#runner-title'),name:document.querySelector('main').getAttribute('aria-labelledby')};
             }''')
             self.assertEqual(child['name'],'runner-title');self.assertEqual(child['title']['width'],1)
             self.assertIn('main "わくわくランナー"',frame.locator('main').aria_snapshot())
-            before=self.page.evaluate(MEASURE)
-            badge=frame.locator('#runner-balance-status').bounding_box()
-            self.assertGreaterEqual(badge['y'],0);self.assertLessEqual(badge['y']+badge['height'],height)
-            self.assertLessEqual(child['balance']['bottom'],before['child']['boxes']['#runner-canvas']['y'])
+            before=layout.RunnerLayoutTest.measure(self, 'ready')
+            self.assertEqual(frame.locator('#runner-mode').inner_text(),'開始前')
+            self.assertLessEqual(child['mode']['bottom'],before['child']['boxes']['#runner-canvas']['y'])
             # 長い失敗文言・読込中・保存済みを切り替えてもゲーム/操作は動かない。
             for text in ['確認中…','確認できません','∞（無料）','100枚']:
                 self.page.evaluate('showRunnerBalance',text)
@@ -141,8 +142,9 @@ class RunnerHeaderTest(unittest.TestCase):
             self.page.evaluate('formalRunner.bridge.resume()');self.balance('70枚')
             self.assertEqual(self.page.evaluate('formalRunner.bridge.view.state.mode'),'running')
             self.assertEqual(frame.locator('#runner-mode').inner_text(),'走行中')
+            layout.RunnerLayoutTest.measure(self, 'running', before)
             if directory:self.page.screenshot(path=f'{directory}/{width}x{height}-play.png')
-            report.append(dict(size=[width,height],initial=initial,playing=before,header=child,parentBalance=b,playingBalance=badge))
+            report.append(dict(size=[width,height],initial=initial,playing=before,header=child,parentBalance=b))
         if directory:Path(directory,'coordinates.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
 
     def test_demo_and_preview_keep_visible_title(self):
@@ -150,4 +152,4 @@ class RunnerHeaderTest(unittest.TestCase):
             self.page.goto(self.url.replace('index.html','runner/')+suffix)
             self.page.locator('#runner-toggle:enabled').wait_for()
             self.assertGreater(self.page.locator('#runner-title').bounding_box()['width'],1)
-            self.assertTrue(self.page.locator('#runner-balance-status').is_hidden())
+            self.assertEqual(self.page.locator('#runner-balance-status, #runner-balance').count(), 0)
