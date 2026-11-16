@@ -1,5 +1,5 @@
-import { STAGES } from "./stages.js?v=1.7.23";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.23";
+import { STAGES } from "./stages.js?v=1.7.24";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.24";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -71,7 +71,7 @@ function createRunnerState(course = COURSE, characterId = course?.characterId ??
   const character = getCharacter(characterId);
   return { stageId: stage.stageId ?? null, goalDistance: stage.goalDistance,
     characterId: character.characterId, speed: character.speed, jump: character.jump,
-    initialLives: character.initialLives,
+    initialLives: character.initialLives, airJumpsRemaining: character.airJumps,
     hitFeedbackRemaining: 0, hitPoint: null,
     mode: "ready", lives: character.initialLives, invincibleRemaining: 0, distance: 0, animationTime: 0,
     feetY: GROUND_Y, velocityY: 0, supportId: "ground", jumpOriginY: GROUND_Y, airAction: null,
@@ -165,6 +165,7 @@ function advanceMotion(state, seconds) {
     state.feetY = landing.top;
     state.velocityY = 0;
     state.supportId = landing.id;
+    state.airJumpsRemaining = getCharacter(state.characterId).airJumps;
     state.airAction = null;
     state.jumpOriginY = landing.top;
     state.landingUntil = state.animationTime - remaining + CHARACTER_SET.landingSeconds;
@@ -289,7 +290,11 @@ function resumeRunner(state) {
 }
 
 function startJump(state) {
-  if (state.mode !== "running" || state.supportId === null) return false;
+  if (state.mode !== "running") return false;
+  if (state.supportId === null) {
+    if (state.airJumpsRemaining <= 0) return false;
+    state.airJumpsRemaining--;
+  }
   state.jumpOriginY = state.feetY;
   state.velocityY = -state.jump.initialVelocity;
   state.supportId = null;
