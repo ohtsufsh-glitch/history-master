@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.35";
-import { STAGES } from "./stages.js?v=1.7.35";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.35";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.36";
+import { STAGES } from "./stages.js?v=1.7.36";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.36";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
