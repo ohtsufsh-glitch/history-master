@@ -11,12 +11,16 @@ class RunnerResultsTest(unittest.TestCase):
     enter = RunnerIntegrationTest.enter
     start = RunnerIntegrationTest.start
 
-    def finish(self):
-        self.page.evaluate("""async()=>{
-          const c=formalRunner.session;
-          while(c.view.state.mode==='running')await formalRunner.bridge.advance(.05);
+    def finish(self, clear=False):
+        from runner_difficulty_cases import SOLUTIONS
+        self.page.evaluate("""async times=>{
+          const c=formalRunner.session;let n=0;
+          while(c.view.state.mode==='running'){
+            if(n<times.length&&c.view.state.elapsed+1e-8>=times[n]){await c.jump();n++;}
+            await formalRunner.bridge.advance(1/60);
+          }
           document.querySelector('iframe').contentWindow.refreshFormalRunner();
-        }""")
+        }""",SOLUTIONS['S01']['perfect'] if clear else [])
 
     def test_stage_character_records_and_strict_improvements(self):
         self.assertTrue(self.page.evaluate("""async()=>{
@@ -42,8 +46,7 @@ class RunnerResultsTest(unittest.TestCase):
         self.page.evaluate('install(60)')
         frame=self.start();self.finish()
         frame.locator('#runner-result-title').filter(has_text='ゲームオーバー').wait_for()
-        self.assertIn('S01',frame.locator('#runner-result-course').inner_text())
-        self.assertIn('しば犬',frame.locator('#runner-result-course').inner_text())
+        self.assertEqual(frame.locator('#runner-result-course').count(),0)
         self.assertIn('初記録',frame.locator('#runner-result-record').inner_text())
         self.assertNotEqual(self.page.locator('#runner-stage-best').inner_text(),'S01 総合：記録なし')
         self.page.once('dialog',lambda d:d.accept())
@@ -110,18 +113,20 @@ class RunnerResultsTest(unittest.TestCase):
         metrics=self.layout(frame)
         self.assertLessEqual(metrics['scroll'],metrics['height']+1)
         self.assertLessEqual(frame.locator('body').evaluate('()=>document.documentElement.scrollWidth'),metrics['width'])
+        if metrics['width']<480 and metrics['height']>500:
+            gap=frame.locator('#runner-jump').evaluate("e=>e.getBoundingClientRect().top-document.querySelector('#runner-canvas').getBoundingClientRect().bottom")
+            self.assertAlmostEqual(gap,12,delta=1)
+            self.assertEqual(frame.locator('#runner-result').bounding_box(),frame.locator('#runner-canvas').bounding_box())
         panel=frame.locator('#runner-result').evaluate('(e)=>[e.clientHeight,e.scrollHeight]')
         if metrics['width']<480 and metrics['height']>500:
             self.assertLessEqual(panel[1],panel[0]+1)
         selectors=['#runner-result-title','#runner-result-message','#runner-result-score',
-                   '#runner-result-progress','#runner-toggle']
-        if confirmed:
-            selectors+=['#runner-result-course','#runner-result-best','#runner-result-character-best']
+                   '#runner-toggle']
         for selector in selectors:
             self.assertTrue(frame.locator(selector).is_visible())
 
     def test_sizes_result_scroll_and_buttons(self):
-        for width,height in [(390,844),(844,390),(820,1180)]:
+        for width,height in [(390,844),(390,700),(402,874),(844,390),(820,1180)]:
             with self.subTest(width=width,height=height):
                 self.page.set_viewport_size(dict(width=width,height=height))
                 self.page.evaluate('async()=>{await navigateHome();await install(60);}')
@@ -129,6 +134,7 @@ class RunnerResultsTest(unittest.TestCase):
                 frame=self.page.frame_locator('iframe')
                 frame.locator('#runner-toggle').filter(has_text='ゲーム開始').wait_for()
                 before=self.layout(frame)
+                self.assertLessEqual(before['scroll'],before['height']+1)
                 iframe_before=self.page.locator('iframe').evaluate('e=>[e.clientWidth,e.clientHeight]')
                 self.page.once('dialog',lambda d:d.accept())
                 frame.locator('#runner-toggle').click()
@@ -145,39 +151,28 @@ class RunnerResultsTest(unittest.TestCase):
                 self.assertTrue(frame.locator('#runner-toggle').is_enabled())
 
     def test_clear_overlay_records_unlock_and_retry(self):
-        from runner_difficulty_cases import SOLUTIONS
         self.page.set_viewport_size(dict(width=390,height=844))
         frame=self.start()
-        self.page.evaluate("""async times=>{
-          const c=formalRunner.session;let n=0;
-          while(c.view.state.mode==='running'){
-            if(n<times.length&&c.view.state.elapsed+1e-8>=times[n]){await c.jump();n++;}
-            await formalRunner.bridge.advance(1/60);
-          }
-          document.querySelector('iframe').contentWindow.refreshFormalRunner();
-        }""",SOLUTIONS['S01']['perfect'])
+        self.finish(clear=True)
         frame.locator('#runner-result-title').filter(has_text='クリア！').wait_for()
         self.assert_result_layout(frame)
         self.assertIn('S02',frame.locator('#runner-result-unlock').inner_text())
         self.assertIn('初記録',frame.locator('#runner-result-record').inner_text())
         self.assertTrue(frame.locator('#runner-toggle').is_enabled())
 
-    def test_long_result_and_enlarged_text_remain_readable(self):
+    def test_enlarged_clear_result_remains_readable(self):
         self.page.set_viewport_size(dict(width=390,height=844))
-        frame=self.start();self.finish()
+        frame=self.start();self.finish(clear=True)
         panel=frame.locator('#runner-result')
-        # 表示だけのストレスケース。実際の得点/保存レコードは書き換えない。
-        for selector,text in [('#runner-result-course','S06 ゴールへの大冒険 ／ オオサンショウウオ'),
-                              ('#runner-result-record','ステージ 新記録！ ／ キャラクター 新記録！'),
-                              ('#runner-result-unlock','S06 が遊べるようになったよ！')]:
-            panel.locator(selector).evaluate('(e,text)=>e.textContent=text',text)
+        panel.locator('#runner-result-unlock').filter(has_text='S02').wait_for()
         self.assert_result_layout(frame)
         self.page.frames[-1].evaluate("document.documentElement.style.fontSize='200%'")
-        panel.locator('#runner-result-progress').scroll_into_view_if_needed()
-        self.assertTrue(panel.locator('#runner-result-progress').evaluate("""e=>{
+        panel.locator('#runner-result-unlock').scroll_into_view_if_needed()
+        self.assertTrue(panel.locator('#runner-result-unlock').evaluate("""e=>{
           const b=e.getBoundingClientRect(),p=e.closest('.runner-result').getBoundingClientRect();
           return b.top>=p.top&&b.bottom<=p.bottom;
         }"""))
+        self.assertTrue(panel.evaluate("e=>e.getBoundingClientRect().bottom<=document.querySelector('.runner-controls').getBoundingClientRect().top"))
         frame.locator('#runner-toggle').scroll_into_view_if_needed()
         self.assertTrue(frame.locator('#runner-toggle').is_enabled())
 
@@ -195,7 +190,7 @@ class RunnerResultsTest(unittest.TestCase):
         styles=[]
         for screen,selector in [('runner','#runner-home'),('arcade','#arcade-back')]:
             self.page.evaluate('(screen)=>navigate(screen,"test")',screen)
-            button=self.page.get_by_role('button',name='学習ホームへ戻る',exact=True)
+            button=self.page.get_by_role('button',name='← 学習ホームへ戻る',exact=True)
             self.assertEqual(button.count(),1)
             self.assertEqual(button.get_attribute('id'),selector[1:])
             styles.append(button.evaluate("""e=>{
@@ -208,6 +203,18 @@ class RunnerResultsTest(unittest.TestCase):
             button.press('Enter')
             self.page.locator('#open-runner').wait_for()
             self.assertEqual(self.page.evaluate('profile'),'test')
+        self.assertEqual(styles[0],styles[1])
+        self.assertEqual(styles[0][0],'rgb(255, 255, 255)')
+        self.assertEqual(styles[0][2],'10px')
+        self.assertEqual(styles[0][3],'rgb(35, 93, 128)')
+
+    def test_english_titles_share_kicker_style(self):
+        styles=[]
+        for screen,title in [('runner','WAKUWAKU RUNNER'),('arcade','PLUSH CATCHER')]:
+            self.page.evaluate('(screen)=>navigate(screen,"test")',screen)
+            kicker=self.page.locator('#'+screen+' > .section-kicker' if screen=='runner' else '#arcade .arcade-title-row .section-kicker')
+            self.assertEqual(kicker.inner_text(),title)
+            styles.append(kicker.evaluate("e=>{const s=getComputedStyle(e);return ['color','fontSize','fontWeight','letterSpacing'].map(k=>s[k]);}"))
         self.assertEqual(styles[0],styles[1])
 
     def test_refresh_records_secret_reset_and_other_profile(self):

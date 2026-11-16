@@ -181,46 +181,44 @@ h1 { margin: 0; font-size: clamp(1.2rem, 3vw, 1.65rem); line-height: 1.3; }
   .runner-jump, .runner-start { width: 100%; min-width: 0; overflow-wrap: anywhere; }
 }
 
-/* 正式画面の保存状態は独立した行へ。iframe内の横はみ出しを防ぐ。 */
-.runner-app-formal .runner-footer { display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 440px); }
-.runner-app-formal .runner-status { position: static; grid-column: 1 / -1;
-  padding: 4px; font-size: .75rem; line-height: 1.4; }
-.runner-app-formal .runner-controls { width: 100%; }
-@media (max-width: 480px), (max-height: 500px) and (min-width: 481px) {
-  .runner-app-formal .runner-footer { display: flex; flex-direction: column; }
+/* 正式画面はCanvasの実寸で積む。余ったiframe高さをゲーム枠へ配らない。 */
+.runner-app-formal {
+  height:auto; min-height:100vh; min-height:100dvh;
+  grid-template-rows:auto auto auto auto; align-content:start;
 }
-@media (max-height: 500px) and (min-width: 481px) {
-  .runner-app-formal .runner-status { padding: 0; font-size: .7rem; line-height: 1.3; }
-  .runner-app-formal .runner-help { font-size: .7rem; line-height: 1.3; }
-}
-
-/* 正式結果は同じviewportに重ねる。Canvas・操作・iframeの寸法を変えない。 */
-.runner-app-formal { height:100vh; height:100dvh;
-  grid-template-rows:auto auto minmax(0, 1fr) auto; }
 .runner-app-formal .runner-badge { min-width:7.5em; text-align:center; }
 .runner-app-formal .runner-header > div { min-width:0; }
-.runner-app-formal .runner-footer { gap:6px; }
-.runner-app-formal .runner-help { font-size:.75rem; line-height:1.4; }
-.runner-app-formal .runner-status { width:100%; }
-.runner-app-formal .runner-result { width:min(100%, 560px); max-height:100%; padding:12px; background:#fffdf3; }
+.runner-app-formal .runner-viewport {
+  display:grid; min-height:0;
+  align-items:stretch; justify-content:stretch;
+}
+/* 比率用のセルと結果を重ね、文字拡大では結果の必要高を優先する。 */
+.runner-app-formal .runner-viewport::before { content:""; grid-area:1 / 1; padding-top:56.25%; }
+.runner-app-formal .runner-stage { position:absolute; align-self:center; justify-self:center; }
+/* 同じgridセルに重ねる。拡大文字はパネルを自然に伸ばし、documentで読める。 */
+.runner-app-formal .runner-result {
+  grid-area:1 / 1; position:relative; inset:auto; transform:none;
+  width:100%; max-height:none; overflow:visible; padding:8px;
+  display:flex; flex-direction:column; justify-content:center; background:#fffdf3;
+}
+.runner-app-formal .runner-result[hidden] { display:none; }
+.runner-app-formal .runner-result h2 { font-size:1.2rem; }
 .runner-app-formal .runner-result p { margin-top:4px; line-height:1.4; }
 .runner-app-formal .runner-result p:empty { display:none; }
-/* 保存通知の有無でゲーム枠が伸縮しないよう、通常文字で3行を確保する。 */
-.runner-app-formal .runner-status { min-height:3.5em; margin:0; }
-.runner-app-formal .runner-status[hidden] { display:block; visibility:hidden; }
+.runner-app-formal .runner-result-progress { display:none; }
+.runner-app-formal .runner-footer { flex-direction:column; gap:12px; text-align:center; }
+.runner-app-formal .runner-controls { width:100%; }
+.runner-app-formal .runner-help { font-size:.75rem; line-height:1.4; }
+.runner-app-formal .runner-status {
+  position:static; width:100%; margin:0; padding:4px;
+  font-size:.75rem; line-height:1.4;
+}
+.runner-app-formal .runner-status[hidden] { display:none; }
 .runner-result[data-reason="gameover"] { border-color:#a96853; }
 .runner-record { color:#835000; font-weight:800; }
 @media (max-height:500px) and (min-width:481px) {
-  .runner-app-formal { grid-template-rows:auto auto minmax(0, 1fr); }
-  /* 横画面や拡大時は結果パネル内の必要なスクロールを許可する。 */
-  .runner-app-formal .runner-result { padding:8px; }
-}
-@media (max-width:480px) and (orientation:portrait) {
-  .runner-app-formal { grid-template-rows:auto auto minmax(18rem, 1fr) auto; }
-}
-@media (max-height:260px) {
-  .runner-app-formal { height:auto; min-height:100dvh; }
+  .runner-app-formal { grid-template-rows:auto auto auto; }
+  .runner-app-formal .runner-footer { gap:8px; }
 }
 
 /* 選択一覧は常に操作ボタンの下へ。文字拡大時も自然に縦へ伸びる。 */
