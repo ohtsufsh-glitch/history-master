@@ -922,7 +922,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.25";
+const APP_VERSION = "v1.7.26";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3100,12 +3100,12 @@ function isProfile(value) { return value === "test" || value === "student"; }
 function validIndexList(values, max) {
   return Array.isArray(values) && new Set(values).size === values.length && values.every(i => Number.isInteger(i) && i >= 0 && i < max);
 }
-// C3-A: 保存形式と純粋集計のみ。開始・課金・ゲームとの接続は後続で実装する。
+// runnerPlaysの保存形式・集計・正式プレイの内部API。公開導線はIssue #93。
 const RUNNER_STAGE_IDS = Object.freeze(['S01','S02','S03','S04','S05','S06']);
 const RUNNER_CHARACTER_IDS = Object.freeze(['shiba','sloth','goldfish','salamander','secret_yuniko']);
 const RUNNER_STAGE_VERSION = 1;
 function runnerInitialLives(id) { return ['salamander','secret_yuniko'].includes(id)?3:2; }
-function runnerCanResume(play) { return play.status==='active' && play.stageVersion===RUNNER_STAGE_VERSION; }
+function runnerCanResume(play) { return play.status==='active' && play.stageVersion===RUNNER_STAGE_VERSION && play.snapshot?.version===2; }
 function exactRunnerFields(value, fields) {
   return value && typeof value==='object' && !Array.isArray(value) &&
     Object.keys(value).length===fields.length && fields.every(key=>Object.hasOwn(value,key));
@@ -3123,7 +3123,12 @@ function validateRunnerPlays(records) {
     const lives=runnerInitialLives(p.characterId);
     if(p.status==='active') {
       const s=p.snapshot;
+      if(s?.version===2) {
+        const keys=['version','distance','elapsed','lives','score','invincibleRemaining','feetY','velocityY','supportId','jumpOriginY','airAction','airJumpsRemaining','animationTime','landingUntil','hitFeedbackRemaining','hitPoint','nextSpawn','objects','collectedStarIds','mode','reason'];
+        if(active.has(p.profile)||!exactRunnerFields(s,keys)||!['ready','running','paused'].includes(s.mode)||s.reason!==null||s.score!==p.score||!Number.isInteger(s.lives)||s.lives<1||s.lives>lives||!bounded(s.distance,1000000)||!bounded(s.elapsed,86400)||!bounded(s.invincibleRemaining,1)||!validIndexList(s.collectedStarIds,1000)||s.score!==s.collectedStarIds.length*10||!Number.isInteger(s.airJumpsRemaining)||s.airJumpsRemaining<0||s.airJumpsRemaining>(p.characterId==='secret_yuniko'?1:0)||!['feetY','velocityY','jumpOriginY','animationTime','landingUntil','hitFeedbackRemaining'].every(k=>Number.isFinite(s[k])&&Math.abs(s[k])<=1000000)||![null,'jump','fall'].includes(s.airAction)||!(s.supportId===null||s.supportId==='ground'||Number.isInteger(s.supportId))||!Number.isInteger(s.nextSpawn)||s.nextSpawn<0||s.nextSpawn>1000||!Array.isArray(s.objects)||s.objects.length>1000||s.objects.some(o=>!o||!Number.isInteger(o.id)||o.id<0||o.id>=s.nextSpawn||!Number.isFinite(o.x)||!Number.isFinite(o.spawnDistance)||!Number.isFinite(o.at)||Object.keys(o).some(k=>!['at','type','height','width','thickness','id','x','spawnDistance'].includes(k))||['height','width','thickness'].some(k=>Object.hasOwn(o,k)&&!Number.isFinite(o[k]))||!['star','platform','wall','obstacle'].includes(o.type))||!(s.hitPoint===null||exactRunnerFields(s.hitPoint,['x','y','distance'])&&Object.values(s.hitPoint).every(Number.isFinite))||new TextEncoder().encode(JSON.stringify(s)).length>65536)throw new Error('ランナーの途中状態が不正です。');
+      } else {
       if(active.has(p.profile)||!exactRunnerFields(s,['version','distance','elapsedSeconds','livesRemaining','collectedStarIds','player','shieldSeconds','airJumpsUsed'])||s.version!==1||!bounded(s.distance,1000000)||!bounded(s.elapsedSeconds,86400)||!Number.isInteger(s.livesRemaining)||s.livesRemaining<1||s.livesRemaining>lives||!validIndexList(s.collectedStarIds,1000)||s.collectedStarIds.length>1000||!exactRunnerFields(s.player,['x','y','vx','vy'])||!Object.values(s.player).every(n=>Number.isFinite(n)&&Math.abs(n)<=1000000)||!bounded(s.shieldSeconds,1)||!Number.isInteger(s.airJumpsUsed)||s.airJumpsUsed<0||s.airJumpsUsed>(p.characterId==='secret_yuniko'?1:0)||new TextEncoder().encode(JSON.stringify(s)).length>65536)throw new Error('ランナーの途中状態が不正です。');
+      }
       active.add(p.profile);
     } else {
       const r=p.result;
@@ -3150,6 +3155,115 @@ function summarizeRunnerPlays(records, who) {
   }
   return {unlockedStageIds:RUNNER_STAGE_IDS.filter(id=>unlocked.has(id)),bestByStageCharacter,bestByStage};
 }
+// C3-B 内部API。無料試遊のURL/選択UIからは呼ばない。
+let runnerModelPromise;
+function loadRunnerModel() {
+  return runnerModelPromise ||= import('./runner/game.js?v=1.7.26');
+}
+function runnerTransaction(names, action) {
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(names,'readwrite'), data={};
+    let pending=names.length, value, failure;
+    tx.oncomplete=()=>resolve(value);
+    tx.onabort=()=>reject(failure||tx.error||new Error('ランナーを保存できませんでした。'));
+    tx.onerror=()=>{};
+    for(const name of names) {
+      const req=tx.objectStore(name).getAll();
+      req.onsuccess=()=>{
+        data[name]=req.result;
+        if(--pending)return;
+        try { value=action(tx,data); } catch(error) { failure=error;tx.abort(); }
+      };
+    }
+  });
+}
+async function purchaseRunnerPlay({profile:who,stageId,characterId,id=crypto.randomUUID()}) {
+  const model=await loadRunnerModel();
+  if(!isProfile(who)||!RUNNER_STAGE_IDS.includes(stageId)||!RUNNER_CHARACTER_IDS.includes(characterId)||!isNonemptyString(id,100))throw new Error('プレイ指定が不正です。');
+  return runnerTransaction(['coinEvents','reviewEvents','coinSpends','runnerPlays','arcadePlays','arcadePrizes'],(tx,d)=>{
+    const active=d.runnerPlays.find(p=>p.profile===who&&p.status==='active');
+    if(active)return active; // 定義版が合わなくても、購入済みプレイを保持・返却する。
+    if(d.runnerPlays.some(p=>p.id===id)||d.arcadePlays.some(p=>p.id===id)||d.coinSpends.some(p=>p.id===id))throw new Error('このプレイIDは使用済みです。');
+    if(!summarizeRunnerPlays(d.runnerPlays,who).unlockedStageIds.includes(stageId)||
+      (characterId==='secret_yuniko'&&!d.arcadePrizes.some(p=>p.profile===who&&p.prizeId==='secret_yuniko')))throw new Error('ステージまたはキャラクターが未解放です。');
+    if(who==='student'&&availableCoins(d.coinEvents,d.reviewEvents,d.coinSpends,who)<30)throw new Error('コインが足りません。');
+    const at=new Date().toISOString();
+    const state=model.createRunnerState(model.STAGES.find(s=>s.stageId===stageId),characterId);
+    const play={id,profile:who,game:'runner',schemaVersion:1,stageId,characterId,stageVersion:RUNNER_STAGE_VERSION,
+      startedAt:at,updatedAt:at,status:'active',score:0,snapshot:model.snapshotRunner(state)};
+    validateRunnerPlays([play]);
+    tx.objectStore('coinSpends').add({id,profile:who,game:'runner',amount:who==='test'?0:30,at});
+    tx.objectStore('runnerPlays').add(play);
+    return play;
+  });
+}
+async function saveRunnerState(who,id,expectedUpdatedAt,snapshot) {
+  const model=await loadRunnerModel();
+  // 呼出側が待機中に変更しても保存内容を変えない。
+  const saved=structuredClone(snapshot);
+  return runnerTransaction(['runnerPlays'],(tx,d)=>{
+    const old=d.runnerPlays.find(p=>p.id===id&&p.profile===who);
+    if(!old)throw new Error('購入済みプレイが見つかりません。');
+    if(old.status==='finished') {
+      if(saved.mode==='finished')return old;
+      throw new Error('このプレイは別の画面で終了しました。');
+    }
+    if(old.updatedAt!==expectedUpdatedAt)throw new Error('別の画面で保存されました。購入済みプレイを開き直してください。');
+    const at=new Date(Math.max(Date.now(),Date.parse(old.updatedAt)+1)).toISOString();
+    const candidate={...old,score:saved.score,snapshot:saved,updatedAt:at};
+    const previous=old.snapshot;
+    if(previous?.version!==2||saved.distance<previous.distance||saved.elapsed<previous.elapsed||saved.score<old.score||saved.lives>previous.lives||!previous.collectedStarIds.every(id=>saved.collectedStarIds?.includes(id)))throw new Error('保存済みの進行状態を巻き戻すことはできません。');
+    const state=model.restoreRunner(candidate);
+    if(state.mode==='finished') {
+      delete candidate.snapshot;candidate.status='finished';
+      candidate.result={reason:state.reason==='clear'?'clear':'gameover',at,livesRemaining:state.lives};
+    }
+    validateRunnerPlays([candidate]);
+    tx.objectStore('runnerPlays').put(candidate);
+    return candidate;
+  });
+}
+// 正式画面への接続用。状態は外へ公開せず、操作と確定済み保存情報を返す。
+async function openRunnerSession(who,id,{lifecycle=true}={}) {
+  const model=await loadRunnerModel();
+  const records=await new Promise((resolve,reject)=>{
+    const r=db.transaction('runnerPlays','readonly').objectStore('runnerPlays').get(id);
+    r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);
+  });
+  if(!records||records.profile!==who||records.status!=='active')throw new Error('再開できる購入済みプレイがありません。');
+  let play=records,state=model.restoreRunner(play),error=null,dirty=false,queue=Promise.resolve(),disposed=false;
+  let lastCheckpoint=state.elapsed, suspended=lifecycle&&document.hidden;
+  function checkpoint() {
+    const snap=model.snapshotRunner(state);dirty=true;
+    const task=queue.then(async()=>{
+      if(error)throw error;
+      try {
+        play=await saveRunnerState(who,id,play.updatedAt,snap);
+        dirty=JSON.stringify(model.snapshotRunner(state))!==JSON.stringify(snap);return structuredClone(play);
+      } catch(e) {error=e;if(state.mode==='running')state.mode='paused';throw e;}
+    });
+    queue=task.catch(()=>{});return task;
+  }
+  function usable() {if(disposed||error||suspended)throw error||new Error('セッションは停止しています。');}
+  function pause() {if(state.mode==='running')state.mode='paused';return checkpoint();}
+  const hide=()=>{suspended=true;pause().catch(()=>{});};
+  const show=()=>{suspended=document.hidden;};
+  const visibility=()=>{if(document.hidden)hide();else show();};
+  if(lifecycle) {window.addEventListener('pagehide',hide);window.addEventListener('pageshow',show);document.addEventListener('visibilitychange',visibility);}
+  return {
+    get view(){return {state:structuredClone(state),savedPlay:structuredClone(play),dirty,error:error?.message||null};},
+    async resume(){usable();await queue;usable();if(state.mode==='paused'){await checkpoint();if(!suspended&&!disposed)model.resumeRunner(state);}},
+    async jump(){usable();await queue;usable();if(model.startJump(state)){dirty=true;await checkpoint();}},
+    async advance(seconds){
+      usable();await queue;usable();const lives=state.lives,score=state.score;
+      model.updateRunner(state,seconds);dirty=true;
+      if(state.mode==='finished'||state.lives!==lives||state.score!==score||state.elapsed-lastCheckpoint>=2){lastCheckpoint=state.elapsed;await checkpoint();}
+    },
+    pause,checkpoint,
+    async close(){try{await pause();}finally{disposed=true;window.removeEventListener('pagehide',hide);window.removeEventListener('pageshow',show);document.removeEventListener('visibilitychange',visibility);}}
+  };
+}
+
 function runnerRestoreNote(data) {
   return (backupSourceVersions.get(data)||BACKUP_VERSION)<10
     ? '旧バックアップにはランナー記録がありません。復元すると現在の両プロフィールのランナー記録（途中状態・クリア・最高得点）はすべて削除されます。'
