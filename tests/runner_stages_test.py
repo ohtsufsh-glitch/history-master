@@ -9,38 +9,7 @@ import unittest
 import runner_canvas_test as canvas
 
 
-# Issue #74 の中心到達時刻。ステージデータから攻略入力を逆算せず、
-# 初期設計と実ゲームの配置・到達・取得を独立した値で照合する。
-EXPECTED = {
-    'S01': {'length': 4000, 'rocks': [9, 15], 'platforms': [],
-            'ground': [5.2, 6.4, 7.1, 10.4, 11.3, 12.2, 16.4, 17.5], 'upper': []},
-    'S02': {'length': 4800, 'rocks': [8, 13, 18], 'platforms': [],
-            'ground': [5.4, 6.6, 10.3, 11.1, 15, 19.5, 21.5], 'upper': []},
-    'S03': {'length': 5600, 'rocks': [8, 12, 17, 22], 'platforms': [19.5],
-            'ground': [5.6, 10.1, 14, 24.6, 26.1], 'upper': [19.5]},
-    'S04': {'length': 6400, 'rocks': [8, 12, 18, 25, 28], 'platforms': [15, 22],
-            'ground': [5.5, 10, 30.3], 'upper': [15, 22]},
-    'S05': {'length': 7200, 'rocks': [8, 11, 15, 20, 25, 30], 'platforms': [17.5, 27],
-            'ground': [5.5, 34], 'upper': [17.5, 27]},
-    'S06': {'length': 8000, 'rocks': [8, 11, 14, 18, 22, 26, 31, 35],
-            'platforms': [16, 24, 28.5], 'ground': [5.5], 'upper': [16]},
-}
-
-# 操作は各フレームの先頭に実行する。岩の0.45秒前／足場の1秒前に
-# ジャンプするだけで、途中の状態・座標・得点は書き換えない。
-EXPECTED_NAMES = {
-    'S01': 'はじめての草原', 'S02': 'トゲ岩の道', 'S03': 'スターへの挑戦',
-    'S04': '空中の足場', 'S05': 'トゲ岩と足場', 'S06': 'マスターコース',
-}
-
-SOLUTIONS = {
-    stage_id: {
-        'clear': [time - .45 for time in spec['rocks']],
-        'perfect': sorted([time - .45 for time in spec['rocks']] +
-                          [time - 1 for time in spec['upper']]),
-    }
-    for stage_id, spec in EXPECTED.items()
-}
+from runner_difficulty_cases import DESIGN, EXPECTED, EXPECTED_NAMES, SOLUTIONS
 
 
 class RunnerStagesTest(unittest.TestCase):
@@ -130,20 +99,22 @@ class RunnerStagesTest(unittest.TestCase):
                 course = stage['course']
                 self.assertEqual(len([e for e in course if e['type'] == 'star']), 10)
                 self.assertTrue(all(e['at'] >= 0 for e in course))
-                self.assertTrue(all(e['type'] in ('star', 'obstacle', 'platform') for e in course))
+                self.assertTrue(all(e['type'] in ('star', 'obstacle', 'platform', 'wall') for e in course))
                 self.assertEqual([e['at'] for e in course], sorted(e['at'] for e in course))
-                for kind, height, arrivals in (
-                    ('obstacle', None, expected['rocks']),
-                    ('platform', None, expected['platforms']),
-                    ('star', 0, expected['ground']),
-                    ('star', 120, expected['rocks']),
-                    ('star', 80, expected['upper']),
+                spec = DESIGN[stage['stageId']]
+                for kind, targets in (
+                    ('obstacle', [(x, None, None) for x in spec['rocks']]),
+                    ('platform', spec['platforms']), ('wall', spec['walls']),
+                    ('star', [(x, None, h) for x,h in spec['stars']]),
                 ):
-                    actual = sorted(e['at'] + constants['delay'] for e in course if e['type'] == kind
-                                    and (height is None or e.get('height', 0) == height))
-                    self.assertEqual(len(actual), len(arrivals))
-                    for found, target in zip(actual, sorted(arrivals)):
-                        self.assertAlmostEqual(found, target, delta=1e-9)
+                    actual = [e for e in course if e['type'] == kind]
+                    self.assertEqual(len(actual), len(targets))
+                    for entry, (x, width, height) in zip(actual, targets):
+                        self.assertAlmostEqual(entry['at']*200+822, x, delta=1e-9)
+                        if width is not None:
+                            self.assertEqual(entry['width'], width)
+                        if height is not None:
+                            self.assertEqual(entry['height'], height)
                 # 最初の危険まで猶予があり、最後の岩通過後も安全なゴール区間。
                 self.assertGreaterEqual(expected['rocks'][0] - 68 / 200, 5)
                 self.assertGreater(stage['goalDistance'] / 200 - expected['rocks'][-1], 1)
@@ -255,7 +226,7 @@ class RunnerStagesTest(unittest.TestCase):
                     self.assertGreaterEqual(result['landings'], len(EXPECTED[result['id']]['upper']))
         self.assert_isolated(page, errors, requests)
 
-    def test_two_rock_hits_auto_continue_and_freeze_on_every_stage_at_60_and_120_hz(self):
+    def test_two_hazard_hits_auto_continue_and_freeze_on_every_stage_at_60_and_120_hz(self):
         page, errors, requests = self.stage_runner()
         results = page.evaluate("""() => {
           const results=[],m=runnerModel;
@@ -312,8 +283,9 @@ class RunnerStagesTest(unittest.TestCase):
                 self.assertEqual((final['mode'], final['reason'], final['lives']),
                                  ('finished', 'collision', 0))
                 self.assertFalse(result['endJump'])
-                rocks = EXPECTED[result['id']]['rocks']
-                for collision, arrival in ((first, rocks[0]), (final, rocks[1])):
+                spec = DESIGN[result['id']]
+                hazards = sorted(spec['rocks'] + [x for x, _, _ in spec['walls']])
+                for collision, arrival in ((first, hazards[0]/200), (final, hazards[1]/200)):
                     self.assertLess(collision['elapsed'], arrival)
                     self.assertGreater(collision['elapsed'], arrival - .5)
                 self.assertEqual(result['retry'], {'id': result['id'], 'lives': 2,
@@ -452,13 +424,20 @@ class RunnerStagesTest(unittest.TestCase):
                 self.assertEqual(page.evaluate('JSON.stringify(runnerJumpProbe.state)'), paused)
                 self.toggle(page)
                 page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
-                page.evaluate('runnerClock.advance(7000,60)')
+                # 新しい2連岩は2回目の接触が早い。第1接触のフレームで止める。
+                page.evaluate("""() => {
+                  for(let f=0;f<60*60&&runnerJumpProbe.state.lives===2;f++)
+                    runnerClock.advance(1000/60,60);
+                }""")
                 self.assertEqual(page.locator('#runner-toggle').inner_text(), '一時停止')
                 self.assertEqual(self.snapshot(page)['pending'], 1)
                 first = page.evaluate('JSON.parse(JSON.stringify(runnerJumpProbe.state))')
                 self.assertEqual((first['mode'], first['lives']), ('running', 1))
                 self.assertEqual(page.locator('#runner-hearts').inner_text(), '♥♡')
-                page.evaluate('runnerClock.advance(7000,60)')
+                page.evaluate("""() => {
+                  for(let f=0;f<60*60&&runnerJumpProbe.state.mode==='running';f++)
+                    runnerClock.advance(1000/60,60);
+                }""")
                 self.assertEqual(page.locator('#runner-result-title').inner_text(), 'ゲームオーバー')
                 self.assertEqual(page.evaluate('runnerJumpProbe.state.lives'), 0)
                 self.assertEqual(self.snapshot(page)['pending'], 0)

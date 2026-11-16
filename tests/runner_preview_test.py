@@ -7,7 +7,7 @@ HISTORY_MASTER_ENGINE=webkit でも実行できる。実機Safariの確認は別
 import unittest
 
 import runner_canvas_test as canvas
-from runner_stages_test import EXPECTED, EXPECTED_NAMES, SOLUTIONS
+from runner_difficulty_cases import DESIGN, EXPECTED, EXPECTED_NAMES, SOLUTIONS
 
 
 class RunnerPreviewTest(unittest.TestCase):
@@ -161,6 +161,7 @@ class RunnerPreviewTest(unittest.TestCase):
                 self.assertIn(f'{expected["length"] // 200}秒', text)
                 self.assertRegex(text, rf'トゲ岩\s*{len(expected["rocks"])}')
                 self.assertRegex(text, rf'足場\s*{len(expected["platforms"])}')
+                self.assertRegex(text, rf'壁\s*{len(DESIGN[stage_id]["walls"])}')
                 self.select_stage(page, stage_id)
                 self.assert_fresh(page, stage_id)
                 details = page.locator('#runner-stage-details').inner_text()
