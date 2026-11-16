@@ -1,5 +1,5 @@
-import { STAGES } from "./stages.js?v=1.7.25";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.25";
+import { STAGES } from "./stages.js?v=1.7.26";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.26";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -76,7 +76,7 @@ function createRunnerState(course = COURSE, characterId = course?.characterId ??
     mode: "ready", lives: character.initialLives, invincibleRemaining: 0, distance: 0, animationTime: 0,
     feetY: GROUND_Y, velocityY: 0, supportId: "ground", jumpOriginY: GROUND_Y, airAction: null,
     landingUntil: 0,
-    elapsed: 0, score: 0, reason: null, objects: [], nextSpawn: 0,
+    collectedStarIds: [], elapsed: 0, score: 0, reason: null, objects: [], nextSpawn: 0,
     course: stage.course.map(entry => ({ ...entry })).sort((a, b) => a.at - b.at) };
 }
 
@@ -267,6 +267,7 @@ function updateRunner(state, seconds) {
     }
     state.objects = state.objects.filter(object => {
       if (object.type === "star" && touchesObject(state, object)) {
+        state.collectedStarIds.push(object.id);
         state.score += 10;
         return false; // 取得済みスターは削除し、二重に加点しない。
       }
@@ -888,7 +889,48 @@ function initializeRunner() {
   requestRedraw();
 }
 
-initializeRunner();
+if (typeof document !== "undefined" && document.getElementById("runner-canvas")) initializeRunner();
+
+// snapshot v2: 定義は再生成し、実行中に変化する値は丸めず保持する。
+const SNAPSHOT_KEYS = ['distance','elapsed','lives','score','invincibleRemaining',
+  'feetY','velocityY','supportId','jumpOriginY','airAction','airJumpsRemaining',
+  'animationTime','landingUntil','hitFeedbackRemaining','hitPoint','nextSpawn',
+  'objects','collectedStarIds','mode','reason'];
+function snapshotRunner(state) {
+  return structuredClone({version:2,...Object.fromEntries(SNAPSHOT_KEYS.map(k=>[k,state[k]]))});
+}
+function restoreRunner(play) {
+  const s=play.snapshot;
+  if(play.stageVersion!==1 || s?.version!==2) throw new Error('この途中記録は現在の版では正確に再開できません。購入記録は保持されています。');
+  const stage=STAGES.find(s=>s.stageId===play.stageId);
+  const state=createRunnerState(stage,play.characterId);
+  if(!s || Object.keys(s).length!==SNAPSHOT_KEYS.length+1 || !SNAPSHOT_KEYS.every(k=>Object.hasOwn(s,k)))throw new Error('途中状態の項目が不正です。');
+  const finite=['distance','elapsed','lives','score','invincibleRemaining','feetY','velocityY',
+    'jumpOriginY','airJumpsRemaining','animationTime','landingUntil','hitFeedbackRemaining','nextSpawn'];
+  if(!finite.every(k=>Number.isFinite(s[k])&&Math.abs(s[k])<=1000000) ||
+    s.distance<0||s.distance>state.goalDistance||s.elapsed<0||s.animationTime<0||
+    !Number.isInteger(s.lives)||s.lives<0||s.lives>state.initialLives||
+    !Number.isInteger(s.airJumpsRemaining)||s.airJumpsRemaining<0||s.airJumpsRemaining>getCharacter(play.characterId).airJumps||
+    s.invincibleRemaining<0||s.invincibleRemaining>1||s.hitFeedbackRemaining<0||s.hitFeedbackRemaining>HIT_FEEDBACK_SECONDS||
+    ![null,'jump','fall'].includes(s.airAction)|| !['ready','paused','running','finished'].includes(s.mode)||
+    (s.mode==='finished' ? !((s.reason==='clear'&&s.distance===state.goalDistance&&s.lives>0)||(s.reason==='collision'&&s.lives===0)) : s.reason!==null||s.lives<1||s.distance>=state.goalDistance))throw new Error('途中状態の値が不正です。');
+  const next=state.course.filter(e=>e.at*SCROLL_SPEED<=s.distance+1e-9).length;
+  if(s.nextSpawn!==next||!Array.isArray(s.collectedStarIds)||new Set(s.collectedStarIds).size!==s.collectedStarIds.length||
+    !s.collectedStarIds.every(id=>Number.isInteger(id)&&id>=0&&id<next&&state.course[id].type==='star')||
+    s.score!==s.collectedStarIds.length*10||s.score!==play.score||s.score>100)throw new Error('スター記録が不正です。');
+  const expected=state.course.slice(0,next).map((e,id)=>({...e,spawnDistance:e.at*SCROLL_SPEED,id,
+    x:SPAWN_X-Math.max(0,s.distance-e.at*SCROLL_SPEED)})).filter(o=>o.x+objectHalfWidth(o)>=0&&!s.collectedStarIds.includes(o.id));
+  if(!Array.isArray(s.objects)||s.objects.length!==expected.length||!s.objects.every((o,i)=>{
+    const e=expected[i];return Object.keys(o).length===Object.keys(e).length&&Object.keys(e).every(k=>k==='x'?Math.abs(o.x-e.x)<1e-6:o[k]===e[k]);
+  }))throw new Error('コース状態が不正です。');
+  if(s.hitPoint!==null && (!s.hitPoint||Object.keys(s.hitPoint).sort().join(',')!=='distance,x,y'||!Object.values(s.hitPoint).every(Number.isFinite)))throw new Error('衝撃状態が不正です。');
+  if(s.supportId!==null && s.supportId!=='ground' && !s.objects.some(o=>o.id===s.supportId&&o.type==='platform'&&overlapsPlatform(o)&&Math.abs(platformBounds(o).top-s.feetY)<1e-6))throw new Error('足場状態が不正です。');
+  if(s.supportId==='ground'&&(s.feetY!==GROUND_Y||s.velocityY!==0))throw new Error('接地状態が不正です。');
+  Object.assign(state,structuredClone(s));delete state.version;
+  if(state.mode!=='finished')state.mode='paused';
+  return state;
+}
+export {snapshotRunner,restoreRunner,STAGES};
 
 // コースとゲーム状態はDOMから独立。配置の差し替えや決定的なルール検証に使う。
 export { CHARACTERS, getCharacter, COURSE, COLLISION, CHARACTER_X, SPAWN_X, CHARACTER_IMAGE, CHARACTER_SET, OBSTACLE_IMAGE, PLATFORM, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,

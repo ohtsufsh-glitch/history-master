@@ -43,7 +43,7 @@ class RunnerStorageTest(unittest.TestCase):
         self.assertEqual(self.errors, [])
 
     def test_v9_upgrade_preserves_all_sixteen_stores_and_balance(self):
-        old = subprocess.check_output(['git','show','origin/main:index.html'], cwd=ROOT, text=True)
+        old = subprocess.check_output(['git','show','b7b6b19:index.html'], cwd=ROOT, text=True)
         self.page.evaluate('db.close()')
         # 同一DB名、一時コンテキスト内でのみ旧版DBを作り直す。
         self.page.evaluate("() => new Promise(ok=>{const r=indexedDB.deleteDatabase(DB_NAME);r.onsuccess=ok;})")
