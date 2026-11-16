@@ -1,4 +1,4 @@
-"""Issue #93: 正式画面・入力・保存の統合。合成データのみ。"""
+"""Issue #98: 正式画面・入力・保存の統合。合成データのみ。"""
 import unittest
 from runner_session_test import RunnerSessionTest
 from runner_difficulty_cases import SOLUTIONS
@@ -16,15 +16,16 @@ class RunnerIntegrationTest(unittest.TestCase):
 
     def start(self):
         self.enter()
-        self.page.locator('#runner-purchase').click()
         frame=self.page.frame_locator('#runner-frame-host iframe')
-        frame.locator('#runner-toggle').filter(has_text='再開').wait_for()
+        frame.locator('#runner-toggle').filter(has_text='ゲーム開始').wait_for()
+        self.page.once('dialog',lambda dialog:dialog.accept())
+        frame.locator('#runner-toggle').click()
+        frame.locator('#runner-toggle').filter(has_text='一時停止').wait_for()
         return frame
 
     def test_home_formal_purchase_reload_resume_return(self):
         frame=self.start()
         self.assertEqual(self.page.evaluate("async()=>[(await readAll('coinSpends')).length,(await readAll('coinSpends'))[0].amount]"),[1,30])
-        frame.locator('#runner-toggle').click()
         self.page.wait_for_timeout(150)
         frame.locator('#runner-jump').click()
         self.assertIsNone(self.page.evaluate('formalRunner.session.view.state.supportId'))
@@ -32,7 +33,7 @@ class RunnerIntegrationTest(unittest.TestCase):
         self.page.locator('#runner-home').click()
         self.page.locator('#open-runner').wait_for()
         self.page.reload();self.page.wait_for_function('appReady')
-        self.page.locator('#open-runner').click();self.page.locator('#runner-purchase').click()
+        self.page.locator('#open-runner').click()
         frame=self.page.frame_locator('iframe')
         frame.locator('#runner-toggle').filter(has_text='再開').wait_for()
         self.assertEqual(self.page.evaluate("async()=>[(await readAll('coinSpends')).length,formalRunner.session.view.state.mode]"),[1,'paused'])
@@ -48,8 +49,8 @@ class RunnerIntegrationTest(unittest.TestCase):
         self.assertEqual(self.page.locator('#formal-character option').count(),5)
         self.page.evaluate("async()=>{await navigate('runner','test');}")
         self.assertEqual(self.page.locator('#formal-character option').count(),4)
-        self.page.locator('#runner-purchase').click()
-        self.page.frame_locator('iframe').locator('#runner-toggle').filter(has_text='再開').wait_for()
+        self.page.frame_locator('iframe').locator('#runner-toggle').click()
+        self.page.wait_for_function('formalRunner.session !== null')
         self.assertEqual(self.page.evaluate("async()=>(await readAll('coinSpends'))[0].amount"),0)
 
     def test_payment_recheck_missing_mismatch_and_legacy(self):
@@ -115,33 +116,35 @@ class RunnerIntegrationTest(unittest.TestCase):
         self.assertEqual(self.page.locator('#formal-character option').count(),5)
         self.page.locator('#formal-character').select_option('secret_yuniko')
         self.page.evaluate("async()=>{await runnerTransaction(['arcadePrizes'],tx=>tx.objectStore('arcadePrizes').clear());}")
-        self.page.locator('#runner-purchase').click()
+        self.page.frame_locator('iframe').locator('#runner-toggle').click()
         self.page.wait_for_function("!runnerStarting")
         self.assertEqual(self.page.evaluate("async()=>(await readAll('runnerPlays')).length"),0)
         self.page.evaluate("async()=>{await install(29);await renderRunnerLobby();}")
-        self.assertTrue(self.page.locator('#runner-purchase').is_disabled())
+        self.page.frame_locator('iframe').locator('#runner-toggle').click()
+        self.page.locator('#runner-info').filter(has_text='あと1コイン').wait_for()
+        self.assertEqual(self.page.evaluate("async()=>(await readAll('coinSpends')).length"),0)
 
     def test_formal_touch_result_and_manual_return(self):
         self.context.close()
         self.context=self.browser.new_context(has_touch=True,viewport=dict(width=390,height=844))
         self.page=self.context.new_page();self.page.goto(self.url);self.page.wait_for_function('appReady')
         self.page.evaluate("async()=>{await navigate('runner','test');}")
-        self.page.locator('#runner-purchase').tap()
+        self.page.frame_locator('iframe').locator('#runner-toggle').wait_for(state='visible')
         frame=self.page.frame_locator('iframe')
-        frame.locator('#runner-toggle').filter(has_text='再開').wait_for();frame.locator('#runner-toggle').tap()
+        frame.locator('#runner-toggle').filter(has_text='ゲーム開始').wait_for();frame.locator('#runner-toggle').tap()
         frame.locator('#runner-jump').tap()
         self.assertIsNone(self.page.evaluate('formalRunner.session.view.state.supportId'))
         # 通常走行の結果を実コントローラで確定する。
         self.page.evaluate("""async()=>{
-          while(formalRunner.session.view.state.mode==='running')await formalRunner.session.advance(.05);
+          while(formalRunner.session?.view.state.mode==='running')await formalRunner.session.advance(.05);
         }""")
         frame.locator('#runner-result-title').filter(has_text='ゲームオーバー').wait_for()
         self.assertEqual(self.page.evaluate("formalRunner.session.view.savedPlay.result.reason"),'gameover')
         self.page.locator('#runner-home').tap();self.page.locator('#open-runner').wait_for()
-        self.assertIn('再開するプレイなし',self.page.locator('#runner-home-info').inner_text())
+        self.assertNotIn('購入済み',self.page.locator('#runner-home-info').inner_text())
 
     def test_screen_reports_save_failure_and_keeps_paid_record(self):
-        frame=self.start();frame.locator('#runner-toggle').click()
+        frame=self.start()
         self.page.evaluate("""async()=>{
           const original=IDBObjectStore.prototype.put;
           IDBObjectStore.prototype.put=function(v){if(this.name==='runnerPlays')throw new Error('disk full');return original.call(this,v);};
@@ -149,6 +152,7 @@ class RunnerIntegrationTest(unittest.TestCase):
         }""")
         frame.locator('#runner-status').filter(has_text='保存に失敗').wait_for()
         self.assertTrue(self.page.evaluate('formalRunner.session.view.dirty'))
+        self.assertTrue(self.page.locator('#formal-stage').is_disabled())
         self.assertEqual(self.page.evaluate("async()=>[(await readAll('runnerPlays'))[0].status,(await readAll('coinSpends')).length]"),['active',1])
 
     def test_representative_touch_layout_and_single_engine(self):
@@ -156,9 +160,9 @@ class RunnerIntegrationTest(unittest.TestCase):
         self.context=self.browser.new_context(has_touch=True,viewport=dict(width=390,height=844))
         self.page=self.context.new_page();self.page.goto(self.url);self.page.wait_for_function('appReady')
         self.page.evaluate("async()=>{await navigate('runner','test');}")
-        self.page.locator('#runner-purchase').tap()
+        self.page.frame_locator('iframe').locator('#runner-toggle').wait_for(state='visible')
         frame=self.page.frame_locator('iframe')
-        frame.locator('#runner-toggle').filter(has_text='再開').wait_for()
+        frame.locator('#runner-toggle').filter(has_text='ゲーム開始').wait_for()
         # 同じ購入済みiframeを回転させ、再生成・再課金なしで配置を切り替える。
         for width,height in [(390,844),(844,390),(820,1180)]:
             with self.subTest(width=width,height=height):
@@ -210,20 +214,93 @@ class RunnerIntegrationTest(unittest.TestCase):
                 self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),width)
                 # 実タッチで開始→即時ジャンプ→停止→手動再開を各サイズで確認。
                 frame.locator('#runner-toggle').tap()
-                self.page.wait_for_function("formalRunner.session.view.state.mode==='running'")
+                self.page.wait_for_function("formalRunner.session?.view.state.mode==='running'")
                 self.page.wait_for_function("formalRunner.session.view.state.supportId!==null")
                 frame.locator('#runner-jump').tap()
                 self.assertIsNone(self.page.evaluate('formalRunner.session.view.state.supportId'))
                 frame.locator('#runner-toggle').tap()
-                self.page.wait_for_function("formalRunner.session.view.state.mode==='paused'")
+                self.page.wait_for_function("formalRunner.session?.view.state.mode==='paused'")
                 distance=self.page.evaluate('formalRunner.session.view.state.distance')
                 self.page.wait_for_timeout(100)
                 self.assertEqual(self.page.evaluate('formalRunner.session.view.state.distance'),distance)
                 frame.locator('#runner-toggle').tap()
-                self.page.wait_for_function("formalRunner.session.view.state.mode==='running'")
+                self.page.wait_for_function("formalRunner.session?.view.state.mode==='running'")
                 frame.locator('#runner-toggle').tap()
-                self.page.wait_for_function("formalRunner.session.view.state.mode==='paused'")
+                self.page.wait_for_function("formalRunner.session?.view.state.mode==='paused'")
         self.assertEqual(self.page.evaluate("async()=>(await readAll('coinSpends')).length"),1)
+
+    def test_free_wait_cancel_double_click_and_new_paid_play(self):
+        self.page.evaluate('async()=>await install(60)')
+        self.enter()
+        frame=self.page.frame_locator('iframe')
+        frame.locator('#runner-toggle').filter(has_text='ゲーム開始').wait_for()
+        self.page.wait_for_timeout(100)
+        self.assertEqual(self.page.evaluate("async()=>[formalRunner.bridge.view.state.mode,(await readAll('runnerPlays')).length,(await readAll('coinSpends')).length]"),['ready',0,0])
+        self.page.locator('#formal-character').select_option('salamander')
+        self.assertEqual(frame.locator('#runner-hearts').inner_text(),'♥♥♥')
+        self.page.once('dialog',lambda dialog:dialog.dismiss())
+        frame.locator('#runner-toggle').click()
+        self.assertEqual(self.page.evaluate("async()=>(await readAll('runnerPlays')).length"),0)
+        self.page.once('dialog',lambda dialog:dialog.accept())
+        frame.locator('#runner-toggle').evaluate('(b)=>{b.click();b.click();}')
+        self.page.wait_for_function("formalRunner.session?.view.state.mode==='running'")
+        self.assertTrue(self.page.locator('#formal-character').is_disabled())
+        frame.locator('#runner-toggle').click()
+        self.assertTrue(self.page.locator('#formal-stage').is_disabled())
+        frame.locator('#runner-toggle').click()
+        self.page.evaluate("async()=>{while(formalRunner.session?.view.state.mode==='running')await formalRunner.session.advance(.05);}")
+        frame.locator('#runner-toggle').filter(has_text='ゲーム開始').wait_for()
+        self.assertTrue(self.page.locator('#formal-character').is_enabled())
+        self.page.once('dialog',lambda dialog:dialog.accept())
+        frame.locator('#runner-toggle').click()
+        self.page.wait_for_function("formalRunner.session?.view.state.mode==='running'")
+        self.assertEqual(self.page.evaluate("async()=>[(await readAll('coinSpends')).map(s=>s.amount),(await readAll('runnerPlays')).length]"),[[30,30],2])
+
+    def test_home_spacing_and_choices_below_game(self):
+        self.page.set_viewport_size(dict(width=390,height=844))
+        metrics=self.page.evaluate("""()=>{
+          const crane=document.querySelector('#game-center-home'),runner=document.querySelector('.runner-home-panel'),weak=crane.previousElementSibling;
+          return {gap:runner.getBoundingClientRect().top-crane.getBoundingClientRect().bottom,
+            other:crane.getBoundingClientRect().top-weak.getBoundingClientRect().bottom,
+            styles:[crane,runner].map(e=>{const s=getComputedStyle(e);return [s.borderRadius,s.padding,s.boxShadow]})};
+        }""")
+        self.assertEqual(metrics['gap'],metrics['other'])
+        self.assertGreaterEqual(metrics['gap'],16)
+        self.assertEqual(metrics['styles'][0],metrics['styles'][1])
+        self.enter()
+        self.page.frame_locator('iframe').locator('#runner-toggle').wait_for(state='visible')
+        self.assertTrue(self.page.evaluate("document.querySelector('#runner-choices').getBoundingClientRect().top>=document.querySelector('iframe').getBoundingClientRect().bottom"))
+        self.assertNotIn('ゆにこ',self.page.locator('#runner').inner_text())
+        self.assertEqual(self.page.evaluate("async()=>(await readAll('coinSpends')).length"),0)
+
+    def test_clear_refreshes_unlock_then_selects_without_purchase(self):
+        frame=self.start()
+        self.page.evaluate("""async times=>{
+          const c=formalRunner.session;let n=0;
+          while(c.view.state.mode==='running'){
+            if(n<times.length&&c.view.state.elapsed+1e-8>=times[n]){await c.jump();n++;}
+            await formalRunner.bridge.advance(1/60);
+          }
+        }""",SOLUTIONS['S01']['perfect'])
+        self.assertTrue(self.page.locator('#formal-stage option[value="S02"]').is_enabled())
+        self.assertNotIn('🔒',self.page.locator('#formal-stage option[value="S02"]').inner_text())
+        self.page.locator('#formal-stage').select_option('S02')
+        self.page.locator('#formal-character').select_option('goldfish')
+        self.assertEqual(self.page.evaluate("[formalRunner.bridge.view.state.stageId,formalRunner.bridge.view.state.characterId,formalRunner.bridge.view.state.mode]"),['S02','goldfish','ready'])
+        self.assertEqual(self.page.evaluate("async()=>(await readAll('coinSpends')).length"),1)
+
+    def test_unresumable_secret_shows_error_without_exposing_or_rebuying(self):
+        self.page.evaluate("""async()=>{
+          await runnerTransaction(['arcadePrizes'],tx=>tx.objectStore('arcadePrizes').put({id:'secret',profile:'student',prizeId:'secret_yuniko'}));
+          await buy({characterId:'secret_yuniko'});
+          await runnerTransaction(['arcadePrizes'],tx=>tx.objectStore('arcadePrizes').clear());
+        }""")
+        self.enter()
+        frame=self.page.frame_locator('iframe')
+        frame.locator('#runner-status').filter(has_text='獲得記録を確認できません').wait_for()
+        self.assertNotIn('ゆにこ',self.page.locator('#runner').inner_text())
+        frame.locator('#runner-toggle').click()
+        self.assertEqual(self.page.evaluate("async()=>[(await readAll('coinSpends')).length,(await readAll('runnerPlays'))[0].status,formalRunner.bridge.view.state.mode]"),[1,'active','ready'])
 
 # Imported TestCase must not be rediscovered here.
 del RunnerSessionTest
