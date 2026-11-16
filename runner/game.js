@@ -1,5 +1,5 @@
-import { STAGES } from "./stages.js?v=1.7.28";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.28";
+import { STAGES } from "./stages.js?v=1.7.29";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.29";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -714,8 +714,9 @@ function initializeRunner(session = null) {
     const text = { ready: "ゲーム開始", running: "一時停止", paused: "再開", finished: "もう一度" }[state.mode];
     if (toggle.textContent !== text) toggle.textContent = text;
     if(session) {
-      toggle.disabled=controlBusy||(!!session.view.error&&!!session.view.savedPlay)||(state.mode==='finished'&&session.view.dirty);
-      if(state.mode==='finished')toggle.textContent='ゲーム開始';
+      toggle.disabled=controlBusy||(!!session.view.error&&!!session.view.savedPlay)||(state.mode==='finished'&&(session.view.dirty||!session.view.result));
+      if(state.mode==='finished')toggle.textContent='再挑戦';
+      if(session.view.error&&session.view.savedPlay) {toggle.disabled=controlBusy;toggle.textContent='最後の保存から再開（無料）';}
     }
     const jumpDisabled = !active || state.mode !== "running";
     if (jumpButton && jumpButton.disabled !== jumpDisabled) jumpButton.disabled = jumpDisabled;
@@ -731,12 +732,28 @@ function initializeRunner(session = null) {
     const hideResult = state.mode !== "finished";
     const resetResult = hideResult && !result.hidden;
     if (result.hidden !== hideResult) result.hidden = hideResult;
+    viewport.classList.toggle('runner-show-result',!!session&&!hideResult);
+    document.getElementById('runner-formal-result').hidden=!session||hideResult;
     if (state.mode === "finished") {
       document.getElementById("runner-result-title").textContent = state.reason === "clear" ? "クリア！" : "ゲームオーバー";
       document.getElementById("runner-result-message").textContent = state.reason === "clear" ?
         "ゴールまで走りきったよ！" : "トゲ岩にぶつかったよ。もう一度挑戦しよう！";
       document.getElementById("runner-result-score").textContent = state.score;
       document.getElementById("runner-result-progress").textContent = progress;
+      result.dataset.reason=state.reason;
+      if(session){
+        const view=session.view,r=view.result;
+        const confirmed=r&&!view.dirty&&!view.error&&view.savedPlay?.status==='finished';
+        document.getElementById('runner-result-title').textContent=confirmed?(r.play.result.reason==='clear'?'クリア！':'ゲームオーバー'):'結果を保存中…';
+        document.getElementById('runner-result-message').textContent=confirmed?'がんばったね！ 下のボタンで再挑戦できるよ。':view.error?'保存できませんでした。追加コインなしで最後の保存から再開できます。':'保存が終わるまで待ってね。';
+        if(view.error)document.getElementById('runner-result-title').textContent='まだ保存できていません';
+        document.getElementById('runner-result-score').textContent=confirmed?r.play.score:state.score;
+        document.getElementById('runner-result-course').textContent=confirmed?`${r.play.stageId} ${STAGES.find(s=>s.stageId===r.play.stageId).name} ／ ${getCharacter(r.play.characterId).name}`:'';
+        document.getElementById('runner-result-best').textContent=confirmed?`ステージ最高：${r.stageBest}点`:'';
+        document.getElementById('runner-result-character-best').textContent=confirmed?`このキャラクターの最高：${r.characterBest}点`:'';
+        document.getElementById('runner-result-record').textContent=confirmed?[r.stageRecord&&`ステージ ${r.stageRecord}`,r.characterRecord&&`キャラクター ${r.characterRecord}`].filter(Boolean).join(' ／ '):'';
+        document.getElementById('runner-result-unlock').textContent=confirmed&&r.unlocked.length?`${r.unlocked.join('・')} が遊べるようになったよ！`:'';
+      }
     } else if (resetResult) {
       document.getElementById("runner-result-title").textContent = "";
       document.getElementById("runner-result-message").textContent = "";
@@ -851,6 +868,7 @@ function initializeRunner(session = null) {
     requestRedraw();
   });
 
+  document.getElementById('runner-result-home').addEventListener('click',()=>session?.home());
   toggle.addEventListener("click", async () => {
     if (!active || document.hidden || controlBusy) return;
     if(session) {

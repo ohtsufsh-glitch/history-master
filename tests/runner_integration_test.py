@@ -136,7 +136,7 @@ class RunnerIntegrationTest(unittest.TestCase):
         self.assertIsNone(self.page.evaluate('formalRunner.session.view.state.supportId'))
         # 通常走行の結果を実コントローラで確定する。
         self.page.evaluate("""async()=>{
-          while(formalRunner.session?.view.state.mode==='running')await formalRunner.session.advance(.05);
+          while(formalRunner.session?.view.state.mode==='running')await formalRunner.bridge.advance(.05);
         }""")
         frame.locator('#runner-result-title').filter(has_text='ゲームオーバー').wait_for()
         self.assertEqual(self.page.evaluate("formalRunner.session.view.savedPlay.result.reason"),'gameover')
@@ -248,8 +248,8 @@ class RunnerIntegrationTest(unittest.TestCase):
         frame.locator('#runner-toggle').click()
         self.assertTrue(self.page.locator('#formal-stage').is_disabled())
         frame.locator('#runner-toggle').click()
-        self.page.evaluate("async()=>{while(formalRunner.session?.view.state.mode==='running')await formalRunner.session.advance(.05);}")
-        frame.locator('#runner-toggle').filter(has_text='ゲーム開始').wait_for()
+        self.page.evaluate("async()=>{while(formalRunner.session?.view.state.mode==='running')await formalRunner.bridge.advance(.05);}")
+        frame.locator('#runner-toggle').filter(has_text='再挑戦').wait_for()
         self.assertTrue(self.page.locator('#formal-character').is_enabled())
         self.page.once('dialog',lambda dialog:dialog.accept())
         frame.locator('#runner-toggle').click()
