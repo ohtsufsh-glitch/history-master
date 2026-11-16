@@ -1428,7 +1428,7 @@ class RunnerCanvasTest(unittest.TestCase):
                     return scene
                 if broken:
                     self.assertIsNone(initial['sprite'])
-                    self.assertEqual(page.evaluate('runnerImages[0].naturalWidth'),0)
+                    self.assertEqual(page.evaluate("runnerImages.find(i=>i.src.endsWith('/assets/plush/shiba.webp')).naturalWidth"),0)
                 else:
                     pose('idle')
                     alpha=page.evaluate("""() => runnerImages.filter(image=>image.src.includes('/runner/assets/shiba/')).map(image=>{
@@ -1444,6 +1444,17 @@ class RunnerCanvasTest(unittest.TestCase):
                           'jump_up':465,'jump_top':465,'jump_down':464,'land':466}
                     for frame in alpha:
                         self.assertEqual((frame['corner'],frame['bottom']),(0,feet[frame['name']]))
+                if broken:
+                    # PR #103以降、全画像失敗時は名前を表示し、仮キャラは描かない。
+                    self.assertIsNone(initial['character'])
+                    self.toggle(page);page.evaluate('runnerClock.step(0)');self.tap(page)
+                    page.evaluate('runnerClock.advance(500,60)')
+                    self.assertIsNone(self.snapshot(page)['character'])
+                    self.assertGreater(self.snapshot(page)['progress'],0)
+                    self.toggle(page)
+                    self.assertEqual(self.snapshot(page)['pending'],0)
+                    self.assert_isolated(page,errors,requests)
+                    continue
                 self.assertAlmostEqual(initial['character']['x'],186,delta=.001)
                 self.assertAlmostEqual(initial['character']['y'],427,delta=.001)
                 self.toggle(page); page.evaluate('runnerClock.step(0)')
@@ -1553,8 +1564,12 @@ class RunnerCanvasTest(unittest.TestCase):
                     if times[frame]:
                         page.evaluate('ms=>runnerClock.advance(ms,60)',times[frame])
                 scene=self.snapshot(page)
-                self.assertEqual(scene['sprite']['pose'],'fallback')
-                self.assertTrue(scene['sprite']['src'].endswith('/assets/plush/shiba.webp'))
+                previous={'idle':'fallback','run_1':'idle','run_2':'run_1','run_3':'run_2',
+                    'run_4':'run_3','jump_up':'run_1','jump_top':'jump_up',
+                    'jump_down':'jump_top','land':'jump_down'}[frame]
+                self.assertEqual(scene['sprite']['pose'],previous)
+                expected='/assets/plush/shiba.webp' if previous=='fallback' else f'/shiba/{previous}.webp'
+                self.assertTrue(scene['sprite']['src'].endswith(expected))
                 self.assertEqual((scene['sprite']['width'],scene['sprite']['height']),(100,100))
                 if frame in ('jump_up','jump_down'):
                     self.assertAlmostEqual(scene['character']['y'],337,delta=.001)
@@ -1578,7 +1593,7 @@ class RunnerCanvasTest(unittest.TestCase):
         self.toggle(page);page.evaluate('runnerClock.step(0)')
         page.evaluate('runnerClock.advance(100,60)')
         running=self.snapshot(page)
-        self.assertEqual(running['sprite']['pose'],'fallback')
+        self.assertEqual(running['sprite']['pose'],'run_1')
         page.evaluate("""() => {
           Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});
           document.dispatchEvent(new Event('visibilitychange'));

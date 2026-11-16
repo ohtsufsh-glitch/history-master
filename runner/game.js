@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.31";
-import { STAGES } from "./stages.js?v=1.7.31";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.31";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.32";
+import { STAGES } from "./stages.js?v=1.7.32";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.32";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -33,6 +33,37 @@ const CHARACTER_SET = Object.freeze({ maxSize: 100, runFrameSeconds: 0.1,
   ].map(([name, feet]) => [name, Object.freeze({
     src: `./assets/shiba/${name}.webp`, feetRatio: feet / 512,
   })]))) });
+// 画像の実体の足先を確認した補正値（512px基準）。物理座標は変更しない。
+const ANIMATION_SETS = Object.freeze({
+  shiba: CHARACTER_SET,
+  ...Object.fromEntries(Object.entries({
+    sloth: [461,461,461,461,461,461,461,461,461],
+    goldfish: [460,461,459,461,461,461,461,460,461],
+    salamander: [460,461,460,461,461,461,461,461,461],
+    secret_yuniko: [461,461,460,461,460,461,461,461,461],
+  }).map(([id, feet]) => [id, Object.freeze({
+    maxSize: 100, runFrameSeconds: 0.1, bob: false,
+    frames: Object.freeze(Object.fromEntries(Object.keys(CHARACTER_SET.frames).map((pose, i) =>
+      [pose, Object.freeze({src: `./assets/${id}/${pose}.webp`, feetRatio: feet[i] / 512})]))),
+  })])),
+});
+
+function loadedImage(image) {
+  return !!(image?.complete && image.naturalWidth && image.naturalHeight);
+}
+
+// 選択時だけ生成。失敗したImageも保持するので404を再試行しない。
+function loadCharacterImages(cache, id, redraw) {
+  if (cache[id]) return cache[id];
+  const set = ANIMATION_SETS[id], definition = getCharacter(id);
+  const images = cache[id] = {last: null};
+  for (const [pose, frame] of Object.entries({...set.frames, fallback: definition.image})) {
+    const image = images[pose] = new Image();
+    image.onload = image.onerror = redraw;
+    image.src = new URL(frame.src, import.meta.url).href;
+  }
+  return images;
+}
 const OBSTACLE_WIDTH = 80;
 // 元画像の下端2pxは透明。実体の底面Y=464を地面に合わせる。
 const OBSTACLE_IMAGE = Object.freeze({ src: "./assets/spike-rock.webp", width: OBSTACLE_WIDTH,
@@ -313,7 +344,7 @@ function characterPose(state) {
     return state.velocityY < 0 ? "jump_up" : "jump_down";
   }
   if (state.animationTime < state.landingUntil - 1e-9) return "land";
-  const frame = Math.floor((state.animationTime + 1e-9) / CHARACTER_SET.runFrameSeconds) % 4 + 1;
+  const frame = Math.floor((state.animationTime + 1e-9) / ANIMATION_SETS[state.characterId].runFrameSeconds) % 4 + 1;
   return `run_${frame}`;
 }
 
@@ -400,13 +431,16 @@ function drawFallbackCharacter(context, state) {
 function drawCharacter(context, state, characterImages) {
   const definition = getCharacter(state.characterId);
   const pose = characterPose(state);
-  const frame = CHARACTER_SET.frames[pose];
-  const selectedImage = state.characterId === "shiba" ? characterImages[pose] : characterImages[state.characterId];
-  const loaded = selectedImage?.complete && selectedImage.naturalWidth && selectedImage.naturalHeight;
-  const characterImage = loaded ? selectedImage :
-    state.characterId === "shiba" ? (characterImages.lastShiba?.image || characterImages.fallback) : null;
-  if (!characterImage?.complete || !characterImage.naturalWidth || !characterImage.naturalHeight) {
-    // 別キャラの仮絵には置換しない。ロード失敗でも操作・保存は継続できる。
+  const set = ANIMATION_SETS[state.characterId];
+  const images = characterImages[state.characterId];
+  const selectedImage = images?.[pose];
+  if (loadedImage(selectedImage)) images.last = {image: selectedImage, feetRatio: set.frames[pose].feetRatio};
+  const available = loadedImage(selectedImage) ? images.last :
+    loadedImage(images?.last?.image) ? images.last :
+    loadedImage(images?.idle) ? {image: images.idle, feetRatio: set.frames.idle.feetRatio} :
+    {image: images?.fallback, feetRatio: definition.image.feetRatio};
+  const characterImage = available.image;
+  if (!loadedImage(characterImage)) {
     context.fillStyle = "#344e47";
     context.font = "16px sans-serif";
     context.textAlign = "center";
@@ -414,13 +448,11 @@ function drawCharacter(context, state, characterImages) {
     context.textAlign = "start";
     return;
   }
-  const feetRatio = state.characterId === "shiba" ?
-    (loaded ? frame.feetRatio : (characterImages.lastShiba?.feetRatio || CHARACTER_IMAGE.feetRatio)) : definition.image.feetRatio;
-  if(state.characterId === "shiba" && loaded)characterImages.lastShiba={image:selectedImage,feetRatio:frame.feetRatio};
-  const scale = CHARACTER_SET.maxSize / Math.max(characterImage.naturalWidth, characterImage.naturalHeight);
+  const feetRatio = available.feetRatio;
+  const scale = set.maxSize / Math.max(characterImage.naturalWidth, characterImage.naturalHeight);
   const width = characterImage.naturalWidth * scale;
   const height = characterImage.naturalHeight * scale;
-  const bob = characterBob(state);
+  const bob = set.bob === false ? 0 : characterBob(state);
   context.fillStyle = "#705c4930";
   context.beginPath();
   context.ellipse(CHARACTER_X, shadowY(state), 38, 9, 0, 0, Math.PI * 2);
@@ -680,8 +712,7 @@ function initializeRunner(session = null) {
     preview.hidden = false;
     document.querySelector(".runner-app").classList.add("runner-app-preview");
   }
-  const characterImages = { fallback: new Image(), lastShiba: null };
-  for (const name of Object.keys(CHARACTER_SET.frames)) characterImages[name] = new Image();
+  const characterImages = Object.create(null);
   const obstacleImage = new Image();
   let active = !document.hidden;
   let pendingFrame = null;
@@ -697,13 +728,7 @@ function initializeRunner(session = null) {
     // 読み込み失敗でも名前・能力と操作はそのまま使える。
     characterIcon.onerror = () => { characterIcon.hidden = true; };
     characterIcon.onload = () => { characterIcon.hidden = false; };
-    if (state.characterId !== "shiba" && !characterImages[state.characterId]) {
-      const image = new Image();
-      characterImages[state.characterId] = image;
-      image.onload = requestRedraw;
-      image.onerror = requestRedraw;
-      image.src = characterIcon.src;
-    }
+    loadCharacterImages(characterImages, state.characterId, requestRedraw);
     canvas.setAttribute("aria-label", `地面を走る${definition.name}とトゲ岩、乗れる足場、スター、ゴールの旗。` +
       "走行中にタップするとジャンプします。旗のラインを通過するとクリアです。");
     for (const option of stageSelect.options) {
@@ -942,13 +967,7 @@ function initializeRunner(session = null) {
     else resumeRendering();
   });
   // 画像を待ってゲームを止めない。復帰・静止中も必要な1フレームだけ更新する。
-  for (const [name, image] of Object.entries(characterImages)) {
-    if(!image)continue;
-    image.onload = requestRedraw;
-    image.onerror = requestRedraw;
-    const src = name === "fallback" ? CHARACTER_IMAGE.src : CHARACTER_SET.frames[name].src;
-    image.src = new URL(src, import.meta.url).href;
-  }
+  loadCharacterImages(characterImages, state.characterId, requestRedraw);
   if (isStagePreview || session) updateCharacterDetails();
   obstacleImage.onload = requestRedraw;
   obstacleImage.onerror = requestRedraw;
@@ -1016,6 +1035,6 @@ function restoreRunner(play) {
 export {snapshotRunner,restoreRunner,STAGES};
 
 // コースとゲーム状態はDOMから独立。配置の差し替えや決定的なルール検証に使う。
-export { describeCharacter, selectionItems, renderSelectionCards, CHARACTERS, getCharacter, COURSE, COLLISION, CHARACTER_X, SPAWN_X, CHARACTER_IMAGE, CHARACTER_SET, OBSTACLE_IMAGE, PLATFORM, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
+export { ANIMATION_SETS, loadCharacterImages, drawCharacter, describeCharacter, selectionItems, renderSelectionCards, CHARACTERS, getCharacter, COURSE, COLLISION, CHARACTER_X, SPAWN_X, CHARACTER_IMAGE, CHARACTER_SET, OBSTACLE_IMAGE, PLATFORM, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
   createRunnerState, updateRunner, resumeRunner, startJump, progressPercent, goalX, characterCenter, characterPose,
   platformBounds, wallBounds, characterBob, shadowY };

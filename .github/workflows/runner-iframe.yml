@@ -6,6 +6,7 @@ on:
       - 'runner/**'
       - 'tests/runner_integration_test.py'
       - 'tests/runner_safari_test.py'
+      - 'tests/runner_animation_test.py'
       - '.github/workflows/runner-iframe.yml'
 permissions:
   contents: read
@@ -27,6 +28,7 @@ jobs:
           PYTHONPATH: tests
         run: |
           python -m unittest -v \
+            runner_animation_test \
             runner_integration_test.RunnerIntegrationTest.test_representative_touch_layout_and_single_engine \
             runner_integration_test.RunnerIntegrationTest.test_home_formal_purchase_reload_resume_return \
             runner_integration_test.RunnerIntegrationTest.test_formal_touch_result_and_manual_return \
