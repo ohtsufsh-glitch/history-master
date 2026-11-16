@@ -361,7 +361,7 @@ class StudyModesTest(unittest.TestCase):
         self.page.evaluate('nextStudy()')
         self.start('genre', 'culture')
         before=self.snapshot()
-        self.assertEqual(self.page.evaluate('BACKUP_VERSION'), 9)
+        self.assertEqual(self.page.evaluate('BACKUP_VERSION'), 10)
         self.page.evaluate("""async()=>{
           const data=validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:9,data:await snapshotAllStores()});
           await replaceAllStores(data);await reconcilePage();
@@ -483,7 +483,7 @@ class StudyModesTest(unittest.TestCase):
         page.unroute(self.url)
         page.reload()
         self.ready(page)
-        self.assertEqual(page.evaluate('[db.version,db.objectStoreNames.length]'),[9,16])
+        self.assertEqual(page.evaluate('[db.version,db.objectStoreNames.length]'),[10,17])
         after=self.snapshot(page)
         for name in before:self.assertEqual(before[name],after[name])
         self.assertEqual(after['studySets'],[])
