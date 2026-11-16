@@ -1,4 +1,4 @@
-"""Issue #110: 操作前の実寸・全結果状態・親スクロール。独立context/合成DBのみ。"""
+"""Issue #110 / #113: 操作前の実寸・全結果状態・親スクロール。独立context/合成DBのみ。"""
 import json
 import os
 from pathlib import Path
@@ -24,7 +24,7 @@ MEASURE = """()=>{
   const header=document.querySelector('main > header');
   return {parent:{width:innerWidth,height:innerHeight,scrollY,host:box(f.parentElement),iframe:box(f),
       headerBottom:getComputedStyle(header).position==='sticky'?box(header).bottom:0},
-    child:{width:w.innerWidth,height:w.innerHeight,scrollHeight:d.scrollingElement.scrollHeight,
+    child:{bottomBlank:w.innerHeight-Math.max(...['#runner-canvas','#runner-jump','#runner-toggle'].map(s=>d.querySelector(s).getBoundingClientRect().bottom)),width:w.innerWidth,height:w.innerHeight,scrollHeight:d.scrollingElement.scrollHeight,
       scrollWidth:d.scrollingElement.scrollWidth,scrollTop:d.scrollingElement.scrollTop,
       boxes:Object.fromEntries(['#runner-canvas','#runner-jump','#runner-toggle','#runner-result',
         '.runner-hud','#runner-status'].map(s=>[s,box(d.querySelector(s))]))}};
@@ -58,6 +58,10 @@ class RunnerLayoutTest(unittest.TestCase):
         self.settle()
         m = self.page.evaluate(MEASURE)
         self.reports.append(dict(state=state, **m))
+        if self._testMethodName == 'test_all_sizes_all_states_without_inner_scroll' and (m['parent']['width'],m['parent']['height']) == (1180,700) and state in ['ready','clear']:
+            if directory := os.environ.get('RUNNER_LAYOUT_REPORT_DIR'):
+                Path(directory).mkdir(parents=True, exist_ok=True)
+                self.page.screenshot(path=str(Path(directory) / (state+'.png')))
         c, p = m['child'], m['parent']
         self.assertEqual(c['scrollTop'], 0, state)
         self.assertLessEqual(c['scrollHeight'], c['height'] + 1, state)
@@ -82,12 +86,21 @@ class RunnerLayoutTest(unittest.TestCase):
             self.assertGreaterEqual(c['boxes'][s]['width'], 44)
         canvas, jump = c['boxes']['#runner-canvas'], c['boxes']['#runner-jump']
         self.assertAlmostEqual(canvas['width']/canvas['height'], 16/9, delta=.01)
+        if (p['width'], p['height']) in SIZES[:4]:
+            toggle = c['boxes']['#runner-toggle']
+            self.assertGreater(canvas['width'], 527)
+            for b in [jump, toggle]:
+                self.assertAlmostEqual(b['x']+b['width']/2, canvas['x']+canvas['width']/2, delta=1)
+                self.assertGreaterEqual(b['height'], 48)
+            self.assertGreaterEqual(jump['y'], canvas['bottom'])
+            self.assertGreaterEqual(toggle['y'], jump['bottom']+8)
         if p['width'] == 390:
             self.assertAlmostEqual(jump['y']-canvas['bottom'], 12, delta=1)
         if result:
             panel = c['boxes']['#runner-result']
             self.assertLessEqual(panel['scrollHeight'], panel['clientHeight'] + 1)
         if initial:
+            self.assertAlmostEqual(p['iframe']['height'], initial['parent']['iframe']['height'], delta=1)
             self.assertAlmostEqual(p['scrollY'], initial['parent']['scrollY'], delta=1)
             for s in ['#runner-canvas','#runner-jump','#runner-toggle']:
                 for key in ['x','y','width','height']:
@@ -130,7 +143,7 @@ class RunnerLayoutTest(unittest.TestCase):
                 initial = self.measure('ready')
                 self.assertEqual(frame.locator('.runner-help').count(), 0)
                 self.assertIn('タップするとジャンプ', frame.locator('#runner-canvas').get_attribute('aria-label'))
-                if (width,height) in SIZES[:4] or width==844:
+                if width==844:
                     self.assertLessEqual(initial['child']['boxes']['#runner-canvas']['right'],
                                          initial['child']['boxes']['#runner-jump']['x'])
                 self.tap(frame, 'ゲーム開始')
@@ -226,6 +239,19 @@ class RunnerLayoutTest(unittest.TestCase):
         self.settle()
         self.assertAlmostEqual(self.page.evaluate('scrollY'), before, delta=1)
         self.assertTrue(self.page.evaluate('originalFrame===formalRunner.frame'))
+
+    def test_split_view_switches_with_available_width(self):
+        for width,height in [(700,900),(900,700),(1024,768)]:
+            with self.subTest(width=width,height=height):
+                self.page.evaluate('async()=>{await navigateHome();await install();}')
+                self.page.set_viewport_size(dict(width=width,height=height))
+                self.enter()
+                self.page.frame_locator('iframe').locator('#runner-toggle').filter(has_text='ゲーム開始').wait_for()
+                m = self.measure('split ready')
+                c = m['child']['boxes']['#runner-canvas']
+                j = m['child']['boxes']['#runner-jump']
+                self.assertAlmostEqual(c['x']+c['width']/2, j['x']+j['width']/2, delta=1)
+                self.assertGreaterEqual(j['y'], c['bottom'])
 
     def test_demo_preview_help_removed(self):
         for suffix in ['runner/', 'runner/?stagePreview=1']:
