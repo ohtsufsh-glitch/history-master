@@ -34,7 +34,8 @@ jobs:
             runner_integration_test.RunnerIntegrationTest.test_representative_touch_layout_and_single_engine \
             runner_integration_test.RunnerIntegrationTest.test_home_formal_purchase_reload_resume_return \
             runner_integration_test.RunnerIntegrationTest.test_formal_touch_result_and_manual_return \
-            runner_integration_test.RunnerIntegrationTest.test_home_entry_positions_canvas_once_then_preserves_user_scroll \
+            runner_integration_test.RunnerIntegrationTest.test_home_top_and_bottom_entry_show_page_top \
+            runner_integration_test.RunnerIntegrationTest.test_home_entry_shows_top_then_preserves_user_scroll \
             runner_safari_test.RunnerSafariTest.test_delayed_initial_frame_does_not_override_user_scroll \
             runner_safari_test.RunnerSafariTest.test_history_traversal_does_not_apply_entry_scroll
       - name: Syntax and version checks

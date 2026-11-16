@@ -263,15 +263,15 @@ h1 { margin: 0; font-size: clamp(1.2rem, 3vw, 1.65rem); line-height: 1.3; }
   .runner-app-formal .runner-hud > div { flex-direction:row; align-items:baseline; gap:8px; }
   .runner-app-formal .runner-viewport {
     grid-column:1; grid-row:3; width:100%;
-    max-width:calc(max(12rem, 100dvh - 17rem) * 16 / 9);
+    max-width:calc(max(12rem, 100dvh - 18rem) * 16 / 9);
     justify-self:center;
   }
   .runner-app-formal .runner-viewport::before { padding-top:56.25%; }
   .runner-app-formal .runner-footer {
     grid-column:1; grid-row:4; gap:8px;
   }
-  .runner-app-formal .runner-controls { width:min(100%, 440px); gap:8px; }
-  .runner-app-formal .runner-jump { min-height:48px; }
+  .runner-app-formal .runner-controls { width:min(100%, 440px); gap:16px; }
+  .runner-app-formal .runner-jump { min-height:64px; }
   .runner-app-formal .runner-start { min-height:48px; }
   /* 通知3行と無料再開の文言を通常文字で確保。拡大文字は自然に伸ばす。 */
   .runner-app-formal .runner-status { min-height:calc(3.5em + 8px); }
