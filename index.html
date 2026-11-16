@@ -611,7 +611,7 @@
       #runner-frame-host { height:90vh; height:90dvh; }
     }
   </style>
-  <link rel="stylesheet" href="./runner/selection.css?v=1.7.34">
+  <link rel="stylesheet" href="./runner/selection.css?v=1.7.35">
 </head>
 <body>
 <!-- 立体的な金貨イラスト：ホーム・正解時に共用 -->
@@ -968,7 +968,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.34";
+const APP_VERSION = "v1.7.35";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3204,7 +3204,7 @@ function summarizeRunnerPlays(records, who) {
 // C3-B 内部API。無料試遊のURL/選択UIからは呼ばない。
 let runnerModelPromise;
 function loadRunnerModel() {
-  return runnerModelPromise ||= import('./runner/game.js?v=1.7.34');
+  return runnerModelPromise ||= import('./runner/game.js?v=1.7.35');
 }
 function runnerTransaction(names, action, {mode='readwrite', keys={}}={}) {
   return new Promise((resolve,reject)=>{
@@ -3537,7 +3537,7 @@ async function startFormalRunner(ctx,d,m) {
   const frame=current.frame;
   frame.title='わくわくランナー';frame.className='runner-formal-frame';
   frame.onload=()=>{if(formalRunner===current){frame.contentWindow.mountFormalRunner(current.bridge);choices();}};
-  frame.src='./runner/?embedded=1&v=1.7.34';
+  frame.src='./runner/?embedded=1&v=1.7.35';
   $('runner-frame-host').replaceChildren(frame);choices();
 }
 $('open-runner').addEventListener('click',()=>navigate('runner').catch(err));
@@ -3988,7 +3988,11 @@ function navigate(screen, who=profile, era=null) {
     // 明示的な新規遷移だけ。高さを確保したホストへ同期的に移動し、
     // DB/iframe読込後にはスクロールしない。pushState後なので元の履歴位置も保つ。
     show('runner');
-    $('runner-frame-host').scrollIntoView({block:'start',behavior:'instant'});
+    const host=$('runner-frame-host'),header=document.querySelector('main > header');
+    // iPad等のstickyヘッダーでCanvas/HUDを隠さない。初回遷移時だけ実高を読む。
+    host.style.scrollMarginTop=getComputedStyle(header).position==='sticky'
+      ? `${header.getBoundingClientRect().height+8}px` : '0px';
+    host.scrollIntoView({block:'start',behavior:'instant'});
   }
   return restoreRoute(target,{allowCreate:screen==="quiz"});
 }
