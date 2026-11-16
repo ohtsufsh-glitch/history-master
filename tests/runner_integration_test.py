@@ -152,17 +152,78 @@ class RunnerIntegrationTest(unittest.TestCase):
         self.assertEqual(self.page.evaluate("async()=>[(await readAll('runnerPlays'))[0].status,(await readAll('coinSpends')).length]"),['active',1])
 
     def test_representative_touch_layout_and_single_engine(self):
+        self.context.close()
+        self.context=self.browser.new_context(has_touch=True,viewport=dict(width=390,height=844))
+        self.page=self.context.new_page();self.page.goto(self.url);self.page.wait_for_function('appReady')
+        self.page.evaluate("async()=>{await navigate('runner','test');}")
+        self.page.locator('#runner-purchase').tap()
+        frame=self.page.frame_locator('iframe')
+        frame.locator('#runner-toggle').filter(has_text='再開').wait_for()
+        # 同じ購入済みiframeを回転させ、再生成・再課金なしで配置を切り替える。
         for width,height in [(390,844),(844,390),(820,1180)]:
-            self.page.set_viewport_size(dict(width=width,height=height))
-            if self.page.locator('#open-runner').is_visible():
-                frame=self.start()
-            else:
-                frame=self.page.frame_locator('iframe')
-            self.assertEqual(self.page.locator('iframe').count(),1)
-            jump=frame.locator('#runner-jump').bounding_box();toggle=frame.locator('#runner-toggle').bounding_box()
-            self.assertGreaterEqual(jump['height'],44)
-            if width==390:self.assertLess(jump['y'],toggle['y'])
-            self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),width)
+            with self.subTest(width=width,height=height):
+                self.page.set_viewport_size(dict(width=width,height=height))
+                self.page.wait_for_function("""()=> {
+                  const f=document.querySelector('iframe'),w=f.contentWindow,d=w.document;
+                  const b=d.getElementById('runner-toggle').getBoundingClientRect();
+                  return Math.abs(w.innerHeight-f.clientHeight)<2&&b.bottom<=w.innerHeight+1&&
+                    d.documentElement.scrollHeight<=w.innerHeight+1;
+                }""")
+                self.assertEqual(self.page.locator('iframe').count(),1)
+                metrics=frame.locator('body').evaluate("""()=>({
+                  width:innerWidth,height:innerHeight,
+                  scrollHeight:document.documentElement.scrollHeight,
+                  scrollWidth:document.documentElement.scrollWidth,
+                  landscape:matchMedia('(max-height:500px) and (min-width:481px)').matches,
+                  columns:getComputedStyle(document.querySelector('.runner-app')).gridTemplateColumns,
+                  canvasColumn:getComputedStyle(document.querySelector('.runner-viewport')).gridColumnStart,
+                  controlsColumn:getComputedStyle(document.querySelector('.runner-footer')).gridColumnStart
+                })""")
+                print('formal iframe',width,height,metrics,flush=True)
+                self.assertLessEqual(metrics['scrollHeight'],metrics['height']+1)
+                self.assertLessEqual(metrics['scrollWidth'],metrics['width']+1)
+                canvas=frame.locator('#runner-canvas').bounding_box()
+                jump=frame.locator('#runner-jump').bounding_box()
+                toggle=frame.locator('#runner-toggle').bounding_box()
+                self.assertGreater(canvas['width'],100)
+                self.assertGreater(canvas['height'],50)
+                if width==844:
+                    self.assertLessEqual(metrics['height'],500)
+                    self.assertTrue(metrics['landscape'])
+                    self.assertEqual(metrics['canvasColumn'],'1')
+                    self.assertEqual(metrics['controlsColumn'],'2')
+                    for b in [jump,toggle]:
+                        self.assertLessEqual(canvas['x']+canvas['width'],b['x'])
+                        self.assertGreater(min(canvas['y']+canvas['height'],b['y']+b['height'])-
+                                           max(canvas['y'],b['y']),0)
+                else:
+                    self.assertFalse(metrics['landscape'])
+                    self.assertEqual(len(metrics['columns'].split()),1)
+                    self.assertLessEqual(canvas['y']+canvas['height'],jump['y'])
+                if width==390:
+                    self.assertLessEqual(jump['y']+jump['height'],toggle['y'])
+                for b in [jump,toggle]:
+                    self.assertGreaterEqual(b['x'],0);self.assertGreaterEqual(b['y'],0)
+                    self.assertLessEqual(b['x']+b['width'],width+1)
+                    self.assertLessEqual(b['y']+b['height'],height+1)
+                    self.assertGreaterEqual(b['height'],44)
+                self.assertLessEqual(self.page.evaluate('document.documentElement.scrollWidth'),width)
+                # 実タッチで開始→即時ジャンプ→停止→手動再開を各サイズで確認。
+                frame.locator('#runner-toggle').tap()
+                self.page.wait_for_function("formalRunner.session.view.state.mode==='running'")
+                self.page.wait_for_function("formalRunner.session.view.state.supportId!==null")
+                frame.locator('#runner-jump').tap()
+                self.assertIsNone(self.page.evaluate('formalRunner.session.view.state.supportId'))
+                frame.locator('#runner-toggle').tap()
+                self.page.wait_for_function("formalRunner.session.view.state.mode==='paused'")
+                distance=self.page.evaluate('formalRunner.session.view.state.distance')
+                self.page.wait_for_timeout(100)
+                self.assertEqual(self.page.evaluate('formalRunner.session.view.state.distance'),distance)
+                frame.locator('#runner-toggle').tap()
+                self.page.wait_for_function("formalRunner.session.view.state.mode==='running'")
+                frame.locator('#runner-toggle').tap()
+                self.page.wait_for_function("formalRunner.session.view.state.mode==='paused'")
+        self.assertEqual(self.page.evaluate("async()=>(await readAll('coinSpends')).length"),1)
 
 # Imported TestCase must not be rediscovered here.
 del RunnerSessionTest

@@ -1,0 +1,38 @@
+name: Runner iframe layout
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'runner/**'
+      - 'tests/runner_integration_test.py'
+      - '.github/workflows/runner-iframe.yml'
+permissions:
+  contents: read
+jobs:
+  formal-iframe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install playwright
+      - run: python -m playwright install --with-deps chromium
+      - name: Targeted formal runner tests
+        env:
+          PYTHONPATH: tests
+        run: |
+          python -m unittest -v \
+            runner_integration_test.RunnerIntegrationTest.test_representative_touch_layout_and_single_engine \
+            runner_integration_test.RunnerIntegrationTest.test_home_formal_purchase_reload_resume_return \
+            runner_integration_test.RunnerIntegrationTest.test_formal_touch_result_and_manual_return
+      - name: Syntax and version checks
+        run: |
+          python -c "import re,pathlib; s=pathlib.Path('index.html').read_text(); pathlib.Path('/tmp/runner-parent.js').write_text(re.search(r'<script>([\s\S]*?)</script>',s)[1])"
+          node --check /tmp/runner-parent.js
+          node --input-type=module --check < runner/game.js
+          git diff --check HEAD^ HEAD
+          python scripts/check_app_version.py --base origin/main --head HEAD

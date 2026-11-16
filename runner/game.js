@@ -628,7 +628,7 @@ function initializeRunner(session = null) {
   const characterIcon = document.getElementById("runner-character-image");
   const isStagePreview = !session && STAGE_PREVIEW_ENABLED &&
     new URLSearchParams(window.location.search).get("stagePreview") === "1";
-  if(session){status.removeAttribute('role');status.removeAttribute('aria-live');document.querySelector('.runner-footer').prepend(status);}
+  if(session){document.querySelector('.runner-app').classList.add('runner-app-formal');status.removeAttribute('role');status.removeAttribute('aria-live');document.querySelector('.runner-footer').prepend(status);}
   let context;
   try {
     context = canvas.getContext("2d", { alpha: false });

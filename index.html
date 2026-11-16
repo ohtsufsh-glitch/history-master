@@ -595,6 +595,11 @@
     #feedback-list select, #feedback-panel button { min-height:44px; max-width:100%; }
     #feedback-list input[type=checkbox] { min-width:24px; min-height:24px; }
     .feedback-select { display:flex; align-items:center; gap:10px; min-height:44px; }
+    /* 高さ判定は子のviewportに作用する。横画面に固定の最低高さを強制しない。 */
+    .runner-formal-frame { width:100%; height:85vh; height:85dvh; border:0; display:block; }
+    @media (max-height:500px) and (min-width:481px) {
+      .runner-formal-frame { height:90vh; height:90dvh; }
+    }
   </style>
 </head>
 <body>
@@ -3350,9 +3355,13 @@ async function startFormalRunner() {
     if(!viewCurrent(ctx)){await session.close();return;}
     const frame=document.createElement('iframe');
     frame.title='わくわくランナー 正式プレイ';
-    frame.style='width:100%;height:85vh;height:85dvh;min-height:520px;border:0;display:block';
+    frame.className='runner-formal-frame';
     // onloadで親がセッションを渡す。URLやpostMessageを権限にしない。
-    frame.onload=()=>{if(formalRunner?.frame===frame)frame.contentWindow.mountFormalRunner(session);};
+    frame.onload=()=>{
+      if(formalRunner?.frame!==frame)return;
+      frame.contentWindow.mountFormalRunner(session);
+      frame.scrollIntoView({block:'start'});
+    };
     frame.src='./runner/?embedded=1&v=1.7.27';
     formalRunner={session,frame};$('runner-frame-host').replaceChildren(frame);
     $('runner-choices').hidden=true;$('runner-purchase').hidden=true;
@@ -3364,6 +3373,7 @@ async function startFormalRunner() {
 $('open-runner').addEventListener('click',()=>navigate('runner').catch(err));
 $('runner-purchase').addEventListener('click',()=>startFormalRunner().catch(err));
 $('runner-home').addEventListener('click',()=>navigateHome().catch(err));
+window.addEventListener('resize',()=>formalRunner?.frame.scrollIntoView({block:'start'}));
 
 function runnerRestoreNote(data) {
   return (backupSourceVersions.get(data)||BACKUP_VERSION)<10
