@@ -186,14 +186,14 @@ class PlushPopupTest(unittest.TestCase):
         for who in ['student', 'test']:
             self.page.evaluate("who=>navigate('arcade',who)", who)
             before = self.snapshot()
-            self.assertEqual(len(before), 16)
+            self.assertEqual(len(before), 17)
             for method in ['button', 'outside', 'escape']:
                 for prize in ['shiba', 'secret_koryun' if who == 'student' else 'secret_yuniko']:
                     self.open(prize)
                     self.assertEqual(self.snapshot(), before)
                     self.close(method)
                     self.assertEqual(self.snapshot(), before)
-        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [9, 9, 16])
+        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [10, 10, 17])
 
     def test_history_length_state_url_and_api_calls_are_unchanged(self):
         before = self.page.evaluate("({length:history.length,state:history.state,url:location.href})")

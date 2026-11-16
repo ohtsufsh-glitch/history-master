@@ -209,7 +209,7 @@ class StudyCoinIntegrationTest(unittest.TestCase):
                 self.page.locator('#toggle-backup').click()
                 with self.page.expect_download() as event:self.page.locator('#backup-export').click()
                 backup=json.loads(Path(event.value.path()).read_text())
-                self.assertEqual(backup['backupVersion'],9)
+                self.assertEqual(backup['backupVersion'],10)
                 self.assertEqual(backup['data'],before)
                 self.page.evaluate("""async()=>{
                   const data=await snapshotAllStores();
@@ -297,7 +297,7 @@ class StudyCoinIntegrationTest(unittest.TestCase):
             legacy={'backupFormat':'history-master-backup','backupVersion':8,'data':before}
             page.unroute(self.url)
             page.reload();self.ready(page)
-            self.assertEqual(page.evaluate('[APP_VERSION,DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'),[current_version,9,9,16])
+            self.assertEqual(page.evaluate('[APP_VERSION,DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'),[current_version,10,10,17])
             after=self.snapshot(page)
             for name in before:self.assertEqual(after[name],before[name],name)
             self.assertEqual(after['studySets'],[])

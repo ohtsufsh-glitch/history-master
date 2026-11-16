@@ -922,7 +922,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.24";
+const APP_VERSION = "v1.7.25";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -950,7 +950,7 @@ const SAMPLE_QUESTIONS = [
 
 // データベース名は以前と同じ（回答履歴を引き継ぐため変更しない）。
 const DB_NAME = "history-master-sample-v1";
-const DB_VERSION = 9; // studySetsを追加。既存15ストアは保持。
+const DB_VERSION = 10; // runnerPlaysを追加。既存16ストアは保持。
 let QUESTIONS = [...SAMPLE_QUESTIONS]; // 出題対象（削除・非表示を除く）
 let importedQuestions = []; // 削除済みも含めて保管
 let hiddenSampleIds = new Set();
@@ -2052,6 +2052,7 @@ function openDatabase() {
     request.onupgradeneeded = () => {
       const database = request.result;
       if (!database.objectStoreNames.contains("progress")) database.createObjectStore("progress", {keyPath:"key"});
+      if (!database.objectStoreNames.contains("runnerPlays")) database.createObjectStore("runnerPlays", {keyPath:"id"});
       if (!database.objectStoreNames.contains("studySets")) database.createObjectStore("studySets", {keyPath:"key"});
       if (!database.objectStoreNames.contains("sessions")) database.createObjectStore("sessions", {keyPath:"key"});
       if (!database.objectStoreNames.contains("answers")) database.createObjectStore("answers", {keyPath:"id", autoIncrement:true});
@@ -3050,8 +3051,8 @@ $("feedback-improvement-selected").addEventListener("click",()=>exportImprovemen
 window.addEventListener("focus",()=>{if(appReady&&!$("admin").classList.contains("hidden")&&!$("feedback-panel").classList.contains("hidden"))renderFeedback().catch(err);});
 
 const BACKUP_FORMAT = "history-master-backup";
-const BACKUP_VERSION = 9;
-const BACKUP_STORES = ["questions", "progress", "sessions", "answers", "awards", "sampleSettings", "coinClaims", "coinEvents", "coinMeta", "reviewEvents", "coinSpends", "arcadePlays", "arcadePrizes", "arcadeBoards", "questionFeedback", "studySets"];
+const BACKUP_VERSION = 10;
+const BACKUP_STORES = ["questions", "progress", "sessions", "answers", "awards", "sampleSettings", "coinClaims", "coinEvents", "coinMeta", "reviewEvents", "coinSpends", "arcadePlays", "arcadePrizes", "arcadeBoards", "questionFeedback", "studySets", "runnerPlays"];
 function snapshotAllStores() {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(BACKUP_STORES, "readonly");
@@ -3099,10 +3100,67 @@ function isProfile(value) { return value === "test" || value === "student"; }
 function validIndexList(values, max) {
   return Array.isArray(values) && new Set(values).size === values.length && values.every(i => Number.isInteger(i) && i >= 0 && i < max);
 }
-function validateBackup(obj) {
-  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.backupFormat !== BACKUP_FORMAT || ![1, 2, 3, 4, 5, 6, 7, 8, BACKUP_VERSION].includes(obj.backupVersion) || !obj.data || typeof obj.data !== "object") {
-    throw new Error("このアプリのバックアップ形式ではありません（バージョン1〜9が必要です）。");
+// C3-A: 保存形式と純粋集計のみ。開始・課金・ゲームとの接続は後続で実装する。
+const RUNNER_STAGE_IDS = Object.freeze(['S01','S02','S03','S04','S05','S06']);
+const RUNNER_CHARACTER_IDS = Object.freeze(['shiba','sloth','goldfish','salamander','secret_yuniko']);
+const RUNNER_STAGE_VERSION = 1;
+function runnerInitialLives(id) { return ['salamander','secret_yuniko'].includes(id)?3:2; }
+function runnerCanResume(play) { return play.status==='active' && play.stageVersion===RUNNER_STAGE_VERSION; }
+function exactRunnerFields(value, fields) {
+  return value && typeof value==='object' && !Array.isArray(value) &&
+    Object.keys(value).length===fields.length && fields.every(key=>Object.hasOwn(value,key));
+}
+function runnerTimestamp(value) {
+  return typeof value==='string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value) &&
+    Number.isFinite(Date.parse(value)) && new Date(value).toISOString()===value;
+}
+function validateRunnerPlays(records) {
+  const plays=new Map(), active=new Set();
+  const bounded=(n,max)=>Number.isFinite(n)&&n>=0&&n<=max;
+  for(const p of records) {
+    const fields=['id','profile','game','schemaVersion','stageId','characterId','stageVersion','startedAt','updatedAt','status','score',p?.status==='active'?'snapshot':'result'];
+    if(!exactRunnerFields(p,fields)||!isNonemptyString(p.id,100)||plays.has(p.id)||!isProfile(p.profile)||p.game!=='runner'||p.schemaVersion!==1||!RUNNER_STAGE_IDS.includes(p.stageId)||!RUNNER_CHARACTER_IDS.includes(p.characterId)||!Number.isSafeInteger(p.stageVersion)||p.stageVersion<1||!runnerTimestamp(p.startedAt)||!runnerTimestamp(p.updatedAt)||p.startedAt>p.updatedAt||!['active','finished'].includes(p.status)||!Number.isInteger(p.score)||!bounded(p.score,100))throw new Error('ランナーのプレイ記録が不正です。');
+    const lives=runnerInitialLives(p.characterId);
+    if(p.status==='active') {
+      const s=p.snapshot;
+      if(active.has(p.profile)||!exactRunnerFields(s,['version','distance','elapsedSeconds','livesRemaining','collectedStarIds','player','shieldSeconds','airJumpsUsed'])||s.version!==1||!bounded(s.distance,1000000)||!bounded(s.elapsedSeconds,86400)||!Number.isInteger(s.livesRemaining)||s.livesRemaining<1||s.livesRemaining>lives||!validIndexList(s.collectedStarIds,1000)||s.collectedStarIds.length>1000||!exactRunnerFields(s.player,['x','y','vx','vy'])||!Object.values(s.player).every(n=>Number.isFinite(n)&&Math.abs(n)<=1000000)||!bounded(s.shieldSeconds,1)||!Number.isInteger(s.airJumpsUsed)||s.airJumpsUsed<0||s.airJumpsUsed>(p.characterId==='secret_yuniko'?1:0)||new TextEncoder().encode(JSON.stringify(s)).length>65536)throw new Error('ランナーの途中状態が不正です。');
+      active.add(p.profile);
+    } else {
+      const r=p.result;
+      if(!exactRunnerFields(r,['reason','at','livesRemaining'])||!['clear','gameover'].includes(r.reason)||r.at!==p.updatedAt||!Number.isInteger(r.livesRemaining)||r.livesRemaining<0||r.livesRemaining>lives||(r.reason==='clear'?r.livesRemaining<1:r.livesRemaining!==0))throw new Error('ランナーの終了記録が不正です。');
+    }
+    plays.set(p.id,p);
   }
+  return plays;
+}
+// 検証済みの正本からのみ導出。キャラ順→開始日時→IDで同点表示を固定する。
+function summarizeRunnerPlays(records, who) {
+  const plays=records.filter(p=>p.profile===who&&p.status==='finished');
+  const unlocked=new Set(['S01']);
+  for(const p of plays) {
+    const next=RUNNER_STAGE_IDS[RUNNER_STAGE_IDS.indexOf(p.stageId)+1];
+    if(p.result.reason==='clear'&&next)unlocked.add(next);
+  }
+  const ordered=[...plays].sort((a,b)=>b.score-a.score||RUNNER_CHARACTER_IDS.indexOf(a.characterId)-RUNNER_CHARACTER_IDS.indexOf(b.characterId)||(a.startedAt<b.startedAt?-1:a.startedAt>b.startedAt?1:0)||(a.id<b.id?-1:a.id>b.id?1:0));
+  const bestByStageCharacter={}, bestByStage={};
+  for(const p of ordered) {
+    const key=`${p.stageId}:${p.characterId}`;
+    if(!Object.hasOwn(bestByStageCharacter,key))bestByStageCharacter[key]=p;
+    if(!Object.hasOwn(bestByStage,p.stageId))bestByStage[p.stageId]=p;
+  }
+  return {unlockedStageIds:RUNNER_STAGE_IDS.filter(id=>unlocked.has(id)),bestByStageCharacter,bestByStage};
+}
+function runnerRestoreNote(data) {
+  return (backupSourceVersions.get(data)||BACKUP_VERSION)<10
+    ? '旧バックアップにはランナー記録がありません。復元すると現在の両プロフィールのランナー記録（途中状態・クリア・最高得点）はすべて削除されます。'
+    : `ランナー記録：${data.runnerPlays.length}件（現在の途中状態・クリア・最高得点も置き換えます）。`;
+}
+
+function validateBackup(obj) {
+  if (!obj || typeof obj !== "object" || Array.isArray(obj) || obj.backupFormat !== BACKUP_FORMAT || ![1, 2, 3, 4, 5, 6, 7, 8, 9, BACKUP_VERSION].includes(obj.backupVersion) || !obj.data || typeof obj.data !== "object") {
+    throw new Error("このアプリのバックアップ形式ではありません（バージョン1〜10が必要です）。");
+  }
+  if(obj.backupVersion<10 && Array.isArray(obj.data.coinSpends) && obj.data.coinSpends.some(s=>s?.game==='runner'))throw new Error('旧バックアップにランナー消費履歴が混入しています。');
   // v1〜v3からの復元では旧履歴の報酬済み情報のみ作成し、コイン残高は0枚。
   const legacy=obj.backupVersion<4;
   const data = {...obj.data, awards: obj.backupVersion===1 ? [] : obj.data.awards,
@@ -3122,7 +3180,8 @@ function validateBackup(obj) {
   if(obj.backupVersion<7)data.arcadeBoards=[];
   if(obj.backupVersion<8)delete data.questionFeedback; // 旧形式はローカル指摘を保持する。混入した値も採用しない。
   if(obj.backupVersion<9)data.studySets=[]; // 旧形式に混入したセットも採用しない。
-  const maxSizes = {studySets:12,questionFeedback:100000,questions:20000, progress:100000, sessions:100, answers:300000, awards:20, sampleSettings:9, coinClaims:100000, coinEvents:100000, coinMeta:2, reviewEvents:300000, coinSpends:100000, arcadePlays:100000, arcadePrizes:100000, arcadeBoards:2};
+  if(obj.backupVersion<10)data.runnerPlays=[];
+  const maxSizes = {runnerPlays:100000,studySets:12,questionFeedback:100000,questions:20000, progress:100000, sessions:100, answers:300000, awards:20, sampleSettings:9, coinClaims:100000, coinEvents:100000, coinMeta:2, reviewEvents:300000, coinSpends:100000, arcadePlays:100000, arcadePrizes:100000, arcadeBoards:2};
   for (const name of BACKUP_STORES) {
     if(name==="questionFeedback"&&obj.backupVersion<8)continue;
     if (!Array.isArray(data[name]) || data[name].length > maxSizes[name]) throw new Error(`${name} のデータ件数が不正です。`);
@@ -3207,12 +3266,17 @@ function validateBackup(obj) {
     if(p.result&&(p.result.grabbed||p.result.won)&&!validPlushId(p.prizes[p.result.targetIndex]))throw new Error("空枠をつかんだクレーン結果は復元できません。");
     plays.set(p.id,p);
   }
+  const runnerPlays=validateRunnerPlays(data.runnerPlays);
+  for(const id of runnerPlays.keys())if(plays.has(id))throw new Error("ゲーム間でプレイIDが重複しています。");
   const spends=new Set();
   for(const s of data.coinSpends) {
-    if(!s || !isNonemptyString(s.id,100) || spends.has(s.id) || !isProfile(s.profile) || !plays.has(s.id) || plays.get(s.id).profile!==s.profile || s.game!=="crane" || !(s.amount===CRANE_COST || (s.profile==="test" && s.amount===0)) || !isNonemptyString(s.at,64)) throw new Error("コイン消費履歴が不正です。");
+    const play=s?.game==='runner'?runnerPlays.get(s.id):s?.game==='crane'?plays.get(s.id):null;
+    // クレーンの日時条件はv9互換。開始日時との一致は新規ランナーだけに要求する。
+    const validAmount=s?.game==='runner'?s.amount===(s.profile==='test'?0:30):(s?.amount===CRANE_COST||(s?.profile==='test'&&s.amount===0));
+    if(!s || !isNonemptyString(s.id,100) || spends.has(s.id) || !isProfile(s.profile) || !play || play.profile!==s.profile || !validAmount || !isNonemptyString(s.at,64) || (s.game==='runner' && s.at!==play.startedAt)) throw new Error("コイン消費履歴が不正です。");
     spends.add(s.id);
   }
-  if(spends.size!==plays.size) throw new Error("クレーンの料金記録が不足しています。");
+  if(spends.size!==plays.size+runnerPlays.size) throw new Error("ゲームの料金記録が不足しています。");
   const prizeRecords=new Set();
   for(const a of data.arcadePrizes) {
     const play=plays.get(a?.id);
@@ -3258,7 +3322,8 @@ async function previewRestore() {
     if($("backup-file").files?.[0]!==file)return;
     pendingRestore = data;
     setBackupPreview(`検査OK（${file.name}）\n取り込み問題：${data.questions.length}問\n学習履歴：${data.progress.length}件\n時代別中断情報：${data.sessions.length}件\n新モードのセット：${data.studySets.length}件\n回答記録：${data.answers.length}件\n獲得カード：${data.awards.length}枚\n学習用コイン：${availableCoins(data.coinEvents,data.reviewEvents,data.coinSpends,"student")}枚\nテスト用コイン：${availableCoins(data.coinEvents,data.reviewEvents,data.coinSpends,"test")}枚\nクレーン履歴：${data.arcadePlays.length}件\nぬいぐるみ獲得：${data.arcadePrizes.length}体\n非表示サンプル：${data.sampleSettings.length}問\n\n「復元する」を押すと、現在の問題と本番・テスト両方の学習履歴がすべて置き換わります。\n${data.questionFeedback?`指摘${data.questionFeedback.length}件を復元し、現在の指摘${localFeedback}件も置き換えます。`:`旧バックアップ：現在の指摘${localFeedback}件は保持します。復元後に問題の内容・版が変わった指摘は要確認になります。`}`);
-    $("backup-preview").textContent += (backupSourceVersions.get(pendingRestore)||9)<9 ? "\n旧バックアップには新モードの途中状態がありません。復元すると現在の新モードの途中セットを破棄します。問題・回答履歴・習得状況はバックアップから復元します。" : "\nv9：新モードの途中状態も復元します。";
+    $("backup-preview").textContent += "\n"+runnerRestoreNote(pendingRestore);
+    $("backup-preview").textContent += (backupSourceVersions.get(pendingRestore)||9)<9 ? "\n旧バックアップには新モードの途中状態がありません。復元すると現在の新モードの途中セットを破棄します。問題・回答履歴・習得状況はバックアップから復元します。" : "\nv9以降：新モードの途中状態も復元します。";
     $("backup-restore").classList.remove("hidden");
   } catch (error) {
     setBackupPreview("復元できません：" + error.message + "\n現在のデータは変更されていません。", "import-error");
@@ -3280,8 +3345,8 @@ function activeResetLabels(choice, counts) {
   return [
     choice.hideSamples && `内蔵サンプルを非表示：${counts.visibleSamples}問`,
     choice.hideImported && `取り込み問題を非表示：${counts.activeImported}問`,
-    choice.student && `娘さん用の履歴消去：回答${counts.student.answers}件／習得${counts.student.progress}件／途中${counts.student.sessions}件／カード${counts.student.awards}枚／コイン${counts.student.coins}枚／クレーン${counts.student.plays}回／景品${counts.student.plush}体／景品配置${counts.student.boards}面`,
-    choice.test && `テスト用の履歴消去：回答${counts.test.answers}件／習得${counts.test.progress}件／途中${counts.test.sessions}件／カード${counts.test.awards}枚／コイン${counts.test.coins}枚／クレーン${counts.test.plays}回／景品${counts.test.plush}体／景品配置${counts.test.boards}面`
+    choice.student && `娘さん用の履歴消去：回答${counts.student.answers}件／習得${counts.student.progress}件／途中${counts.student.sessions}件／カード${counts.student.awards}枚／コイン${counts.student.coins}枚／クレーン${counts.student.plays}回／景品${counts.student.plush}体／景品配置${counts.student.boards}面／ランナー${counts.student.runnerPlays}回`,
+    choice.test && `テスト用の履歴消去：回答${counts.test.answers}件／習得${counts.test.progress}件／途中${counts.test.sessions}件／カード${counts.test.awards}枚／コイン${counts.test.coins}枚／クレーン${counts.test.plays}回／景品${counts.test.plush}体／景品配置${counts.test.boards}面／ランナー${counts.test.runnerPlays}回`
   ].filter(Boolean);
 }
 async function updateResetPreview() {
@@ -3293,6 +3358,7 @@ async function updateResetPreview() {
     answers: snapshot.answers.filter(x => x.profile === who).length,
     awards: snapshot.awards.filter(x => x.profile === who).length,
     coins:availableCoins(snapshot.coinEvents,snapshot.reviewEvents,snapshot.coinSpends,who),
+    runnerPlays:snapshot.runnerPlays.filter(x=>x.profile===who).length,
     plays:snapshot.arcadePlays.filter(x=>x.profile===who).length,
     plush:snapshot.arcadePrizes.filter(x=>x.profile===who).length,
     boards:snapshot.arcadeBoards.filter(x=>x.profile===who).length
@@ -3331,7 +3397,7 @@ function performReset(choice, complete=false) {
         };
       }
       if (choice.student || choice.test) {
-        for (const name of ["progress", "sessions", "studySets", "answers", "awards", "coinClaims", "coinEvents", "reviewEvents", "coinSpends", "arcadePlays", "arcadePrizes", "arcadeBoards"]) {
+        for (const name of ["progress", "sessions", "studySets", "answers", "awards", "coinClaims", "coinEvents", "reviewEvents", "coinSpends", "arcadePlays", "arcadePrizes", "arcadeBoards", "runnerPlays"]) {
           const store = tx.objectStore(name);
           if (choice.student && choice.test) {
             store.clear();
@@ -3473,7 +3539,7 @@ function replaceAllStores(data) {
 async function applyRestore() {
   if (feedbackSaving || feedbackImporting || saving || importing || backingUp || updatingQuestions || !pendingRestore) return;
   const feedbackNote=pendingRestore.questionFeedback?`現在の指摘もバックアップの指摘${pendingRestore.questionFeedback.length}件で置き換えます。`:"旧バックアップ：現在の指摘は保持します。問題が変わった指摘は要確認になります。";
-  if (!confirm("現在の問題・学習履歴・カード・コイン・クレーン景品・景品配置とプレイ履歴を、バックアップの内容ですべて置き換えます。\n"+feedbackNote+((backupSourceVersions.get(pendingRestore)||9)<9?"\n新モードの途中セットは破棄します。":"\n新モードの途中状態も置き換えます。")+"\n現在のデータのバックアップは作成しましたか？\n\n復元を実行しますか？")) return;
+  if (!confirm("現在の問題・学習履歴・カード・コイン・クレーン景品・景品配置とプレイ履歴を、バックアップの内容ですべて置き換えます。\n"+feedbackNote+((backupSourceVersions.get(pendingRestore)||9)<9?"\n新モードの途中セットは破棄します。":"\n新モードの途中状態も置き換えます。")+"\n"+runnerRestoreNote(pendingRestore)+"\n現在のデータのバックアップは作成しましたか？\n\n復元を実行しますか？")) return;
   backingUp = true;
   $("backup-restore").disabled = true;
   const data = pendingRestore;

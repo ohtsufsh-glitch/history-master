@@ -212,7 +212,7 @@ class PositiveCoinRewardTest(unittest.TestCase):
         with self.page.expect_download() as event:
             self.page.locator('#backup-export').click()
         backup = json.loads(Path(event.value.path()).read_text())
-        self.assertEqual(backup['backupVersion'], 9)
+        self.assertEqual(backup['backupVersion'], 10)
         self.assertEqual(backup['data'], before)
         # 補完報酬でも既存の検証（額・キー・重複・プロフィール）を緩めない。
         self.assertTrue(self.page.evaluate("""data=>[
@@ -250,7 +250,7 @@ class PositiveCoinRewardTest(unittest.TestCase):
         self.balance(707)
         self.assertEqual(self.page.locator('#result').inner_text(), result)
         self.assertEqual(self.snapshot(), before)
-        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [9, 9, 16])
+        self.assertEqual(self.page.evaluate('[DB_VERSION,BACKUP_VERSION,db.objectStoreNames.length]'), [10, 10, 17])
 
     def test_old_zero_result_is_read_without_retroactive_payment(self):
         self.fallback_question()

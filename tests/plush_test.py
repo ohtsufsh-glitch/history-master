@@ -160,7 +160,7 @@ class PlushTest(unittest.TestCase):
         })""")
         self.assertEqual(actual['types'], TYPES)
         self.assertEqual(actual['ids'], IDS)
-        self.assertEqual((actual['db'], actual['backup']), (9, 9))
+        self.assertEqual((actual['db'], actual['backup']), (10, 10))
         for prize_id, image in zip(IDS, actual['images']):
             self.assertEqual(image['path'], f'assets/plush/{prize_id}.webp')
             self.assertGreater(image['width'], 0)
@@ -340,7 +340,7 @@ class PlushTest(unittest.TestCase):
         with self.page.expect_download() as event:
             self.page.locator('#backup-export').click()
         backup = json.loads(Path(event.value.path()).read_text())
-        self.assertEqual(backup['backupVersion'], 9)
+        self.assertEqual(backup['backupVersion'], 10)
         self.assertEqual(backup['data'], before)
         self.install(self.fixture())
         cleared = self.snapshot()
