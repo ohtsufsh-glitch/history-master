@@ -141,3 +141,50 @@ class RunnerSafariTest(unittest.TestCase):
           release();await refresh;
           return !!formalRunner.bridge.view.result&&!formalRunner.session.view.dirty;
         }"""))
+
+    def test_delayed_initial_frame_does_not_override_user_scroll(self):
+        self.page.set_viewport_size(dict(width=390,height=844))
+        held=[]
+        self.page.route('**/runner/?embedded=1&v=*',lambda route:held.append(route))
+        self.page.evaluate("""()=>{
+          window.entryScrolls=0;
+          const original=Element.prototype.scrollIntoView;
+          Element.prototype.scrollIntoView=function(...args){if(this.id==='runner-frame-host')entryScrolls++;return original.apply(this,args);};
+        }""")
+        self.page.locator('#open-runner').scroll_into_view_if_needed()
+        self.page.locator('#open-runner').click()
+        self.page.locator('#formal-character-cards button').first.wait_for()
+        self.page.wait_for_timeout(100)
+        self.assertEqual(len(held),1)
+        self.assertEqual(self.page.evaluate('entryScrolls'),1)
+        self.page.locator('#formal-character-cards').scroll_into_view_if_needed()
+        before=self.page.evaluate('scrollY')
+        self.assertGreater(before,300)
+        held[0].continue_()
+        self.page.frame_locator('iframe').locator('#runner-toggle').wait_for()
+        self.page.wait_for_timeout(100)
+        self.assertAlmostEqual(self.page.evaluate('scrollY'),before,delta=1)
+        self.assertEqual(self.page.evaluate('entryScrolls'),1)
+
+    def test_history_traversal_does_not_apply_entry_scroll(self):
+        self.page.set_viewport_size(dict(width=390,height=844))
+        self.page.evaluate("""()=>{
+          window.entryScrolls=0;
+          const original=Element.prototype.scrollIntoView;
+          Element.prototype.scrollIntoView=function(...args){if(this.id==='runner-frame-host')entryScrolls++;return original.apply(this,args);};
+        }""")
+        self.page.locator('#open-runner').scroll_into_view_if_needed()
+        home_y=self.page.evaluate('scrollY')
+        self.page.locator('#open-runner').click()
+        self.page.frame_locator('iframe').locator('#runner-toggle').wait_for()
+        self.page.locator('#formal-character-cards').scroll_into_view_if_needed()
+        runner_y=self.page.evaluate('scrollY')
+        self.page.go_back()
+        self.page.locator('#open-runner').wait_for()
+        self.page.wait_for_timeout(100)
+        self.assertAlmostEqual(self.page.evaluate('scrollY'),home_y,delta=1)
+        self.page.go_forward()
+        self.page.frame_locator('iframe').locator('#runner-toggle').wait_for()
+        self.page.wait_for_timeout(100)
+        self.assertAlmostEqual(self.page.evaluate('scrollY'),runner_y,delta=1)
+        self.assertEqual(self.page.evaluate('entryScrolls'),1)

@@ -304,5 +304,42 @@ class RunnerIntegrationTest(unittest.TestCase):
         frame.locator('#runner-toggle').click()
         self.assertEqual(self.page.evaluate("async()=>[(await readAll('coinSpends')).length,(await readAll('runnerPlays'))[0].status,formalRunner.bridge.view.state.mode]"),[1,'active','ready'])
 
+
+    def test_home_entry_positions_canvas_once_then_preserves_user_scroll(self):
+        self.context.close()
+        self.context=self.browser.new_context(has_touch=True,viewport=dict(width=390,height=844))
+        self.page=self.context.new_page();self.page.goto(self.url);self.page.wait_for_function('appReady')
+        for width,height in [(390,844),(844,390),(820,1180)]:
+            with self.subTest(width=width,height=height):
+                self.page.set_viewport_size(dict(width=width,height=height))
+                self.page.evaluate("navigateHome('test')")
+                self.page.locator('#open-runner').scroll_into_view_if_needed()
+                self.assertGreater(self.page.evaluate('scrollY'),300)
+                self.page.locator('#open-runner').tap()
+                frame=self.page.frame_locator('#runner-frame-host iframe')
+                frame.locator('#runner-toggle').filter(has_text='ゲーム開始').wait_for()
+                # Locatorの操作による自動スクロール前に、初期表示の可視性を確認。
+                for selector in ['#runner-canvas','#runner-jump','#runner-toggle']:
+                    b=frame.locator(selector).bounding_box()
+                    self.assertGreaterEqual(b['y'],-1)
+                    self.assertLessEqual(b['y']+b['height'],height+1)
+                self.page.locator('#formal-character-cards').scroll_into_view_if_needed()
+                before=self.page.evaluate('scrollY')
+                self.assertGreater(before,300)
+                self.page.evaluate("""async()=>{
+                  window.entryFrame=formalRunner.frame;
+                  window.dispatchEvent(new Event('resize'));
+                  window.dispatchEvent(new Event('focus'));
+                  window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));
+                  Object.defineProperty(document,'hidden',{configurable:true,value:true});
+                  document.dispatchEvent(new Event('visibilitychange'));
+                  Object.defineProperty(document,'hidden',{configurable:true,value:false});
+                  document.dispatchEvent(new Event('visibilitychange'));
+                  await formalRunner.refresh();
+                }""")
+                self.page.wait_for_timeout(100)
+                self.assertAlmostEqual(self.page.evaluate('scrollY'),before,delta=1)
+                self.assertTrue(self.page.evaluate('entryFrame===formalRunner.frame'))
+
 # Imported TestCase must not be rediscovered here.
 del RunnerSessionTest

@@ -598,12 +598,13 @@
     /* 高さ判定は子のviewportに作用する。横画面に固定の最低高さを強制しない。 */
     .runner-home-panel { background:linear-gradient(145deg,#edf7ee,#fffdf6); }
     #runner-choices { margin:16px 0; padding:16px; border:1px solid #d4e3d8; border-radius:16px; background:#fffdf6; }
-    #runner-info { font-size:.85rem; }
+    #runner-info { font-size:.85rem; min-height:1.5em; }
     .runner-character-bests { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
     .runner-character-bests dt, .runner-character-bests dd { margin:0; overflow-wrap:anywhere; }
-    .runner-formal-frame { width:100%; height:85vh; height:85dvh; border:0; display:block; }
+    #runner-frame-host { height:85vh; height:85dvh; }
+    .runner-formal-frame { width:100%; height:100%; border:0; display:block; }
     @media (max-height:500px) and (min-width:481px) {
-      .runner-formal-frame { height:90vh; height:90dvh; }
+      #runner-frame-host { height:90vh; height:90dvh; }
     }
   </style>
   <link rel="stylesheet" href="./runner/selection.css?v=1.7.31">
@@ -3973,9 +3974,16 @@ function historyRoute(state) {
   return {screen:state.screen,profile:state.profile,era:state.screen==="quiz"?state.era:null,...(state.screen==="study"?{mode:state.mode,genre:state.genre||null}:{})};
 }
 function navigate(screen, who=profile, era=null) {
+  const enteringRunner=screen==='runner'&&historyRoute(history.state)?.screen==='home'&&!$('home').classList.contains('hidden');
   const target={screen,profile:who,era:screen==="quiz"?era:null};
   if(!sameRecord(target,historyRoute(history.state))) {
     history.pushState({app:"history-master",version:1,...target},"");
+  }
+  if(enteringRunner) {
+    // 明示的な新規遷移だけ。高さを確保したホストへ同期的に移動し、
+    // DB/iframe読込後にはスクロールしない。pushState後なので元の履歴位置も保つ。
+    show('runner');
+    $('runner-frame-host').scrollIntoView({block:'start',behavior:'instant'});
   }
   return restoreRoute(target,{allowCreate:screen==="quiz"});
 }
