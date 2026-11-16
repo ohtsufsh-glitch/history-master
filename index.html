@@ -76,6 +76,8 @@
     .era-row span:last-child { white-space: nowrap; font-size: .86rem; color: #607086; }
     .track { height: 7px; background: #e6edf4; border-radius: 99px; margin-top: 10px; overflow: hidden; }
     .fill { height: 100%; background: #3e9b84; border-radius: 99px; }
+    .game-home { min-height:48px; padding:8px 14px; border:1px solid #767676; border-radius:3px; background:#efefef; color:#263f3b; font-size:1rem; touch-action:manipulation; }
+    .game-home:focus-visible { outline:3px solid #286f9a; outline-offset:3px; }
     .nav { background: transparent; border: 0; padding: 12px 4px; color: #286b94; font-weight: 600; }
     .quiz-toolbar { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
     .quiz-home { flex:0 0 auto; min-width:44px; min-height:48px; padding:11px 14px; border:2px solid #8db8a3; border-radius:14px; background:#e9f6ee; color:#245b42; box-shadow:0 3px 0 #bfd7c9; font-weight:800; }
@@ -607,7 +609,7 @@
       #runner-frame-host { height:90vh; height:90dvh; }
     }
   </style>
-  <link rel="stylesheet" href="./runner/selection.css?v=1.7.32">
+  <link rel="stylesheet" href="./runner/selection.css?v=1.7.33">
 </head>
 <body>
 <!-- 立体的な金貨イラスト：ホーム・正解時に共用 -->
@@ -694,6 +696,7 @@
   </section>
 
   <section id="runner" class="hidden card" aria-labelledby="runner-heading">
+    <button id="runner-home" class="secondary game-home" type="button">学習ホームへ戻る</button>
     <h2 id="runner-heading">わくわくランナー</h2>
     <p id="runner-info" role="status" aria-live="polite"></p>
     <div id="runner-frame-host"></div>
@@ -712,10 +715,9 @@
       </section>
     </div>
 
-    <button id="runner-home" class="secondary" type="button" style="min-height:48px">学習ホームへ戻る</button>
   </section>
   <section id="arcade" class="card arcade-screen hidden" aria-label="ぬいぐるみキャッチャー">
-    <button id="arcade-back" type="button" class="nav">← 学習ホームに戻る</button>
+    <button id="arcade-back" type="button" class="secondary game-home">学習ホームへ戻る</button>
     <div class="arcade-title-row"><div><span class="section-kicker">PLUSH CATCHER</span><h2>🧸 ぬいぐるみキャッチャー</h2></div><div class="arcade-balance"><img src="assets/coins/crown-gold.webp" alt="" width="33" height="33">コイン <strong id="arcade-balance">0枚</strong></div></div>
     <p id="arcade-profile-note" class="arcade-profile-note hidden"></p>
     <p class="arcade-intro">アームが自動で左右に動きます。「キャッチ！」でタイミングよく止めよう！ つかんだ景品を出口まで運べたらゲットです。</p>
@@ -963,7 +965,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.32";
+const APP_VERSION = "v1.7.33";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3199,7 +3201,7 @@ function summarizeRunnerPlays(records, who) {
 // C3-B 内部API。無料試遊のURL/選択UIからは呼ばない。
 let runnerModelPromise;
 function loadRunnerModel() {
-  return runnerModelPromise ||= import('./runner/game.js?v=1.7.32');
+  return runnerModelPromise ||= import('./runner/game.js?v=1.7.33');
 }
 function runnerTransaction(names, action, {mode='readwrite', keys={}}={}) {
   return new Promise((resolve,reject)=>{
@@ -3532,7 +3534,7 @@ async function startFormalRunner(ctx,d,m) {
   const frame=current.frame;
   frame.title='わくわくランナー';frame.className='runner-formal-frame';
   frame.onload=()=>{if(formalRunner===current){frame.contentWindow.mountFormalRunner(current.bridge);choices();}};
-  frame.src='./runner/?embedded=1&v=1.7.32';
+  frame.src='./runner/?embedded=1&v=1.7.33';
   $('runner-frame-host').replaceChildren(frame);choices();
 }
 $('open-runner').addEventListener('click',()=>navigate('runner').catch(err));

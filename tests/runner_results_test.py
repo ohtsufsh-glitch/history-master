@@ -54,10 +54,11 @@ class RunnerResultsTest(unittest.TestCase):
         self.assertNotIn('新記録',frame.locator('#runner-result-record').inner_text())
         frame.locator('#runner-toggle').click()
         self.page.locator('#runner-info').filter(has_text='あと30コイン').wait_for()
-        frame.locator('#runner-result-home').click()
+        self.page.locator('#runner-home').click()
         self.page.locator('#open-runner').wait_for()
 
     def test_pending_commit_never_confirms_then_recovers_without_charge(self):
+        self.page.set_viewport_size(dict(width=390,height=844))
         frame=self.start()
         self.page.evaluate("""()=>{
           window.originalSave=saveRunnerState;
@@ -72,6 +73,7 @@ class RunnerResultsTest(unittest.TestCase):
         self.page.wait_for_function('typeof releaseFinish === "function"')
         self.page.evaluate("document.querySelector('iframe').contentWindow.refreshFormalRunner()")
         self.assertIn('保存中',frame.locator('#runner-result-title').inner_text())
+        self.assert_result_layout(frame,confirmed=False)
         self.assertEqual(frame.locator('#runner-result-record').inner_text(),'')
         self.assertEqual(frame.locator('#runner-result-unlock').inner_text(),'')
         self.assertTrue(frame.locator('#runner-toggle').is_disabled())
@@ -80,6 +82,7 @@ class RunnerResultsTest(unittest.TestCase):
         self.assertEqual(self.page.evaluate("async()=>(await readAll('coinSpends')).length"),1)
 
     def test_failed_finish_is_unconfirmed_and_free_recovery(self):
+        self.page.set_viewport_size(dict(width=390,height=844))
         frame=self.start()
         self.page.evaluate("""async()=>{
           const original=IDBObjectStore.prototype.put;
@@ -89,24 +92,123 @@ class RunnerResultsTest(unittest.TestCase):
           document.querySelector('iframe').contentWindow.refreshFormalRunner();
         }""")
         self.assertIn('まだ保存',frame.locator('#runner-result-title').inner_text())
+        self.assert_result_layout(frame,confirmed=False)
         self.assertEqual(frame.locator('#runner-result-record').inner_text(),'')
         frame.locator('#runner-toggle').click()
         self.page.wait_for_function("formalRunner.session?.view.state.mode==='running'")
         self.assertEqual(self.page.evaluate("async()=>[(await readAll('coinSpends')).length,formalRunner.session.view.state.mode]"),[1,'running'])
 
+    def layout(self, frame):
+        return frame.locator('body').evaluate("""()=>({
+          width:innerWidth,height:innerHeight,scroll:document.documentElement.scrollHeight,
+          boxes:['.runner-viewport','.runner-stage','.runner-controls'].map(s=>{
+            const b=document.querySelector(s).getBoundingClientRect();return [b.x,b.y,b.width,b.height];
+          })})""")
+
+    def assert_result_layout(self, frame, confirmed=True):
+        self.assertEqual(frame.locator('#runner-result-home').count(),0)
+        metrics=self.layout(frame)
+        self.assertLessEqual(metrics['scroll'],metrics['height']+1)
+        self.assertLessEqual(frame.locator('body').evaluate('()=>document.documentElement.scrollWidth'),metrics['width'])
+        panel=frame.locator('#runner-result').evaluate('(e)=>[e.clientHeight,e.scrollHeight]')
+        if metrics['width']<480 and metrics['height']>500:
+            self.assertLessEqual(panel[1],panel[0]+1)
+        selectors=['#runner-result-title','#runner-result-message','#runner-result-score',
+                   '#runner-result-progress','#runner-toggle']
+        if confirmed:
+            selectors+=['#runner-result-course','#runner-result-best','#runner-result-character-best']
+        for selector in selectors:
+            self.assertTrue(frame.locator(selector).is_visible())
+
     def test_sizes_result_scroll_and_buttons(self):
-        frame=self.start();self.finish()
         for width,height in [(390,844),(844,390),(820,1180)]:
-            self.page.set_viewport_size(dict(width=width,height=height))
-            frame.locator('#runner-result-home').scroll_into_view_if_needed()
-            metrics=frame.locator('body').evaluate("""()=>({width:innerWidth,body:document.documentElement.scrollWidth,
-              scroll:getComputedStyle(document.querySelector('#runner-viewport')).overflowY,
-              left:document.querySelector('#runner-viewport').getBoundingClientRect().left,
-              right:document.querySelector('.runner-controls').getBoundingClientRect().left})""")
-            self.assertLessEqual(metrics['body'],metrics['width'])
-            self.assertEqual(metrics['scroll'],'auto')
-            if width==844:self.assertGreater(metrics['right'],metrics['left'])
-            self.assertTrue(self.page.evaluate("document.querySelector('#runner-choices').getBoundingClientRect().top>=document.querySelector('iframe').getBoundingClientRect().bottom"))
+            with self.subTest(width=width,height=height):
+                self.page.set_viewport_size(dict(width=width,height=height))
+                self.page.evaluate('async()=>{await navigateHome();await install(60);}')
+                self.enter()
+                frame=self.page.frame_locator('iframe')
+                frame.locator('#runner-toggle').filter(has_text='ゲーム開始').wait_for()
+                before=self.layout(frame)
+                iframe_before=self.page.locator('iframe').evaluate('e=>[e.clientWidth,e.clientHeight]')
+                self.page.once('dialog',lambda d:d.accept())
+                frame.locator('#runner-toggle').click()
+                frame.locator('#runner-toggle').click()
+                self.assertEqual(self.layout(frame)['boxes'],before['boxes'])
+                frame.locator('#runner-toggle').click()
+                scroll_before=self.page.evaluate('scrollY')
+                self.finish()
+                frame.locator('#runner-result-title').filter(has_text='ゲームオーバー').wait_for()
+                self.assert_result_layout(frame)
+                self.assertEqual(self.layout(frame)['boxes'],before['boxes'])
+                self.assertEqual(self.page.locator('iframe').evaluate('e=>[e.clientWidth,e.clientHeight]'),iframe_before)
+                self.assertAlmostEqual(self.page.evaluate('scrollY'),scroll_before,delta=1)
+                self.assertTrue(frame.locator('#runner-toggle').is_enabled())
+
+    def test_clear_overlay_records_unlock_and_retry(self):
+        from runner_difficulty_cases import SOLUTIONS
+        self.page.set_viewport_size(dict(width=390,height=844))
+        frame=self.start()
+        self.page.evaluate("""async times=>{
+          const c=formalRunner.session;let n=0;
+          while(c.view.state.mode==='running'){
+            if(n<times.length&&c.view.state.elapsed+1e-8>=times[n]){await c.jump();n++;}
+            await formalRunner.bridge.advance(1/60);
+          }
+          document.querySelector('iframe').contentWindow.refreshFormalRunner();
+        }""",SOLUTIONS['S01']['perfect'])
+        frame.locator('#runner-result-title').filter(has_text='クリア！').wait_for()
+        self.assert_result_layout(frame)
+        self.assertIn('S02',frame.locator('#runner-result-unlock').inner_text())
+        self.assertIn('初記録',frame.locator('#runner-result-record').inner_text())
+        self.assertTrue(frame.locator('#runner-toggle').is_enabled())
+
+    def test_long_result_and_enlarged_text_remain_readable(self):
+        self.page.set_viewport_size(dict(width=390,height=844))
+        frame=self.start();self.finish()
+        panel=frame.locator('#runner-result')
+        # 表示だけのストレスケース。実際の得点/保存レコードは書き換えない。
+        for selector,text in [('#runner-result-course','S06 ゴールへの大冒険 ／ オオサンショウウオ'),
+                              ('#runner-result-record','ステージ 新記録！ ／ キャラクター 新記録！'),
+                              ('#runner-result-unlock','S06 が遊べるようになったよ！')]:
+            panel.locator(selector).evaluate('(e,text)=>e.textContent=text',text)
+        self.assert_result_layout(frame)
+        self.page.frames[-1].evaluate("document.documentElement.style.fontSize='200%'")
+        panel.locator('#runner-result-progress').scroll_into_view_if_needed()
+        self.assertTrue(panel.locator('#runner-result-progress').evaluate("""e=>{
+          const b=e.getBoundingClientRect(),p=e.closest('.runner-result').getBoundingClientRect();
+          return b.top>=p.top&&b.bottom<=p.bottom;
+        }"""))
+        frame.locator('#runner-toggle').scroll_into_view_if_needed()
+        self.assertTrue(frame.locator('#runner-toggle').is_enabled())
+
+    def test_top_home_buttons_touch_preserves_profile(self):
+        self.context.close()
+        self.context=self.browser.new_context(has_touch=True,viewport=dict(width=390,height=844))
+        self.page=self.context.new_page();self.page.goto(self.url);self.page.wait_for_function('appReady')
+        for screen,selector in [('runner','#runner-home'),('arcade','#arcade-back')]:
+            self.page.evaluate('(screen)=>navigate(screen,"test")',screen)
+            self.page.locator(selector).tap()
+            self.page.locator('#open-runner').wait_for()
+            self.assertEqual(self.page.evaluate('profile'),'test')
+
+    def test_top_home_buttons_share_style_and_keyboard_navigation(self):
+        styles=[]
+        for screen,selector in [('runner','#runner-home'),('arcade','#arcade-back')]:
+            self.page.evaluate('(screen)=>navigate(screen,"test")',screen)
+            button=self.page.get_by_role('button',name='学習ホームへ戻る',exact=True)
+            self.assertEqual(button.count(),1)
+            self.assertEqual(button.get_attribute('id'),selector[1:])
+            styles.append(button.evaluate("""e=>{
+              const s=getComputedStyle(e);return ['backgroundColor','border','borderRadius','color','fontSize','minHeight'].map(k=>s[k]);
+            }"""))
+            self.assertGreaterEqual(button.bounding_box()['height'],48)
+            self.assertTrue(button.evaluate('e=>e.parentElement.firstElementChild===e'))
+            button.focus()
+            self.assertTrue(button.evaluate('e=>e.matches(":focus-visible")'))
+            button.press('Enter')
+            self.page.locator('#open-runner').wait_for()
+            self.assertEqual(self.page.evaluate('profile'),'test')
+        self.assertEqual(styles[0],styles[1])
 
     def test_refresh_records_secret_reset_and_other_profile(self):
         self.enter()
