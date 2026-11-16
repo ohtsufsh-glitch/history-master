@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.37";
-import { STAGES } from "./stages.js?v=1.7.37";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.37";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.38";
+import { STAGES } from "./stages.js?v=1.7.38";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.38";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -747,6 +747,11 @@ function initializeRunner(session = null) {
     }
   }
   function updateControls() {
+    if(session){
+      document.getElementById('runner-balance-status').hidden=false;
+      const balance=document.getElementById('runner-balance');
+      if(balance.textContent!==session.view.balanceText)balance.textContent=session.view.balanceText;
+    }
     if (isStagePreview) {
       stageSelect.disabled = !active || (state.mode !== "ready" && state.mode !== "finished");
       characterSelect.disabled = stageSelect.disabled;

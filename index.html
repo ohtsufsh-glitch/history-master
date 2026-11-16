@@ -453,8 +453,8 @@
 
     /* v1.6.2 ぬいぐるみキャッチャー（タッチ操作優先） */
     .arcade-home-panel { background:linear-gradient(145deg,#fff7e5,#fffdf6);border-color:#ddc487; }
-    .arcade-home-cost,.arcade-balance{display:flex;align-items:center;gap:7px;font-weight:800;color:#805315;background:#fff3ce;border-radius:999px;padding:7px 12px;min-width:0;max-width:100%;}
-    .arcade-home-cost img,.arcade-balance img{flex:0 0 auto;}
+    .arcade-home-cost{display:flex;align-items:center;gap:7px;font-weight:800;color:#805315;background:#fff3ce;border-radius:999px;padding:7px 12px;min-width:0;max-width:100%;}
+    .arcade-home-cost img{flex:0 0 auto;}
     .arcade-home-body{display:flex;align-items:center;gap:18px;margin:8px 0;}
     .arcade-home-preview{flex:0 0 100px;height:92px;display:flex;align-items:center;justify-content:center;border-radius:17px;background:linear-gradient(135deg,#ffe6c2,#dfedf3);border:2px solid #f1d2a4;font-size:2.2rem;letter-spacing:-5px;}
     .arcade-home-preview span{transform:translateY(-13px);font-size:1.3rem;}
@@ -615,7 +615,8 @@
       #runner-frame-host { height:90vh; height:90dvh; }
     }
   </style>
-  <link rel="stylesheet" href="./runner/selection.css?v=1.7.37">
+  <link rel="stylesheet" href="./runner/balance.css?v=1.7.38">
+  <link rel="stylesheet" href="./runner/selection.css?v=1.7.38">
 </head>
 <body>
 <!-- 立体的な金貨イラスト：ホーム・正解時に共用 -->
@@ -705,6 +706,7 @@
     <button id="runner-home" class="game-home" type="button">← 学習ホームへ戻る</button>
     <span class="section-kicker">WAKUWAKU RUNNER</span>
     <h2 id="runner-heading">わくわくランナー</h2>
+    <div class="arcade-balance runner-balance" role="status" aria-live="polite" aria-atomic="true"><img src="assets/coins/crown-gold.webp" alt="" width="33" height="33"><span>コイン <strong id="runner-balance">確認中…</strong></span></div>
     <p id="runner-info" role="status" aria-live="polite"></p>
     <div id="runner-frame-host"></div>
     <div id="runner-choices">
@@ -972,7 +974,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.37";
+const APP_VERSION = "v1.7.38";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3208,7 +3210,7 @@ function summarizeRunnerPlays(records, who) {
 // C3-B 内部API。無料試遊のURL/選択UIからは呼ばない。
 let runnerModelPromise;
 function loadRunnerModel() {
-  return runnerModelPromise ||= import('./runner/game.js?v=1.7.37');
+  return runnerModelPromise ||= import('./runner/game.js?v=1.7.38');
 }
 function runnerTransaction(names, action, {mode='readwrite', keys={}}={}) {
   return new Promise((resolve,reject)=>{
@@ -3390,13 +3392,28 @@ function renderFormalRunnerChoices(d,m) {
   }
   $('formal-character-info').textContent=m.describeCharacter(m.getCharacter(characters.value));
 }
+// 表示専用。残高の計算・保存はrunnerLobbyData/getAvailableCoinsだけが担当する。
+let runnerBalanceText='確認中…';
+function showRunnerBalance(text) {
+  runnerBalanceText=text;
+  $('runner-balance').textContent=text;
+  formalRunner?.frame.contentWindow?.refreshFormalRunner?.();
+}
+function savedRunnerBalance(who,data) {
+  return who==='test'?'∞（無料）':`${data.balance.toLocaleString('ja-JP')}枚`;
+}
+function runnerFee(who) {return who==='test'?'テスト用：無料':'1プレイ30コイン';}
 async function renderRunnerLobby() {
   const ctx=viewContext();
+  showRunnerBalance('確認中…');
   await closeFormalRunner();
   if(!viewCurrent(ctx))return;
-  const [d,m]=await Promise.all([runnerLobbyData(ctx.who),loadRunnerModel()]);
+  let d,m;
+  try {[d,m]=await Promise.all([runnerLobbyData(ctx.who),loadRunnerModel()]);}
+  catch(e){if(viewCurrent(ctx))showRunnerBalance('確認できません');throw e;}
   if(!viewCurrent(ctx))return;
-  $('runner-info').textContent=runnerPrice(ctx.who,d);
+  showRunnerBalance(savedRunnerBalance(ctx.who,d));
+  $('runner-info').textContent=runnerFee(ctx.who);
   $('runner-choices').hidden=false;
   const stages=$('formal-stage'), characters=$('formal-character');
   stages.replaceChildren();characters.replaceChildren();
@@ -3441,25 +3458,38 @@ async function startFormalRunner(ctx,d,m) {
     if(locked){$('formal-stage').value=state.stageId;$('formal-character').value=state.characterId;}
     renderFormalRunnerChoices(latestData,m);
   };
-  let refreshing=null;
+  let refreshing=null, refreshGeneration=0;
   function refresh(){
+    ++refreshGeneration;
+    showRunnerBalance('確認中…');
     if(refreshing)return refreshing;
-    refreshing=refreshData().finally(()=>{refreshing=null;});
+    refreshing=(async()=>{
+      let request;
+      do {
+        request=refreshGeneration;
+        try {await refreshData(request);}
+        catch(e){
+          if(!closed&&viewCurrent(ctx)&&request===refreshGeneration)showRunnerBalance('確認できません');
+          if(request===refreshGeneration)throw e;
+        }
+      } while(!closed&&viewCurrent(ctx)&&request!==refreshGeneration);
+    })().finally(()=>{refreshing=null;});
     return refreshing;
   }
-  async function refreshData(){
+  async function refreshData(request){
     const session=current.session;
     await session?.flush();
     const savedAt=session?.view.savedPlay.updatedAt;
     const latest=await runnerLobbyData(ctx.who);
     // フォーカス再照合と終了保存が重なった場合、古い読取で結果確定を消さない。
-    if(!closed&&(session!==current.session||savedAt!==session?.view.savedPlay.updatedAt))return refreshData();
-    if(!closed&&viewCurrent(ctx)){
+    if(!closed&&(session!==current.session||savedAt!==session?.view.savedPlay.updatedAt))return refreshData(request);
+    if(!closed&&viewCurrent(ctx)&&request===refreshGeneration){
       if(current.session&&!latest.records.some(p=>p.id===current.session.view.savedPlay.id)&&latest.active?.id!==current.session.view.savedPlay.id){await reconcilePage();return;}
       if(!latest.secret&&current.session?.view.state.characterId==='secret_yuniko'){await reconcilePage();return;}
       if(current.session?.view.savedPlay.status==='active'&&latest.active?.id===current.session.view.savedPlay.id&&latest.active.updatedAt!==current.session.view.savedPlay.updatedAt&&!current.session.view.dirty){await reconcilePage();return;}
       latestData=latest;resultData=runnerResultData(latest,current.session?.view.savedPlay);
-      $('runner-info').textContent=localError||runnerPrice(ctx.who,latest);
+      showRunnerBalance(savedRunnerBalance(ctx.who,latest));
+      $('runner-info').textContent=localError||runnerFee(ctx.who);
       const character=$('formal-character').value;
       $('formal-character').replaceChildren(...[...m.CHARACTERS,...(latest.secret?[m.getCharacter('secret_yuniko')]:[])].map(c=>new Option(c.name,c.characterId)));
       if([...$('formal-character').options].some(o=>o.value===character))$('formal-character').value=character;
@@ -3477,10 +3507,11 @@ async function startFormalRunner(ctx,d,m) {
     }
   }
   current.bridge={
-    get view(){return {...(current.session?.view||{state:structuredClone(waiting),dirty:false,error:null}),message:localError,result:resultData};},
+    get view(){return {...(current.session?.view||{state:structuredClone(waiting),dirty:false,error:null}),message:localError,result:resultData,balanceText:runnerBalanceText};},
     async resume(){
       if(closed||runnerStarting||!viewCurrent(ctx))return;
       if(current.session?.view.state.mode==='finished'&&!current.session.view.error&&(current.session.view.dirty||!resultData))return;
+      ++refreshGeneration;
       runnerStarting=true;localError=null;choices();
       try {
         if(current.session?.view.error){
@@ -3541,7 +3572,7 @@ async function startFormalRunner(ctx,d,m) {
   const frame=current.frame;
   frame.title='わくわくランナー';frame.className='runner-formal-frame';
   frame.onload=()=>{if(formalRunner===current){frame.contentWindow.mountFormalRunner(current.bridge);choices();}};
-  frame.src='./runner/?embedded=1&v=1.7.37';
+  frame.src='./runner/?embedded=1&v=1.7.38';
   $('runner-frame-host').replaceChildren(frame);choices();
 }
 $('open-runner').addEventListener('click',()=>navigate('runner').catch(err));
@@ -4016,6 +4047,7 @@ async function restoreRoute(target,{allowCreate=false}={}) {
   $("home-coin-amount").textContent="確認中…";
   $("quiz-coin-amount").textContent="確認中…";
   $("arcade-balance").textContent="確認中…";
+  showRunnerBalance('確認中…');
   if(target.screen==="quiz"||target.screen==="study") {
     $("report-question").classList.add("hidden");
     $("result").classList.add("hidden");
@@ -4062,6 +4094,9 @@ window.addEventListener("pageshow",event=>{
 });
 
 window.addEventListener('focus',()=>{formalRunner?.refresh().catch(err);});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)formalRunner?.refresh().catch(err);});
+// IndexedDB変更自体にstorageイベントはない。別タブから戻った際はfocus/pageshowで正本を再照合。
+window.addEventListener('storage',()=>{formalRunner?.refresh().catch(err);});
 // 別ウインドウで増減した場合も、問題画面へフォーカスが戻ったら保存残高を再取得。
 window.addEventListener("visibilitychange",()=>{
   if(appReady&&!document.hidden&&!saving&&historyRoute(history.state)?.screen==="study")reconcilePage().catch(err);
