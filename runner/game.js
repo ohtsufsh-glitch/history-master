@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.33";
-import { STAGES } from "./stages.js?v=1.7.33";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.33";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.34";
+import { STAGES } from "./stages.js?v=1.7.34";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.34";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -667,7 +667,7 @@ function initializeRunner(session = null) {
   const characterIcon = document.getElementById("runner-character-image");
   const isStagePreview = !session && STAGE_PREVIEW_ENABLED &&
     new URLSearchParams(window.location.search).get("stagePreview") === "1";
-  if(session){document.querySelector('.runner-app').classList.add('runner-app-formal');status.setAttribute('aria-live','polite');document.querySelector('.runner-footer').prepend(status);}
+  if(session){document.querySelector('.runner-app').classList.add('runner-app-formal');status.setAttribute('aria-live','polite');document.querySelector('.runner-footer').append(status);}
   let context;
   try {
     context = canvas.getContext("2d", { alpha: false });
@@ -786,13 +786,10 @@ function initializeRunner(session = null) {
         const view=session.view,r=view.result;
         const confirmed=r&&!view.dirty&&!view.error&&view.savedPlay?.status==='finished';
         document.getElementById('runner-result-title').textContent=confirmed?(r.play.result.reason==='clear'?'クリア！':'ゲームオーバー'):'結果を保存中…';
-        document.getElementById('runner-result-message').textContent=confirmed?'がんばったね！ 下のボタンで再挑戦できるよ。':view.error?'保存できませんでした。追加コインなしで最後の保存から再開できます。':'保存が終わるまで待ってね。';
+        document.getElementById('runner-result-message').textContent=confirmed?'保存しました。下のボタンで再挑戦！':view.error?'保存できませんでした。追加コインなしで最後の保存から再開できます。':'保存が終わるまで待ってね。';
         if(view.error)document.getElementById('runner-result-title').textContent='まだ保存できていません';
         document.getElementById('runner-result-score').textContent=confirmed?r.play.score:state.score;
-        document.getElementById('runner-result-course').textContent=confirmed?`${r.play.stageId} ${STAGES.find(s=>s.stageId===r.play.stageId).name} ／ ${getCharacter(r.play.characterId).name}`:'';
-        document.getElementById('runner-result-best').textContent=confirmed?`ステージ最高：${r.stageBest}点`:'';
-        document.getElementById('runner-result-character-best').textContent=confirmed?`このキャラクターの最高：${r.characterBest}点`:'';
-        document.getElementById('runner-result-record').textContent=confirmed?[r.stageRecord&&`ステージ ${r.stageRecord}`,r.characterRecord&&`キャラクター ${r.characterRecord}`].filter(Boolean).join(' ／ '):'';
+        document.getElementById('runner-result-record').textContent=confirmed?(r.stageRecord||r.characterRecord||''):'';
         document.getElementById('runner-result-unlock').textContent=confirmed&&r.unlocked.length?`${r.unlocked.join('・')} が遊べるようになったよ！`:'';
       }
     } else if (resetResult) {
