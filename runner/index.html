@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#eef6f1">
   <title>ランナーゲーム</title>
   <!-- 配信更新時は両方の識別子を揃え、古いCSS・JSとの混在を避ける。 -->
-  <link rel="stylesheet" href="./style.css?v=1.7.27">
-  <script type="module" src="./game.js?v=1.7.27"></script>
+  <link rel="stylesheet" href="./style.css?v=1.7.28">
+  <script type="module" src="./game.js?v=1.7.28"></script>
 </head>
 <body>
   <main class="runner-app" aria-labelledby="runner-title">
@@ -73,7 +73,10 @@
     </footer>
   </main>
 <script>
-if(new URLSearchParams(location.search).get('embedded')==='1')document.getElementById('runner-demo-note').textContent='わくわくランナー・正式プレイ';
+if(new URLSearchParams(location.search).get('embedded')==='1'){
+  document.getElementById('runner-demo-note').textContent='ジャンプでゴールを目指そう！';
+  document.getElementById('runner-title').textContent='わくわくランナー';
+}
 </script>
 </body>
 </html>

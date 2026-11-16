@@ -1,5 +1,5 @@
-import { STAGES } from "./stages.js?v=1.7.27";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.27";
+import { STAGES } from "./stages.js?v=1.7.28";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.28";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -628,7 +628,7 @@ function initializeRunner(session = null) {
   const characterIcon = document.getElementById("runner-character-image");
   const isStagePreview = !session && STAGE_PREVIEW_ENABLED &&
     new URLSearchParams(window.location.search).get("stagePreview") === "1";
-  if(session){document.querySelector('.runner-app').classList.add('runner-app-formal');status.removeAttribute('role');status.removeAttribute('aria-live');document.querySelector('.runner-footer').prepend(status);}
+  if(session){document.querySelector('.runner-app').classList.add('runner-app-formal');status.setAttribute('aria-live','polite');document.querySelector('.runner-footer').prepend(status);}
   let context;
   try {
     context = canvas.getContext("2d", { alpha: false });
@@ -714,8 +714,8 @@ function initializeRunner(session = null) {
     const text = { ready: "ゲーム開始", running: "一時停止", paused: "再開", finished: "もう一度" }[state.mode];
     if (toggle.textContent !== text) toggle.textContent = text;
     if(session) {
-      toggle.disabled=controlBusy||!!session.view.error||state.mode==='finished';
-      if(state.mode==='finished')toggle.textContent='終了（学習ホームへ戻ってね）';
+      toggle.disabled=controlBusy||(!!session.view.error&&!!session.view.savedPlay)||(state.mode==='finished'&&session.view.dirty);
+      if(state.mode==='finished')toggle.textContent='ゲーム開始';
     }
     const jumpDisabled = !active || state.mode !== "running";
     if (jumpButton && jumpButton.disabled !== jumpDisabled) jumpButton.disabled = jumpDisabled;
@@ -769,12 +769,13 @@ function initializeRunner(session = null) {
       previousTimestamp = state.mode === "running" ? timestamp : null;
       updateControls();
     }
+    if(session){syncSession();updateControls();}
     renderScene(context, canvas, state, characterImages, obstacleImage);
     if(session) {
       const view=session.view;
       status.hidden=false;
-      status.textContent=view.error?'保存に失敗しました。最後の保存地点から再開してください。':
-        view.dirty?'プレイ中の状態はまだ保存されていません。':'ここまで保存しました。';
+      status.textContent=view.message||(view.error?'保存に失敗しました。'+view.error:'');
+      status.hidden=!status.textContent;
       status.style.position='static';
     } else status.hidden = true;
     if (state.mode === "running") requestRedraw();
@@ -916,6 +917,7 @@ function initializeRunner(session = null) {
   obstacleImage.onload = requestRedraw;
   obstacleImage.onerror = requestRedraw;
   obstacleImage.src = new URL(OBSTACLE_IMAGE.src, import.meta.url).href;
+  if(session)window.refreshFormalRunner=()=>{syncSession();updateCharacterDetails();updateControls();requestRedraw();};
   if(session)window.stopFormalRunner=()=>{
     stopped=true;active=false;
     if(pendingFrame!==null)cancelAnimationFrame(pendingFrame);

@@ -596,6 +596,9 @@
     #feedback-list input[type=checkbox] { min-width:24px; min-height:24px; }
     .feedback-select { display:flex; align-items:center; gap:10px; min-height:44px; }
     /* 高さ判定は子のviewportに作用する。横画面に固定の最低高さを強制しない。 */
+    .runner-home-panel { background:linear-gradient(145deg,#edf7ee,#fffdf6); }
+    #runner-choices { margin:16px 0; padding:16px; border:1px solid #d4e3d8; border-radius:16px; background:#fffdf6; }
+    #runner-info { font-size:.85rem; }
     .runner-formal-frame { width:100%; height:85vh; height:85dvh; border:0; display:block; }
     @media (max-height:500px) and (min-width:481px) {
       .runner-formal-frame { height:90vh; height:90dvh; }
@@ -670,10 +673,13 @@
       </div>
       <button id="open-arcade" class="primary arcade-entry" type="button">キャッチャーで遊ぶ →</button>
     </div>
-    <section class="card" aria-labelledby="runner-home-title">
-      <h2 id="runner-home-title">わくわくランナー</h2>
-      <p id="runner-home-info">1プレイ30コイン・残高を確認中…</p>
-      <button id="open-runner" class="primary" type="button">ランナーで遊ぶ →</button>
+    <section class="home-panel arcade-home-panel runner-home-panel" aria-labelledby="runner-home-title">
+      <div class="panel-head"><div><span class="section-kicker">ARCADE</span><h3 id="runner-home-title">🐕 わくわくランナー</h3></div><div class="arcade-home-cost"><img src="assets/coins/crown-gold.webp" width="30" height="30" alt=""><span>コイン30枚 / 1プレイ</span></div></div>
+      <div class="arcade-home-body">
+        <div class="arcade-home-preview" aria-hidden="true">🐕 <span>⭐</span> 🏁</div>
+        <div class="arcade-home-copy"><p>ジャンプでトゲ岩を飛びこえて、ゴールを目指そう！</p><p id="runner-home-info" class="small muted">残高を確認中…</p></div>
+      </div>
+      <button id="open-runner" class="primary arcade-entry" type="button">ランナーで遊ぶ →</button>
     </section>
 
     <div id="collection" class="home-panel collection-panel">
@@ -686,14 +692,14 @@
   <section id="runner" class="hidden card" aria-labelledby="runner-heading">
     <h2 id="runner-heading">わくわくランナー</h2>
     <p id="runner-info" role="status" aria-live="polite"></p>
+    <div id="runner-frame-host"></div>
     <div id="runner-choices">
       <label for="formal-stage">ステージ</label><select id="formal-stage" style="width:100%;min-height:48px"></select>
       <p>🔒のステージは、ひとつ前のステージを正式クリアすると遊べるよ。</p>
       <label for="formal-character">キャラクター</label><select id="formal-character" style="width:100%;min-height:48px"></select>
       <p id="formal-character-info"></p>
     </div>
-    <button id="runner-purchase" class="primary" type="button">30コインで開始</button>
-    <div id="runner-frame-host"></div>
+
     <button id="runner-home" class="secondary" type="button" style="min-height:48px">学習ホームへ戻る</button>
   </section>
   <section id="arcade" class="card arcade-screen hidden" aria-label="ぬいぐるみキャッチャー">
@@ -945,7 +951,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.27";
+const APP_VERSION = "v1.7.28";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3181,7 +3187,7 @@ function summarizeRunnerPlays(records, who) {
 // C3-B 内部API。無料試遊のURL/選択UIからは呼ばない。
 let runnerModelPromise;
 function loadRunnerModel() {
-  return runnerModelPromise ||= import('./runner/game.js?v=1.7.27');
+  return runnerModelPromise ||= import('./runner/game.js?v=1.7.28');
 }
 function runnerTransaction(names, action) {
   return new Promise((resolve,reject)=>{
@@ -3310,19 +3316,19 @@ async function runnerLobbyData(who) {
     balance:availableCoins(d.coinEvents,d.reviewEvents,d.coinSpends,who)
   }));
 }
-function runnerPrice(who,d) {return `${who==='test'?'テスト用：無料':'1プレイ30コイン'} ／ コイン ${d.balance}枚 ／ ${d.active?'購入済みの続きあり（追加料金なし）':'再開するプレイなし'}`;}
+function runnerPrice(who,d) {return `${who==='test'?'テスト用：無料':'1プレイ30コイン'} ／ コイン ${d.balance}枚`;}
 async function refreshRunnerHome(ctx) {
   const d=await runnerLobbyData(ctx.who);
   if(viewCurrent(ctx))$('runner-home-info').textContent=runnerPrice(ctx.who,d);
 }
 async function renderRunnerLobby() {
-  const ctx=viewContext(), [d,m]=await Promise.all([runnerLobbyData(profile),loadRunnerModel()]);
+  const ctx=viewContext();
+  await closeFormalRunner();
+  if(!viewCurrent(ctx))return;
+  const [d,m]=await Promise.all([runnerLobbyData(ctx.who),loadRunnerModel()]);
   if(!viewCurrent(ctx))return;
   $('runner-info').textContent=runnerPrice(ctx.who,d);
-  $('runner-choices').hidden=!!d.active;
-  $('runner-purchase').hidden=false;
-  $('runner-purchase').disabled=!d.active&&ctx.who!=='test'&&d.balance<30;
-  $('runner-purchase').textContent=d.active?'購入済みの続きから':ctx.who==='test'?'無料で開始':d.balance<30?`あと${30-d.balance}コイン必要`:'30コインで開始';
+  $('runner-choices').hidden=false;
   const stages=$('formal-stage'), characters=$('formal-character');
   stages.replaceChildren();characters.replaceChildren();
   for(const stage of m.STAGES) {
@@ -3331,47 +3337,107 @@ async function renderRunnerLobby() {
   }
   for(const c of [...m.CHARACTERS,...(d.secret?[m.getCharacter('secret_yuniko')]:[])])characters.add(new Option(c.name,c.characterId));
   function describe(){const c=m.getCharacter(characters.value);$('formal-character-info').textContent=`${c.feature} ／ ハート${c.initialLives}個`;}
-  characters.onchange=describe;describe();
+  if(d.active){
+    if(m.STAGES.some(s=>s.stageId===d.active.stageId))stages.value=d.active.stageId;
+    if([...characters.options].some(c=>c.value===d.active.characterId))characters.value=d.active.characterId;
+  }
+  function select(){
+    if(!formalRunner?.select(stages.value,characters.value)) {
+      if(formalRunner){stages.value=formalRunner.bridge.view.state.stageId;characters.value=formalRunner.bridge.view.state.characterId;}
+    }
+    describe();
+  }
+  stages.onchange=select;characters.onchange=select;describe();
+  await startFormalRunner(ctx,d,m);
 }
 async function closeFormalRunner() {
   const current=formalRunner;formalRunner=null;
   if(current) {
-    current.frame.contentWindow.stopFormalRunner?.();
-    try {await current.session.close();} catch(e) {notice('保存できませんでした。最後の保存地点から再開してください。');}
+    current.stop?.();
+    current.frame.contentWindow?.stopFormalRunner?.();
+    try {await current.session?.close();} catch(e) {notice('保存できませんでした。最後の保存地点から再開してください。');}
     current.frame.remove();
   }
 }
-async function startFormalRunner() {
-  if(runnerStarting||formalRunner)return;
-  runnerStarting=true;$('runner-purchase').disabled=true;
-  const ctx=viewContext();
-  let session;
-  try {
-    const d=await runnerLobbyData(ctx.who);
-    if(!viewCurrent(ctx))return;
-    const play=d.active||await purchaseRunnerPlay({profile:ctx.who,stageId:$('formal-stage').value,characterId:$('formal-character').value});
-    if(!viewCurrent(ctx))return;
-    session=await openRunnerSession(ctx.who,play.id);
-    if(!viewCurrent(ctx)){await session.close();return;}
-    const frame=document.createElement('iframe');
-    frame.title='わくわくランナー 正式プレイ';
-    frame.className='runner-formal-frame';
-    // onloadで親がセッションを渡す。URLやpostMessageを権限にしない。
-    frame.onload=()=>{
-      if(formalRunner?.frame!==frame)return;
-      frame.contentWindow.mountFormalRunner(session);
-      frame.scrollIntoView({block:'start'});
-    };
-    frame.src='./runner/?embedded=1&v=1.7.27';
-    formalRunner={session,frame};$('runner-frame-host').replaceChildren(frame);
-    $('runner-choices').hidden=true;$('runner-purchase').hidden=true;
-    $('runner-info').textContent='購入済みプレイ（追加料金なし）。続けるにはゲーム画面の「再開」を押してね。';
-  } catch(e) {
-    $('runner-info').textContent=`${e.message} 購入済み記録は消しません。再購入せず、バックアップを保存して保護者に確認してください。旧状態・ステージ版の不一致は対応版での再開を待ちます。`;
-  } finally {runnerStarting=false;$('runner-purchase').disabled=false;}
+// このbridgeのreadyは表示専用。正式sessionがない間はadvance/jumpを実行しない。
+async function startFormalRunner(ctx,d,m) {
+  let waiting=m.createRunnerState(m.STAGES.find(s=>s.stageId===$('formal-stage').value),$('formal-character').value);
+  let localError=null, closed=false;
+  const current={session:null,frame:document.createElement('iframe')};
+  const choices=()=>{
+    const state=current.bridge.view.state;
+    const locked=!!current.session&&(state.mode!=='finished'||current.session.view.dirty||!!current.session.view.error);
+    $('formal-stage').disabled=locked||runnerStarting;
+    $('formal-character').disabled=locked||runnerStarting;
+    if(locked){$('formal-stage').value=state.stageId;$('formal-character').value=state.characterId;}
+  };
+  async function refresh(){
+    const latest=await runnerLobbyData(ctx.who);
+    if(!closed&&viewCurrent(ctx)){
+      $('runner-info').textContent=runnerPrice(ctx.who,latest);
+      for(const option of $('formal-stage').options){
+        option.disabled=!latest.unlocked.includes(option.value);
+        const stage=m.STAGES.find(s=>s.stageId===option.value);
+        option.textContent=`${stage.stageId} ${stage.name}${option.disabled?' 🔒 前のステージをクリアしてね':''}`;
+      }
+    }
+  }
+  current.bridge={
+    get view(){return {...(current.session?.view||{state:structuredClone(waiting),dirty:false,error:null}),message:localError};},
+    async resume(){
+      if(closed||runnerStarting||!viewCurrent(ctx))return;
+      if(current.session&&current.session.view.state.mode!=='finished')return current.session.resume();
+      runnerStarting=true;localError=null;choices();
+      try {
+        const latest=await runnerLobbyData(ctx.who);
+        if(closed||!viewCurrent(ctx))return;
+        if(!latest.active){
+          if(!latest.unlocked.includes(waiting.stageId)||waiting.characterId==='secret_yuniko'&&!latest.secret)throw new Error('ステージ・キャラクターを選び直してください。');
+          if(ctx.who!=='test'&&latest.balance<30)throw new Error(`あと${30-latest.balance}コイン必要です。`);
+          if(ctx.who!=='test'&&!confirm('30コインでゲームを始めますか？'))return;
+        }
+        if(closed||!viewCurrent(ctx))return;
+        const play=latest.active||await purchaseRunnerPlay({profile:ctx.who,stageId:waiting.stageId,characterId:waiting.characterId});
+        if(closed||!viewCurrent(ctx))return;
+        await current.session?.close();
+        current.session=await openRunnerSession(ctx.who,play.id);
+        if(closed||!viewCurrent(ctx)){await current.session.close();return;}
+        // 別タブですでに購入されたプレイも、その正本を接続してから走行する。
+        await current.session.resume();
+        await refresh();
+      } catch(e){localError=e.message;$('runner-info').textContent=e.message;}
+      finally{runnerStarting=false;if(!closed){choices();current.frame.contentWindow?.refreshFormalRunner?.();}}
+    },
+    async advance(seconds){
+      if(!current.session)return;
+      const wasFinished=current.session.view.state.mode==='finished';
+      try{await current.session.advance(seconds);}
+      finally{
+        if(!wasFinished&&current.session.view.state.mode==='finished'){choices();await refresh();}
+      }
+    },
+    async jump(){if(current.session)await current.session.jump();},
+    async pause(){if(current.session)await current.session.pause();}
+  };
+  current.select=(stageId,characterId)=>{
+    if(runnerStarting||current.session&&(current.session.view.state.mode!=='finished'||current.session.view.dirty||current.session.view.error))return false;
+    waiting=m.createRunnerState(m.STAGES.find(s=>s.stageId===stageId),characterId);
+    // 終了記録は確定済み。新しい選択は未購入の待機状態へ戻す。
+    if(current.session){current.session.close().catch(e=>{$('runner-info').textContent=e.message;});current.session=null;}
+    localError=null;current.frame.contentWindow?.refreshFormalRunner?.();return true;
+  };
+  current.stop=()=>{closed=true;};
+  formalRunner=current;
+  try{if(d.active)current.session=await openRunnerSession(ctx.who,d.active.id);}
+  catch(e){localError=e.message;$('runner-info').textContent=e.message;}
+  if(!viewCurrent(ctx)||closed){await current.session?.close();return;}
+  const frame=current.frame;
+  frame.title='わくわくランナー';frame.className='runner-formal-frame';
+  frame.onload=()=>{if(formalRunner===current){frame.contentWindow.mountFormalRunner(current.bridge);choices();frame.scrollIntoView({block:'start'});}};
+  frame.src='./runner/?embedded=1&v=1.7.28';
+  $('runner-frame-host').replaceChildren(frame);choices();
 }
 $('open-runner').addEventListener('click',()=>navigate('runner').catch(err));
-$('runner-purchase').addEventListener('click',()=>startFormalRunner().catch(err));
 $('runner-home').addEventListener('click',()=>navigateHome().catch(err));
 window.addEventListener('resize',()=>formalRunner?.frame.scrollIntoView({block:'start'}));
 
