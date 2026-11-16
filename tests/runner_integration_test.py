@@ -173,6 +173,8 @@ class RunnerIntegrationTest(unittest.TestCase):
                   return Math.abs(w.innerHeight-f.clientHeight)<2&&b.bottom<=w.innerHeight+1&&
                     d.documentElement.scrollHeight<=w.innerHeight+1;
                 }""")
+                # 回転では自動スクロールしない。ユーザーが操作位置へ戻った状態で配置を検証。
+                self.page.locator('iframe').evaluate("f=>f.scrollIntoView({block:'start'})")
                 self.assertEqual(self.page.locator('iframe').count(),1)
                 metrics=frame.locator('body').evaluate("""()=>({
                   width:innerWidth,height:innerHeight,
