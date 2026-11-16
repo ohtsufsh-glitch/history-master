@@ -1,5 +1,5 @@
-import { STAGES } from "./stages.js?v=1.7.20";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.20";
+import { STAGES } from "./stages.js?v=1.7.21";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.21";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -209,7 +209,7 @@ function goalX(state) {
 function updateRunner(state, seconds) {
   if (state.mode !== "running" || !Number.isFinite(seconds) || seconds < 0) return;
   let remaining = seconds;
-  // 同じサブステップの接触はスター・ゴールより優先。前の取得得点は保持する。
+  // 同じサブステップの衝突を先に処理し、最終衝突ではスター・ゴールより優先する。
   do {
     const step = Math.min(SIMULATION_STEP, remaining, Math.max(0, state.goalDistance - state.distance) / state.speed);
     state.distance += state.speed * step;
@@ -231,9 +231,14 @@ function updateRunner(state, seconds) {
       objectHalfWidth(object) >= 0);
     if (!invincible && state.objects.some(object => object.type === "obstacle" && touchesObject(state, object))) {
       state.lives = Math.max(0, state.lives - 1);
-      state.mode = state.lives > 0 ? "hurt" : "finished";
-      state.reason = "collision";
-      return;
+      if (state.lives === 0) {
+        state.mode = "finished";
+        state.reason = "collision";
+        return;
+      }
+      // 同じプレイ・サブステップを継続する。位置・ジャンプ・足場・得点は戻さない。
+      // この接触の直後から保護し、残りのサブステップでも多重減算を防ぐ。
+      state.invincibleRemaining = RESPAWN_INVINCIBLE_SECONDS;
     }
     state.objects = state.objects.filter(object => {
       if (object.type === "star" && touchesObject(state, object)) {
@@ -242,7 +247,7 @@ function updateRunner(state, seconds) {
       }
       return true;
     });
-    // 同じ更新でゴールラインを越えても、直前の障害物判定を優先する。
+    // 残機があれば、保護中のスター取得もゴールも通常どおり扱う。
     if (state.distance >= state.goalDistance) {
       state.mode = "finished";
       state.reason = "clear";
@@ -253,8 +258,7 @@ function updateRunner(state, seconds) {
 }
 
 function resumeRunner(state) {
-  if (state.mode !== "hurt" && state.mode !== "paused") return false;
-  if (state.mode === "hurt") state.invincibleRemaining = RESPAWN_INVINCIBLE_SECONDS;
+  if (state.mode !== "paused") return false;
   state.reason = null;
   state.mode = "running";
   return true;
@@ -524,8 +528,7 @@ function initializeRunner() {
   const scoreLabel = document.getElementById("runner-score");
   const progressLabel = document.getElementById("runner-progress");
   const livesLabel = document.getElementById("runner-lives");
-  const protectionLabel = document.getElementById("runner-protection");
-  const continueMessage = document.getElementById("runner-continue");
+  const heartsLabel = document.getElementById("runner-hearts");
   const result = document.getElementById("runner-result");
   const preview = document.getElementById("runner-preview");
   const stageSelect = document.getElementById("runner-stage-select");
@@ -614,17 +617,17 @@ function initializeRunner() {
       stageSelect.disabled = !active || (state.mode !== "ready" && state.mode !== "finished");
       characterSelect.disabled = stageSelect.disabled;
     }
-    const text = { ready: "ゲーム開始", running: "一時停止", paused: "再開", hurt: "つづける", finished: "もう一度" }[state.mode];
+    const text = { ready: "ゲーム開始", running: "一時停止", paused: "再開", finished: "もう一度" }[state.mode];
     if (toggle.textContent !== text) toggle.textContent = text;
     const jumpDisabled = !active || state.mode !== "running";
     if (jumpButton && jumpButton.disabled !== jumpDisabled) jumpButton.disabled = jumpDisabled;
-    const mode = { ready: "開始前", running: "走行中", paused: "一時停止中", hurt: `残り${state.lives}機・停止中`, finished: "終了" }[state.mode];
+    const mode = { ready: "開始前", running: "走行中", paused: "一時停止中", finished: "終了" }[state.mode];
     if (modeLabel.textContent !== mode) modeLabel.textContent = mode;
     if (scoreLabel.textContent !== String(state.score)) scoreLabel.textContent = state.score;
-    if (livesLabel.textContent !== String(state.lives)) livesLabel.textContent = state.lives;
-    protectionLabel.hidden = state.invincibleRemaining <= PHYSICS_EPSILON;
-    continueMessage.hidden = state.mode !== "hurt";
-    document.getElementById("runner-continue-title").textContent = `残り${state.lives}機`;
+    const hearts = "♥".repeat(state.lives) + "♡".repeat(state.initialLives - state.lives);
+    const livesDescription = `残機${state.initialLives}機中あと${state.lives}機`;
+    if (heartsLabel.textContent !== hearts) heartsLabel.textContent = hearts;
+    if (livesLabel.getAttribute("aria-label") !== livesDescription) livesLabel.setAttribute("aria-label", livesDescription);
     const progress = String(progressPercent(state));
     if (progressLabel.textContent !== progress) progressLabel.textContent = progress;
     const hideResult = state.mode !== "finished";

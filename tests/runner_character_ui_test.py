@@ -13,9 +13,9 @@ import runner_preview_test as preview
 
 CHARACTERS = {
     'shiba': ('しば犬', 200, 120, .90, 2),
-    'sloth': ('なまけもの', 170, 125, 1.10, 3),
+    'sloth': ('なまけもの', 170, 125, 1.10, 2),
     'goldfish': ('金魚', 185, 160, 1.05, 2),
-    'salamander': ('オオサンショウウオ', 230, 105, .82, 2),
+    'salamander': ('オオサンショウウオ', 230, 105, .82, 3),
 }
 
 
@@ -25,6 +25,8 @@ class RunnerCharacterUITest(unittest.TestCase):
     preview_runner = preview.RunnerPreviewTest.preview_runner
     settle = preview.RunnerPreviewTest.settle
     state = preview.RunnerPreviewTest.state
+    assert_hearts = preview.RunnerPreviewTest.assert_hearts
+    advance_to_collision = preview.RunnerPreviewTest.advance_to_collision
     select_stage = preview.RunnerPreviewTest.select_stage
     snapshot = canvas.RunnerCanvasTest.snapshot
     toggle = canvas.RunnerCanvasTest.toggle
@@ -47,7 +49,7 @@ class RunnerCharacterUITest(unittest.TestCase):
         self.assertEqual((state['characterId'], state['stageId'], state['mode']),
                          (character_id, stage_id, 'ready'))
         self.assertEqual(state['lives'], CHARACTERS[character_id][4])
-        self.assertEqual(page.locator('#runner-lives').inner_text(), str(state['lives']))
+        self.assert_hearts(page, state['lives'], state['initialLives'])
         for field in ('distance', 'elapsed', 'animationTime', 'score', 'nextSpawn',
                       'landingUntil', 'velocityY', 'invincibleRemaining'):
             self.assertEqual(state[field], 0, field)
@@ -58,22 +60,21 @@ class RunnerCharacterUITest(unittest.TestCase):
         self.assertEqual(page.locator('#runner-score').inner_text(), '0')
         self.assertEqual(page.locator('#runner-progress').inner_text(), '0')
         self.assertTrue(page.locator('#runner-result').is_hidden())
-        self.assertTrue(page.locator('#runner-continue').is_hidden())
-        self.assertTrue(page.locator('#runner-protection').is_hidden())
         self.assertEqual(page.locator('#runner-toggle').inner_text(), 'ゲーム開始')
         self.assertEqual(self.snapshot(page)['pending'], 0)
 
-    def finish_without_jumps(self, page, lives):
+    def finish_without_jumps(self, page, lives, hz=120):
         self.toggle(page)
         page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
-        for remaining in range(lives - 1, -1, -1):
-            page.evaluate('runnerClock.advance(60000,120)')
-            current = self.state(page)
+        for remaining in range(lives-1,-1,-1):
+            current = self.advance_to_collision(page, hz)
             self.assertEqual(current['lives'], remaining)
-            self.assertEqual(current['mode'], 'hurt' if remaining else 'finished')
+            self.assertEqual(current['mode'], 'running' if remaining else 'finished')
+            self.assert_hearts(page, remaining, lives)
             if remaining:
-                self.toggle(page)
-                page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
+                self.assertTrue(page.locator('#runner-result').is_hidden())
+                self.assertEqual(page.locator('#runner-toggle').inner_text(), '一時停止')
+                self.assertGreater(current['invincibleRemaining'], 1-1/hz-1e-6)
 
     def test_four_options_image_abilities_and_default_are_preview_only(self):
         for suffix, disabled in (('', False), ('?stagePreview=0', False),
@@ -133,11 +134,7 @@ class RunnerCharacterUITest(unittest.TestCase):
                                  (key, 'S06', lives, 'running'))
                 self.assertEqual((retry['distance'], retry['score'], retry['objects']), (0, 0, []))
                 # 最終終了後のキャラ切替は同じステージを保持して完全初期化。
-                for _ in range(lives):
-                    page.evaluate('runnerClock.advance(60000,120)')
-                    if self.state(page)['mode'] == 'hurt':
-                        self.toggle(page)
-                        page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
+                page.evaluate('runnerClock.advance(60000,120)')
                 next_key = 'sloth' if key != 'sloth' else 'goldfish'
                 self.select_character(page, next_key)
                 self.assert_fresh(page, next_key)
@@ -145,10 +142,10 @@ class RunnerCharacterUITest(unittest.TestCase):
                 self.assertEqual(page.locator('#runner-result-score').inner_text(), '0')
         self.assert_isolated(page, errors, requests)
 
-    def test_running_paused_hurt_and_hidden_reject_synthetic_changes(self):
+    def test_running_paused_shield_and_hidden_reject_synthetic_changes(self):
         page, errors, requests = self.preview_runner()
         self.select_stage(page, 'S06')
-        self.select_character(page, 'sloth')
+        self.select_character(page, 'salamander')
         select = page.locator('#runner-character-select')
 
         def reject_change(mode):
@@ -156,7 +153,7 @@ class RunnerCharacterUITest(unittest.TestCase):
             self.assertEqual(before['mode'], mode)
             self.assertTrue(select.is_disabled())
             select.evaluate("s=>{s.value='goldfish';s.dispatchEvent(new Event('change',{bubbles:true}));}")
-            self.assertEqual(select.input_value(), 'sloth')
+            self.assertEqual(select.input_value(), 'salamander')
             self.assertEqual(self.state(page), before)
 
         self.toggle(page)
@@ -167,42 +164,20 @@ class RunnerCharacterUITest(unittest.TestCase):
         reject_change('paused')
         self.toggle(page)
         page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
-        page.evaluate('runnerClock.advance(10000,120)')
-        reject_change('hurt')
-        self.assertEqual(page.locator('#runner-continue-title').inner_text(), '残り2機')
-        page.evaluate("""() => {
-          Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});
-          document.dispatchEvent(new Event('visibilitychange'));
-          window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));
-        }""")
-        reject_change('hurt')
-        before = self.state(page)
-        page.evaluate('runnerClock.advance(300000,120)')
-        self.assertEqual(self.state(page), before)
-        page.evaluate("""() => {
-          delete document.hidden;
-          document.dispatchEvent(new Event('visibilitychange'));
-          window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));
-        }""")
-        self.settle(page)
-        reject_change('hurt')
-        self.toggle(page)
-        resumed = self.state(page)
-        self.assertEqual((resumed['characterId'], resumed['stageId'], resumed['lives'],
-                          resumed['invincibleRemaining']), ('sloth', 'S06', 2, 1))
-        for field in ('distance', 'elapsed', 'animationTime', 'score', 'objects', 'feetY',
-                      'velocityY', 'supportId', 'jumpOriginY', 'airAction', 'landingUntil'):
-            self.assertEqual(resumed[field], before[field], field)
-        page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
+        hit = self.advance_to_collision(page)
+        reject_change('running')
+        self.assertEqual((hit['lives'], hit['reason']), (2,None))
+        self.assert_hearts(page, 2,3)
+        self.assertTrue(page.locator('#runner-result').is_hidden())
         page.evaluate('runnerClock.advance(250,120)')
         shield = self.state(page)
-        self.assertAlmostEqual(shield['invincibleRemaining'], .75, delta=1e-6)
-        self.assertTrue(page.locator('#runner-protection').is_visible())
-        page.set_viewport_size({'width': 844, 'height': 390})
+        self.assertAlmostEqual(shield['invincibleRemaining'], hit['invincibleRemaining']-.25, delta=1e-6)
+        page.set_viewport_size({'width':844,'height':390})
         page.evaluate("window.dispatchEvent(new Event('orientationchange'))")
         self.settle(page)
         shield['mode'] = 'paused'
         self.assertEqual(self.state(page), shield)
+        reject_change('paused')
         page.evaluate("""() => {
           Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});
           document.dispatchEvent(new Event('visibilitychange'));
@@ -210,6 +185,7 @@ class RunnerCharacterUITest(unittest.TestCase):
         }""")
         page.evaluate('runnerClock.advance(300000,120)')
         self.assertEqual(self.state(page), shield)
+        reject_change('paused')
         page.evaluate("""() => {
           delete document.hidden;
           document.dispatchEvent(new Event('visibilitychange'));
@@ -221,16 +197,34 @@ class RunnerCharacterUITest(unittest.TestCase):
         reject_change('paused')
         self.toggle(page)
         page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
-        self.assertAlmostEqual(self.state(page)['invincibleRemaining'], .75, delta=1e-6)
-        page.evaluate('runnerClock.advance(10000,120)')
-        self.assertEqual((self.state(page)['mode'], self.state(page)['lives']), ('hurt', 1))
-        self.assertEqual(page.locator('#runner-continue-title').inner_text(), '残り1機')
-        self.toggle(page)
-        page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
-        page.evaluate('runnerClock.advance(10000,120)')
-        self.assertEqual((self.state(page)['mode'], self.state(page)['lives']), ('finished', 0))
+        resumed = self.state(page)
+        expected = dict(shield,mode='running')
+        self.assertEqual(resumed, expected)
+        second = self.advance_to_collision(page)
+        self.assertEqual((second['mode'], second['lives']), ('running',1))
+        self.assert_hearts(page, 1,3)
+        reject_change('running')
+        final = self.advance_to_collision(page)
+        self.assertEqual((final['mode'], final['lives']), ('finished',0))
+        self.assert_hearts(page, 0,3)
         self.assertEqual(page.locator('#runner-result-title').inner_text(), 'ゲームオーバー')
         self.assert_isolated(page, errors, requests)
+
+    def test_two_and_three_life_cycles_at_60_and_120_hz(self):
+        for character, (_,_,_,_,lives) in CHARACTERS.items():
+            for hz in (60,120):
+                with self.subTest(character=character,hz=hz):
+                    page, errors, requests = self.preview_runner()
+                    self.select_stage(page,'S06')
+                    self.select_character(page,character)
+                    self.assert_hearts(page,lives,lives)
+                    self.finish_without_jumps(page,lives,hz)
+                    self.assertEqual(page.locator('#runner-result-title').inner_text(),'ゲームオーバー')
+                    self.toggle(page)
+                    page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
+                    self.assert_hearts(page,lives,lives)
+                    self.assert_isolated(page,errors,requests)
+                    page.context.close()
 
     def test_portrait_landscape_four_characters_and_real_touch(self):
         for width, height in ((375, 667), (390, 844), (667, 375), (844, 390),
@@ -240,6 +234,18 @@ class RunnerCharacterUITest(unittest.TestCase):
                 for key in CHARACTERS:
                     self.select_character(page, key)
                     self.assertEqual(self.state(page)['characterId'], key)
+                    self.assert_hearts(page, CHARACTERS[key][4], CHARACTERS[key][4])
+                    hud = page.locator('#runner-lives').bounding_box()
+                    stage = page.locator('#runner-stage').bounding_box()
+                    self.assertGreaterEqual(hud['x'], stage['x'])
+                    self.assertGreaterEqual(hud['y'], stage['y'])
+                    self.assertLess(hud['x']-stage['x'], 20)
+                    self.assertLess(hud['y']-stage['y'], 20)
+                    self.assertLess(hud['x']+hud['width'],stage['x']+stage['width'])
+                    self.assertLess(hud['y']+hud['height'],stage['y']+stage['height'])
+                    self.assertEqual(page.locator('#runner-lives').evaluate('e=>getComputedStyle(e).pointerEvents'),'none')
+                    self.assertEqual(page.evaluate('p=>document.elementFromPoint(p.x,p.y)?.id',
+                        dict(x=hud['x']+hud['width']/2,y=hud['y']+hud['height']/2)), 'runner-canvas')
                     self.assertLessEqual(page.evaluate('document.documentElement.scrollWidth'), width)
                     self.assertLessEqual(page.evaluate('document.documentElement.scrollHeight'), height + 1)
                     for selector in ('#runner-stage-select', '#runner-character-select',
@@ -258,7 +264,12 @@ class RunnerCharacterUITest(unittest.TestCase):
                         overlap_y = min(box['y'] + box['height'], other['y'] + other['height']) - max(box['y'], other['y'])
                         self.assertTrue(overlap_x <= 0 or overlap_y <= 0, (box, other))
                 for selector in ('#runner-toggle', '#runner-jump'):
-                    page.locator(selector).tap()
+                    if selector == '#runner-jump':
+                        # ハート上の実タップがCanvasへ届き、ジャンプできる。
+                        hud = page.locator('#runner-lives').bounding_box()
+                        page.touchscreen.tap(hud['x']+hud['width']/2,hud['y']+hud['height']/2)
+                    else:
+                        page.locator(selector).tap()
                     if selector == '#runner-toggle':
                         page.evaluate('runnerClock.step(0)')
                 page.evaluate('runnerClock.advance(200,120)')

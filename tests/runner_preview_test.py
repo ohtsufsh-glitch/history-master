@@ -68,10 +68,7 @@ class RunnerPreviewTest(unittest.TestCase):
         self.assertEqual(state['goalDistance'], EXPECTED[stage_id]['length'])
         self.assertEqual(state['mode'], 'ready')
         self.assertEqual((state['lives'], state['invincibleRemaining']), (2, 0))
-        self.assertEqual(page.locator('#runner-lives').inner_text(), '2')
-        self.assertIn('残り2機', page.locator('#runner-lives').locator('..').inner_text())
-        self.assertTrue(page.locator('#runner-protection').is_hidden())
-        self.assertTrue(page.locator('#runner-continue').is_hidden())
+        self.assert_hearts(page, 2)
         for field in ('distance', 'elapsed', 'animationTime', 'score', 'nextSpawn',
                       'landingUntil', 'velocityY'):
             self.assertEqual(state[field], 0, field)
@@ -90,13 +87,40 @@ class RunnerPreviewTest(unittest.TestCase):
         self.assertEqual(self.snapshot(page)['sprite']['pose'], 'idle')
         self.assertEqual(self.snapshot(page)['pending'], 0)
 
+    def assert_hearts(self, page, lives, initial=2):
+        hud = page.locator('#runner-lives')
+        self.assertEqual(hud.get_attribute('role'), 'status')
+        self.assertEqual(hud.get_attribute('aria-live'), 'polite')
+        self.assertEqual(hud.get_attribute('aria-label'), f'残機{initial}機中あと{lives}機')
+        self.assertEqual(page.locator('#runner-hearts').get_attribute('aria-hidden'), 'true')
+        hearts = ''.join(page.locator('#runner-hearts').inner_text().split())
+        self.assertEqual(hearts, '♥' * lives + '♡' * (initial - lives))
+        self.assertEqual(page.locator('#runner-continue, #runner-protection').count(), 0)
+        self.assertNotIn('つづける', page.locator('body').inner_text())
+        self.assertNotIn('シールド・無敵中', page.locator('body').inner_text())
+        self.assertNotRegex(page.locator('#runner-viewport').inner_text(), r'残り\s*\d+\s*機')
+        if lives:
+            self.assertNotIn('ぶつかった', page.locator('#runner-viewport').inner_text())
+        self.assertEqual(page.locator('.runner-hud #runner-lives').count(), 0)
+
+    def advance_to_collision(self, page, hz=60):
+        before = self.state(page)
+        self.assertEqual(before['mode'], 'running')
+        page.evaluate("""hz => {
+          const lives=runnerPreviewState.lives;
+          for(let i=0;i<60*hz && runnerPreviewState.mode==='running' &&
+              runnerPreviewState.lives===lives;i++) runnerClock.advance(1000/hz,hz);
+        }""", hz)
+        after = self.state(page)
+        self.assertEqual(after['lives'], before['lives'] - 1)
+        return after
+
     def continue_to_gameover(self, page, hz=60):
-        self.assertEqual(self.state(page)['mode'], 'hurt')
-        self.assertEqual(page.locator('#runner-toggle').inner_text(), 'つづける')
-        self.toggle(page)
-        page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
-        page.evaluate('hz=>runnerClock.advance(10000,hz)', hz)
+        # 自動継続中ならボタン操作なしで次の衝突を待つ。終了済みでも使える。
+        while self.state(page)['mode'] == 'running':
+            self.advance_to_collision(page, hz)
         self.assertEqual((self.state(page)['mode'], self.state(page)['lives']), ('finished', 0))
+        self.assert_hearts(page, 0)
 
     def test_normal_and_non_preview_queries_keep_legacy_course(self):
         for suffix in ('', '?stagePreview=0', '?stagePreview=true', '?other=1'):
@@ -112,7 +136,7 @@ class RunnerPreviewTest(unittest.TestCase):
                 self.toggle(page)
                 page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
                 page.evaluate('runnerClock.advance(6000,60)')
-                self.assertEqual((self.state(page)['mode'], self.state(page)['lives']), ('hurt', 1))
+                self.assertEqual((self.state(page)['mode'], self.state(page)['lives']), ('running', 1))
                 self.continue_to_gameover(page)
                 self.assertEqual(page.locator('#runner-result-title').inner_text(), 'ゲームオーバー')
                 self.assert_isolated(page, errors, requests)
@@ -208,8 +232,6 @@ class RunnerPreviewTest(unittest.TestCase):
         self.assertEqual(self.state(page), paused)
         self.toggle(page)
         page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
-        page.evaluate('runnerClock.advance(3000,120)')
-        self.assertEqual((self.state(page)['mode'], self.state(page)['lives']), ('hurt', 1))
         self.continue_to_gameover(page, 120)
         self.assertFalse(select.is_disabled())
         self.toggle(page)
@@ -224,118 +246,109 @@ class RunnerPreviewTest(unittest.TestCase):
         self.assertTrue(select.is_disabled())
         self.assert_isolated(page, errors, requests)
 
-    def test_two_lives_continue_and_immunity_freeze_at_60_and_120_hz(self):
+    def test_two_lives_auto_continue_and_immunity_freeze_at_60_and_120_hz(self):
         for suffix in ('', '?stagePreview=1'):
             for hz in (60, 120):
                 with self.subTest(suffix=suffix, hz=hz):
                     page, errors, requests = self.preview_runner(suffix)
-                    self.assertEqual(self.state(page)['lives'], 2)
+                    self.assert_hearts(page, 2)
                     self.toggle(page)
                     page.evaluate('runnerClock.step(0)')
-                    page.evaluate('hz=>runnerClock.advance(10000,hz)', hz)
-                    hurt = self.state(page)
-                    self.assertEqual((hurt['mode'], hurt['reason'], hurt['lives']),
-                                     ('hurt', 'collision', 1))
-                    self.assertGreater(hurt['score'], 0)
-                    self.assertEqual(hurt['invincibleRemaining'], 0)
-                    self.assertEqual(page.locator('#runner-lives').inner_text(), '1')
-                    self.assertTrue(page.locator('#runner-continue').is_visible())
-                    self.assertEqual(page.locator('#runner-toggle').inner_text(), 'つづける')
-                    self.assertTrue(page.locator('#runner-jump').is_disabled())
-                    self.assertNotIn('ゲームオーバー', page.locator('body').inner_text())
+                    hit = self.advance_to_collision(page, hz)
+                    self.assertEqual((hit['mode'], hit['reason'], hit['lives']), ('running', None, 1))
+                    self.assertGreater(hit['score'], 0)
+                    self.assertAlmostEqual(hit['invincibleRemaining'], 1, delta=1/hz + 1e-6)
+                    self.assert_hearts(page, 1)
+                    self.assertTrue(page.locator('#runner-result').is_hidden())
+                    self.assertEqual(page.locator('#runner-toggle').inner_text(), '一時停止')
+                    self.assertFalse(page.locator('#runner-jump').is_disabled())
+                    self.assertGreater(self.snapshot(page)['pending'], 0)
+                    self.assertIsNotNone(self.snapshot(page)['shield'])
                     if suffix:
                         select = page.locator('#runner-stage-select')
                         self.assertTrue(select.is_disabled())
                         select.evaluate("s=>{s.value='S06';s.dispatchEvent(new Event('change',{bubbles:true}));}")
                         self.assertEqual(select.input_value(), 'S01')
+                    # 無敵中も実タッチでジャンプでき、距離・得点・スターを保持する。
                     self.tap(page)
-                    self.assertEqual(page.evaluate('runnerClock.advance(300000)'), 0)
-                    self.assertEqual(self.state(page), hurt)
-                    # 実タップで復帰。入力時点と最初のRAFでは距離・物理・得点を進めない。
-                    page.locator('#runner-toggle').tap()
-                    resumed = self.state(page)
-                    self.assertEqual((resumed['mode'], resumed['lives']), ('running', 1))
-                    self.assertAlmostEqual(resumed['invincibleRemaining'], 1, delta=1e-9)
-                    self.assertIsNone(resumed['reason'])
-                    self.toggle(page)
-                    self.toggle(page)
-                    self.assertEqual(self.state(page), resumed)
-                    for field in ('distance', 'elapsed', 'animationTime', 'score', 'objects',
-                                  'nextSpawn', 'stageId', 'feetY', 'velocityY', 'supportId',
-                                  'jumpOriginY', 'airAction', 'landingUntil'):
-                        self.assertEqual(resumed[field], hurt[field], field)
-                    page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
-                    self.assertEqual(self.state(page), resumed)
+                    jumped = self.state(page)
+                    self.assertEqual((jumped['distance'], jumped['score'], jumped['objects']),
+                                     (hit['distance'], hit['score'], hit['objects']))
                     page.evaluate('hz=>runnerClock.advance(250,hz)', hz)
                     protected = self.state(page)
                     self.assertEqual((protected['mode'], protected['lives']), ('running', 1))
-                    self.assertAlmostEqual(protected['invincibleRemaining'], .75, delta=1e-6)
-                    self.assertTrue(page.locator('#runner-protection').is_visible())
-                    self.assertIn('無敵中', page.locator('#runner-protection').inner_text())
-                    self.assertAlmostEqual(protected['distance'], hurt['distance'] + 50, delta=1e-6)
+                    self.assertLess(protected['feetY'], 470)
+                    self.assertAlmostEqual(protected['invincibleRemaining'], hit['invincibleRemaining']-.25, delta=1e-6)
+                    self.assertAlmostEqual(protected['distance'], hit['distance']+50, delta=1e-6)
+                    self.assertGreaterEqual(protected['score'], hit['score'])
+                    self.assert_hearts(page, 1)
+                    # ユーザーによる一時停止は手動再開を維持し、無敵時間も止める。
                     self.toggle(page)
                     paused = self.state(page)
                     self.assertEqual(paused['mode'], 'paused')
                     self.assertEqual(page.evaluate('runnerClock.advance(300000)'), 0)
                     self.assertEqual(self.state(page), paused)
-                    # 走行中に回転しても距離と無敵時間を進めず手動再開を待つ。
-                    self.toggle(page)
-                    page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
-                    page.set_viewport_size({'width': 844, 'height': 390})
-                    page.evaluate("window.dispatchEvent(new Event('orientationchange'))")
-                    self.settle(page)
-                    self.assertEqual(self.state(page), paused)
-                    self.toggle(page)
-                    page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
-                    page.evaluate("""() => {
-                      Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});
-                      document.dispatchEvent(new Event('visibilitychange'));
-                      window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));
-                    }""")
-                    page.evaluate('runnerClock.advance(300000)')
-                    self.assertEqual(self.state(page), paused)
-                    page.evaluate("""() => {
-                      delete document.hidden;
-                      document.dispatchEvent(new Event('visibilitychange'));
-                      window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));
-                    }""")
-                    self.settle(page)
-                    self.assertEqual(self.state(page), paused)
+                    self.assertEqual(page.locator('#runner-toggle').inner_text(), '再開')
+                    # 回転、非表示、BFCacheのそれぞれで時間・足場・ジャンプを凍結。
+                    for interruption in ('rotation', 'visibility', 'pagehide'):
+                        self.toggle(page)
+                        page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
+                        if interruption == 'rotation':
+                            page.set_viewport_size({'width':844,'height':390})
+                            page.evaluate("window.dispatchEvent(new Event('orientationchange'))")
+                        elif interruption == 'visibility':
+                            page.evaluate("""() => {
+                              Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});
+                              document.dispatchEvent(new Event('visibilitychange'));
+                            }""")
+                        else:
+                            page.evaluate("window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}))")
+                        self.settle(page)
+                        self.assertEqual(self.state(page), paused, interruption)
+                        page.evaluate('runnerClock.advance(300000)')
+                        self.assertEqual(self.state(page), paused, interruption)
+                        if interruption == 'visibility':
+                            page.evaluate("""() => {
+                              delete document.hidden;
+                              document.dispatchEvent(new Event('visibilitychange'));
+                            }""")
+                        elif interruption == 'pagehide':
+                            page.evaluate("window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}))")
+                        self.settle(page)
+                        self.assertEqual(self.state(page), paused, interruption)
+                        self.assertEqual(page.locator('#runner-toggle').inner_text(), '再開')
                     self.toggle(page)
                     page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
                     self.assertEqual(self.state(page)['distance'], paused['distance'])
-                    self.assertAlmostEqual(self.state(page)['invincibleRemaining'], .75, delta=1e-6)
+                    self.assertEqual(self.state(page)['invincibleRemaining'], paused['invincibleRemaining'])
                     page.evaluate('hz=>runnerClock.advance(600,hz)', hz)
-                    self.assertAlmostEqual(self.state(page)['invincibleRemaining'], .15, delta=1e-6)
+                    self.assertAlmostEqual(self.state(page)['invincibleRemaining'], protected['invincibleRemaining']-.6, delta=1e-6)
                     self.assertEqual(self.state(page)['lives'], 1)
                     page.evaluate('hz=>runnerClock.advance(200,hz)', hz)
                     self.assertEqual(self.state(page)['invincibleRemaining'], 0)
-                    self.assertTrue(page.locator('#runner-protection').is_hidden())
+                    self.assertIsNone(self.snapshot(page)['shield'])
                     self.assertEqual(self.state(page)['lives'], 1)
-                    # 二重タップで停止してもライフ・座標・得点・無敵時間を壊さない。
+                    # 二重の一時停止/再開入力もプレイ状態を壊さない。
                     before = self.state(page)
-                    page.locator('#runner-toggle').dispatch_event('click')
-                    page.locator('#runner-toggle').dispatch_event('click')
+                    self.toggle(page)
+                    self.toggle(page)
                     self.assertEqual(self.state(page), before)
                     page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
-                    page.evaluate('hz=>runnerClock.advance(10000,hz)', hz)
-                    ended = self.state(page)
-                    self.assertEqual((ended['mode'], ended['reason'], ended['lives']),
-                                     ('finished', 'collision', 0))
-                    self.assertGreater(ended['distance'], hurt['distance'] + 200)
-                    self.assertGreaterEqual(ended['score'], hurt['score'])
+                    ended = self.advance_to_collision(page, hz)
+                    self.assertEqual((ended['mode'], ended['reason'], ended['lives']), ('finished', 'collision', 0))
+                    self.assertGreater(ended['distance'], hit['distance']+200)
+                    self.assertGreaterEqual(ended['score'], hit['score'])
                     self.assertEqual(page.locator('#runner-result-title').inner_text(), 'ゲームオーバー')
-                    self.assertEqual(page.locator('#runner-lives').inner_text(), '0')
+                    self.assert_hearts(page, 0)
                     self.assertEqual(page.evaluate('runnerClock.advance(10000)'), 0)
                     self.assertEqual(self.state(page), ended)
                     self.toggle(page)
                     page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
                     retried = self.state(page)
-                    self.assertEqual((retried['mode'], retried['lives'], retried['invincibleRemaining']),
-                                     ('running', 2, 0))
-                    self.assertEqual((retried['distance'], retried['elapsed'], retried['score'],
-                                      retried['objects']), (0, 0, 0, []))
-                    self.assertEqual(retried['stageId'], hurt['stageId'])
+                    self.assertEqual((retried['mode'], retried['lives'], retried['invincibleRemaining']), ('running', 2, 0))
+                    self.assertEqual((retried['distance'], retried['elapsed'], retried['score'], retried['objects']), (0,0,0,[]))
+                    self.assertEqual(retried['stageId'], hit['stageId'])
+                    self.assert_hearts(page, 2)
                     self.assert_isolated(page, errors, requests)
                     page.context.close()
 
@@ -355,6 +368,7 @@ class RunnerPreviewTest(unittest.TestCase):
                 self.assertEqual((cleared['mode'], cleared['reason'], cleared['lives']),
                                  ('finished', 'clear', 1))
                 self.assertEqual(page.locator('#runner-result-title').inner_text(), 'クリア！')
+                self.assert_hearts(page, 1)
                 self.toggle(page)
                 page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
                 retried = self.state(page)
@@ -362,6 +376,7 @@ class RunnerPreviewTest(unittest.TestCase):
                                  ('running', 2, 0))
                 self.assertEqual((retried['distance'], retried['score'], retried['objects']), (0, 0, []))
                 self.assertEqual(retried['stageId'], cleared['stageId'])
+                self.assert_hearts(page, 2)
                 self.assert_isolated(page, errors, requests)
 
     def test_all_selected_stages_score_100_with_controls_at_60_and_120_hz(self):
@@ -388,6 +403,7 @@ class RunnerPreviewTest(unittest.TestCase):
                     self.assertEqual(page.locator('#runner-result-title').inner_text(), 'クリア！')
                     self.assertEqual(page.locator('#runner-result-score').inner_text(), '100')
                     self.assertEqual(page.locator('#runner-progress').inner_text(), '100')
+                    self.assert_hearts(page, 2)
                     self.assertFalse(page.locator('#runner-stage-select').is_disabled())
                     self.assertEqual(self.snapshot(page)['pending'], 0)
                     self.select_stage(page, 'S02' if stage_id == 'S01' else 'S01')

@@ -1,4 +1,4 @@
-"""Issue #79: 固定配置・4匹の物理・残機・変更前しば犬の互換性。
+"""Issue #79/#81: 固定配置・4匹の物理・自動継続・残機・しば犬の互換性。
 
 4匹×6ステージ×60/120Hz。攻略は開始とジャンプ入力だけで、位置・得点・
 無敵状態を書き換えない。Chromium/WebKit共通、Safari実機とは区別する。
@@ -12,44 +12,31 @@ from runner_stages_test import EXPECTED, SOLUTIONS
 
 
 # 変更前main 663585b8e881317f330bcd69f800be0edd43dc96 の全フレームの記録。
-# 各行は60Hz完全取得/衝突復帰、120Hz完全取得/衝突復帰のSHA256。
-# 新旧実装の位置・足場・ジャンプ・姿勢・衝突・得点を1e-6px/秒で比較する。
+# 各行は60Hz完全取得、120Hz完全取得のSHA256。
+# 衝突時の変更はIssue #81で意図したため旧衝突トレースは比較対象外。
+# しば犬の位置・足場・ジャンプ・姿勢・得点を1e-6px/秒で比較する。
 BASELINE_TRACES = {
     'legacy': (
         '99918fad5e7523d82be12cf367f9a609d4a8f9280fa22d1f8df7c8c96cb5c99d',
-        '398595ab65933dfbf3f886637526b25e4200612a0855869516b658b7aa58b517',
-        '9e29f2d904a84c0513ccdf098ce06e4286888488a2d1a18a965f34cfc5fbeb09',
-        '08a15be130524ed36d86d07952211803d5bdb6bb73353ff4836dbc5555054aa2'),
+        '9e29f2d904a84c0513ccdf098ce06e4286888488a2d1a18a965f34cfc5fbeb09'),
     'S01': (
         '14279221e53aae9167b5ffdc55de02a4542f248f7db3a9c277d077870f59a8ea',
-        '73a17f45d2ac3ba3f8b7c9315ede23a6d3e33bbd4b83fd1fb1bd17d56c4f9c34',
-        '15af906f435c141a3d4a6384202c29615af5bfb2eb6cb202cae6aee5af5aadcd',
-        'eeb3bc4045d2698c05be19b0b0aff1177f72caeb1a30614d237c6ad6e748a342'),
+        '15af906f435c141a3d4a6384202c29615af5bfb2eb6cb202cae6aee5af5aadcd'),
     'S02': (
         '5fbe5b25100d952273be91fa5c39bd7c4ecef12b499add6b6dcbc51836195312',
-        '7a42ba083bb914b536abf344720a78da448d9aff18124a90b936e45be6dcce21',
-        'c14440d0aab3bb940cf6d4f6e175a6988dbea8032107fe424e303269cf67494d',
-        '12554aeba37d0ad44f35722e12eeaa7c5752f414bb44e856fbb7be0c1a2dd4dc'),
+        'c14440d0aab3bb940cf6d4f6e175a6988dbea8032107fe424e303269cf67494d'),
     'S03': (
         '583a64d5c67ba154aec92f731349d1f588fb94934a1871db9096a6aff5844663',
-        'b71a406d4d9fcf540b9feeee88640f094d83a485261b60424165a9bc9dae51f9',
-        'f3c1727eb05c1e965f625ae5da67bbbc549060bdd5d477118b8e00b80af46e2f',
-        '81b4c5bd62079951254785f6f45787c4c7a1210aeffd11f95033fbfb8f86f666'),
+        'f3c1727eb05c1e965f625ae5da67bbbc549060bdd5d477118b8e00b80af46e2f'),
     'S04': (
         'a6157480579501225b971ec84f349b276df98943ba91af104658e573c426e096',
-        '51c3d27fb6d70f2c4a02e68b60bf3f2e32d767a4d71116aaa45ea3b82d4619e5',
-        '26b89723dee7cede565f3b9c5750779c7cd37d28e9d5489575a8dfe8884f9e4d',
-        '3d50b016cb3cbc477c31388ff758efdeb47af28c8eefac4f2ef621a67a782dc1'),
+        '26b89723dee7cede565f3b9c5750779c7cd37d28e9d5489575a8dfe8884f9e4d'),
     'S05': (
         'b061eff65f12fa5018f5ae1ee6eb6bceb384f1ee533210fe17c51920ec5f90a8',
-        '219508fe3dd4b5c7ca78889fca579ca310bd60d82e0d7e203f8f925183189117',
-        '48ba2617f7ee07a0d0cab63ed23dc442e43084938d4258e7c1e1e5948ed4b701',
-        'f064e8e533b19e3ccb0ecf46f8095d9e5bea7251331cf9a5776e8ae1355e3d8a'),
+        '48ba2617f7ee07a0d0cab63ed23dc442e43084938d4258e7c1e1e5948ed4b701'),
     'S06': (
         'bb08d808477ad93e2b634b380601bc288f37f7e9938ba0c9ac92747b0a256d0f',
-        '05475025db59aa64b3e22610960a187dd58990befd6124d5bbeff0584873e691',
-        'f3d3b5ec36537c97f0e87ac4eba6ef16f818543c0a6bd70c69a61235607b715b',
-        '89d38e35ec63f2d8c2f9f20b18421db7f4c8caa406fa3189b4ae1f5317d2429f'),
+        'f3d3b5ec36537c97f0e87ac4eba6ef16f818543c0a6bd70c69a61235607b715b'),
 }
 
 SHIBA_TRACE = """({stageId,hz,path,solutions})=>{
@@ -67,7 +54,6 @@ SHIBA_TRACE = """({stageId,hz,path,solutions})=>{
   }
   trace.push(sample());
   for(let f=0;f<hz*50&&s.mode!=='finished';f++){
-    if(s.mode==='hurt')m.resumeRunner(s);
     if(path==='perfect'&&next<inputs.length&&f/hz+1e-9>=inputs[next]){
       m.startJump(s);next++;
     }
@@ -126,8 +112,8 @@ class RunnerCharactersTest(unittest.TestCase):
             invalid:['secret_yuniko','unknown',''].map(id=>{try{m.createRunnerState([],id);return false;}
               catch(e){return e instanceof TypeError;}})};
         }""")
-        expected = {'shiba': (200, 120, .9, 2), 'sloth': (170, 125, 1.1, 3),
-                    'goldfish': (185, 160, 1.05, 2), 'salamander': (230, 105, .82, 2)}
+        expected = {'shiba': (200, 120, .9, 2), 'sloth': (170, 125, 1.1, 2),
+                    'goldfish': (185, 160, 1.05, 2), 'salamander': (230, 105, .82, 3)}
         self.assertEqual(actual['defaultId'], 'shiba')
         self.assertTrue(all(actual['invalid']))
         self.assertEqual(len(actual['results']), 8)
@@ -183,7 +169,7 @@ class RunnerCharactersTest(unittest.TestCase):
                 spec = EXPECTED[row['stage']]
                 self.assertEqual((row['mode'], row['reason'], row['progress'], row['score']),
                                  ('finished', 'clear', 100, 100), row)
-                self.assertEqual(row['lives'], 3 if row['character'] == 'sloth' else 2)
+                self.assertEqual(row['lives'], 3 if row['character'] == 'salamander' else 2)
                 self.assertTrue(all(row['accepted']), row)
                 self.assertEqual(row['next'], len(spec['rocks']) + len(spec['upper']))
                 self.assertGreaterEqual(row['landings'], len(spec['upper']))
@@ -197,38 +183,27 @@ class RunnerCharactersTest(unittest.TestCase):
                 self.assertFalse(row['endJump'])
         self.assert_isolated(page, errors, requests)
 
-    def test_every_stage_collisions_resume_shield_and_initial_lives_at_both_rates(self):
+    def test_every_stage_collisions_auto_continue_and_initial_lives_at_both_rates(self):
         page, errors, requests = self.character_runner()
         outcomes = page.evaluate("""()=>{
           const m=runnerModel,results=[];
-          const checkpoint=s=>JSON.stringify({...s,mode:null,reason:null,invincibleRemaining:null});
           for(const c of m.CHARACTERS)for(const stage of runnerStages)for(const hz of [60,120]){
             const s=m.createRunnerState(stage,c.characterId),checks=[];s.mode='running';
-            let hits=0;
-            while(s.mode!=='finished'){
-              const beforeLives=s.lives;
-              while(s.mode==='running')m.updateRunner(s,1/hz);
-              hits++;
-              if(s.mode==='finished'&&s.reason==='clear'){hits--;break;}
-              const hit={lives:s.lives,oneLife:beforeLives-s.lives===1,distance:s.distance};
-              if(s.mode==='hurt'){
-                const stopped=JSON.stringify(s),saved=checkpoint(s);
-                m.updateRunner(s,100);hit.jump=m.startJump(s);hit.hurtFrozen=stopped===JSON.stringify(s);
-                hit.resume=m.resumeRunner(s);hit.preserved=saved===checkpoint(s);
-                hit.shield=s.invincibleRemaining;const resumed=JSON.stringify(s);
-                hit.doubleResume=m.resumeRunner(s);hit.doubleStable=resumed===JSON.stringify(s);
-                for(let f=0;f<hz/2;f++)m.updateRunner(s,1/hz);
-                hit.shieldHalf=s.invincibleRemaining;
-                s.mode='paused';const pause=JSON.stringify(s);m.updateRunner(s,100);m.startJump(s);
-                hit.pauseFrozen=pause===JSON.stringify(s);m.resumeRunner(s);
-                for(let f=0;f<hz*.4;f++)m.updateRunner(s,1/hz);
-                hit.protected=s.mode==='running'&&s.lives===hit.lives;
+            let stopped=false,lastHit=-Infinity;
+            for(let f=0;f<hz*60&&s.mode!=='finished';f++){
+              const beforeLives=s.lives,beforeDistance=s.distance,beforeElapsed=s.elapsed;
+              m.updateRunner(s,1/hz);
+              if(s.mode!=='running'&&s.mode!=='finished')stopped=true;
+              if(s.lives<beforeLives){
+                checks.push({lives:s.lives,mode:s.mode,oneLife:beforeLives-s.lives===1,
+                  moving:s.distance>beforeDistance&&s.elapsed>beforeElapsed,
+                  shield:s.invincibleRemaining,spacing:s.elapsed-lastHit});
+                lastHit=s.elapsed;
               }
-              checks.push(hit);
             }
             const end=JSON.stringify(s);m.updateRunner(s,100);m.startJump(s);
             const retry=m.createRunnerState(s);
-            results.push({character:c.characterId,stage:stage.stageId,hz,hits,checks,
+            results.push({character:c.characterId,stage:stage.stageId,hz,checks,stopped,
               reason:s.reason,lives:s.lives,score:s.score,frozen:end===JSON.stringify(s),
               retry:{id:retry.characterId,stage:retry.stageId,lives:retry.lives,score:retry.score,
                 distance:retry.distance,elapsed:retry.elapsed,shield:retry.invincibleRemaining}});
@@ -238,31 +213,89 @@ class RunnerCharactersTest(unittest.TestCase):
         self.assertEqual(len(outcomes), 48)
         for row in outcomes:
             with self.subTest(character=row['character'], stage=row['stage'], hz=row['hz']):
-                lives = 3 if row['character'] == 'sloth' else 2
+                lives = 3 if row['character'] == 'salamander' else 2
                 collisions = min(lives, len(EXPECTED[row['stage']]['rocks']))
-                self.assertEqual(row['hits'], collisions)
+                self.assertEqual(len(row['checks']), collisions)
+                self.assertFalse(row['stopped'])
                 self.assertEqual(row['lives'], lives-collisions)
                 self.assertEqual(row['reason'], 'clear' if collisions < lives else 'collision')
                 for i, hit in enumerate(row['checks']):
                     self.assertEqual(hit['lives'], lives-i-1)
-                    self.assertTrue(hit['oneLife'])
+                    self.assertTrue(hit['oneLife'] and hit['moving'])
+                    self.assertGreater(hit['spacing'], 1)
+                    self.assertEqual(hit['mode'], 'running' if hit['lives'] else 'finished')
                     if hit['lives']:
-                        for key in ('hurtFrozen', 'resume', 'preserved', 'doubleStable', 'pauseFrozen', 'protected'):
-                            self.assertTrue(hit[key], (key, hit))
-                        self.assertFalse(hit['jump'])
-                        self.assertFalse(hit['doubleResume'])
-                        self.assertAlmostEqual(hit['shield'], 1, delta=1e-9)
-                        self.assertAlmostEqual(hit['shieldHalf'], .5, delta=1e-6)
+                        self.assertGreaterEqual(hit['shield'], 1-1/row['hz']-1e-9)
+                        self.assertLessEqual(hit['shield'], 1)
                 self.assertLessEqual(row['score'], 100)
                 self.assertTrue(row['frozen'])
                 self.assertEqual(row['retry'], {'id': row['character'], 'stage': row['stage'],
                     'lives': lives, 'score': 0, 'distance': 0, 'elapsed': 0, 'shield': 0})
         self.assert_isolated(page, errors, requests)
 
+    def test_shield_boundary_pause_jump_stars_and_repeated_contacts_at_both_rates(self):
+        page, errors, requests = self.character_runner()
+        outcomes = page.evaluate("""()=>{
+          const m=runnerModel,results=[];
+          for(const c of m.CHARACTERS)for(const hz of [60,120]){
+            const s=m.createRunnerState([],c.characterId);s.mode='running';
+            s.objects=[{id:'rock-a',type:'obstacle',x:186},{id:'rock-b',type:'obstacle',x:186}];
+            m.updateRunner(s,0);
+            const first={lives:s.lives,mode:s.mode,shield:s.invincibleRemaining};
+            s.mode='paused';const paused=JSON.stringify(s);
+            m.updateRunner(s,100);const pausedJump=m.startJump(s);
+            const pauseStable=paused===JSON.stringify(s),resumed=m.resumeRunner(s);
+            const resumedShield=s.invincibleRemaining,resumedState=JSON.stringify(s);
+            const doubleResume=m.resumeRunner(s),doubleStable=resumedState===JSON.stringify(s);
+            const jump=m.startJump(s);
+            m.updateRunner(s,c.jump.duration/2);
+            const apex=m.GROUND_Y-s.feetY;
+            s.objects.push({id:'protected-star',type:'star',x:186,height:apex});
+            m.updateRunner(s,0);const score=s.score;
+            m.updateRunner(s,0);const noDuplicate=s.score===score;
+            // 新規の近接岩を毎フレーム配置。ちょうど1秒までは再減算しない。
+            let sameLives=true,remaining=1-c.jump.duration/2;
+            while(remaining>1e-9){
+              for(const o of s.objects)if(o.type==='obstacle')o.x=186;
+              const step=Math.min(1/hz,remaining);m.updateRunner(s,step);remaining-=step;
+              sameLives&&=s.lives===first.lives&&s.mode==='running';
+            }
+            const expired=s.invincibleRemaining;
+            // 着地を待つ必要のない地上の対照stateで解除直後の接触を確認。
+            const ground=m.createRunnerState([],c.characterId);ground.mode='running';
+            ground.objects=[{id:'boundary-rock',type:'obstacle',x:186}];m.updateRunner(ground,0);
+            for(let f=0;f<hz;f++){
+              ground.objects[0].x=186;m.updateRunner(ground,1/hz);
+            }
+            const boundary={lives:ground.lives,mode:ground.mode,shield:ground.invincibleRemaining};
+            ground.objects[0].x=186;m.updateRunner(ground,1/hz);
+            const after={lives:ground.lives,mode:ground.mode,shield:ground.invincibleRemaining};
+            results.push({id:c.characterId,hz,first,pausedJump,pauseStable,resumed,resumedShield,
+              doubleResume,doubleStable,jump,apex,score,noDuplicate,sameLives,expired,boundary,after});
+          }
+          return results;
+        }""")
+        for row in outcomes:
+            with self.subTest(character=row['id'], hz=row['hz']):
+                lives = 3 if row['id'] == 'salamander' else 2
+                self.assertEqual(row['first'], {'lives': lives-1, 'mode': 'running', 'shield': 1})
+                self.assertFalse(row['pausedJump'] or row['doubleResume'])
+                for key in ('pauseStable','resumed','doubleStable','jump','noDuplicate','sameLives'):
+                    self.assertTrue(row[key], (key,row))
+                self.assertEqual(row['resumedShield'], 1)
+                self.assertGreater(row['apex'], 100)
+                self.assertEqual(row['score'], 10)
+                self.assertAlmostEqual(row['expired'], 0, delta=1e-9)
+                self.assertEqual((row['boundary']['lives'],row['boundary']['mode']), (lives-1,'running'))
+                self.assertAlmostEqual(row['boundary']['shield'], 0, delta=1e-9)
+                self.assertEqual((row['after']['lives'],row['after']['mode']),
+                                 (lives-2,'running' if lives>2 else 'finished'))
+        self.assert_isolated(page, errors, requests)
+
     def test_preview_controls_clear_all_48_character_stage_frame_rate_combinations(self):
         page, errors, requests = self.preview_runner()
-        characters = {'shiba': (200, .90, 2), 'sloth': (170, 1.10, 3),
-                      'goldfish': (185, 1.05, 2), 'salamander': (230, .82, 2)}
+        characters = {'shiba': (200, .90, 2), 'sloth': (170, 1.10, 2),
+                      'goldfish': (185, 1.05, 2), 'salamander': (230, .82, 3)}
         for character_id, (speed, duration, lives) in characters.items():
             page.locator('#runner-character-select').select_option(character_id)
             page.wait_for_function('runnerImages.every(image=>image.complete)', polling=50)
@@ -291,7 +324,8 @@ class RunnerCharactersTest(unittest.TestCase):
                             score:s.score,lives:s.lives,distance:s.distance,accepted,next,
                             result:document.querySelector('#runner-result-title').textContent,
                             resultScore:document.querySelector('#runner-result-score').textContent,
-                            hud:document.querySelector('#runner-lives').textContent,
+                            hud:document.querySelector('#runner-hearts').textContent,
+                            livesLabel:document.querySelector('#runner-lives').getAttribute('aria-label'),
                             progress:document.querySelector('#runner-progress').textContent};
                         }""", dict(stageId=stage_id, hz=hz, inputs=inputs))
                         self.assertEqual((outcome['character'], outcome['stage']), (character_id, stage_id))
@@ -302,14 +336,15 @@ class RunnerCharactersTest(unittest.TestCase):
                         self.assertTrue(all(outcome['accepted']), outcome)
                         self.assertEqual(outcome['next'], len(inputs))
                         self.assertEqual((outcome['result'], outcome['resultScore'], outcome['progress'],
-                                          outcome['hud']), ('クリア！', '100', '100', str(lives)))
+                                          outcome['hud']), ('クリア！', '100', '100', '♥'*lives))
+                        self.assertEqual(outcome['livesLabel'], f'残機{lives}機中あと{lives}機')
         self.assert_isolated(page, errors, requests)
 
     def test_shiba_full_frame_traces_match_unchanged_main_course_and_all_stages(self):
         page, errors, requests = self.character_runner()
         for stage_id, digests in BASELINE_TRACES.items():
-            for i, (hz, path) in enumerate(((60, 'perfect'), (60, 'collision'),
-                                          (120, 'perfect'), (120, 'collision'))):
+            for i, hz in enumerate((60, 120)):
+                path = 'perfect'
                 with self.subTest(stage=stage_id, hz=hz, path=path):
                     script = 'async args=>{const trace=(' + SHIBA_TRACE + """)(args);
                       const bytes=new TextEncoder().encode(JSON.stringify(trace));

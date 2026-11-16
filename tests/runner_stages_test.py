@@ -187,9 +187,15 @@ class RunnerStagesTest(unittest.TestCase):
           const collision=m.createRunnerState({...stage,course:[]}); collision.mode='running';
           collision.distance=stage.goalDistance-1;
           collision.objects=[{id:'final-rock',type:'obstacle',x:186}];m.updateRunner(collision,.005);
+          const fatal=m.createRunnerState({...stage,course:[]});fatal.mode='running';fatal.lives=1;
+          fatal.distance=stage.goalDistance-1;
+          fatal.objects=[{id:'final-rock',type:'obstacle',x:186},
+            {id:'final-star',type:'star',x:186}];m.updateRunner(fatal,.005);
           return {id:stage.stageId,goalDistance:state.goalDistance,halfway,before,complete,
             collision:{mode:collision.mode,lives:collision.lives,reason:collision.reason,
-              progress:m.progressPercent(collision)}};
+              progress:m.progressPercent(collision)},
+            fatal:{mode:fatal.mode,lives:fatal.lives,reason:fatal.reason,score:fatal.score,
+              progress:m.progressPercent(fatal)}};
         })""")
         for result in outcomes:
             with self.subTest(stage=result['id']):
@@ -208,7 +214,9 @@ class RunnerStagesTest(unittest.TestCase):
                 self.assertAlmostEqual(complete['elapsed'], length / 200, delta=1e-6)
                 self.assertAlmostEqual(complete['goal'], 186, delta=1e-6)
                 self.assertEqual(result['collision'],
-                    {'mode': 'hurt', 'lives': 1, 'reason': 'collision', 'progress': 100})
+                    {'mode': 'finished', 'lives': 1, 'reason': 'clear', 'progress': 100})
+                self.assertEqual(result['fatal'],
+                    {'mode': 'finished', 'lives': 0, 'reason': 'collision', 'score': 0, 'progress': 100})
         self.assert_isolated(page, errors, requests)
 
     def test_all_stages_clear_and_score_100_using_legal_inputs_at_60_and_120_hz(self):
@@ -247,15 +255,10 @@ class RunnerStagesTest(unittest.TestCase):
                     self.assertGreaterEqual(result['landings'], len(EXPECTED[result['id']]['upper']))
         self.assert_isolated(page, errors, requests)
 
-    def test_two_rock_hits_resume_and_freeze_on_every_stage_at_60_and_120_hz(self):
+    def test_two_rock_hits_auto_continue_and_freeze_on_every_stage_at_60_and_120_hz(self):
         page, errors, requests = self.stage_runner()
         results = page.evaluate("""() => {
           const results=[],m=runnerModel;
-          const progress=s=>JSON.stringify({stageId:s.stageId,goalDistance:s.goalDistance,
-            distance:s.distance,elapsed:s.elapsed,animationTime:s.animationTime,score:s.score,
-            feetY:s.feetY,velocityY:s.velocityY,supportId:s.supportId,
-            jumpOriginY:s.jumpOriginY,airAction:s.airAction,landingUntil:s.landingUntil,
-            objects:s.objects,nextSpawn:s.nextSpawn,course:s.course});
           for(const stage of runnerStages)for(const hz of [60,120]) {
             const state=m.createRunnerState(stage),ready=JSON.stringify(state);
             m.updateRunner(state,100);m.startJump(state);
@@ -263,15 +266,10 @@ class RunnerStagesTest(unittest.TestCase):
             state.mode='running';m.updateRunner(state,1);
             state.mode='paused';const paused=JSON.stringify(state);
             m.updateRunner(state,100);m.startJump(state);
-            const pauseFrozen=paused===JSON.stringify(state);
-            m.resumeRunner(state);
-            while(state.mode==='running')m.updateRunner(state,1/hz);
+            const pauseFrozen=paused===JSON.stringify(state),resumed=m.resumeRunner(state);
+            while(state.mode==='running'&&state.lives===2)m.updateRunner(state,1/hz);
             const first={mode:state.mode,reason:state.reason,lives:state.lives,
               elapsed:state.elapsed,distance:state.distance,score:state.score};
-            const hurt=JSON.stringify(state),checkpoint=progress(state);
-            m.updateRunner(state,100);const hurtJump=m.startJump(state);
-            const hurtFrozen=hurt===JSON.stringify(state);
-            const resumed=m.resumeRunner(state),preserved=checkpoint===progress(state);
             const invincible=state.invincibleRemaining;
             const started=JSON.stringify(state),doubleResume=m.resumeRunner(state);
             const doubleStable=started===JSON.stringify(state);
@@ -288,8 +286,8 @@ class RunnerStagesTest(unittest.TestCase):
               elapsed:state.elapsed,distance:state.distance,score:state.score};
             const retry=m.createRunnerState(state);
             results.push({id:stage.stageId,hz,initialLives,readyFrozen,pauseFrozen,first,
-              hurtJump,hurtFrozen,resumed,preserved,invincible,doubleResume,doubleStable,
-              protectedState,shieldFrozen,final,endJump,endFrozen:ended===JSON.stringify(state),
+              resumed,invincible,doubleResume,doubleStable,protectedState,shieldFrozen,
+              final,endJump,endFrozen:ended===JSON.stringify(state),
               retry:{id:retry.stageId,lives:retry.lives,invincibleRemaining:retry.invincibleRemaining,
                 score:retry.score,distance:retry.distance,elapsed:retry.elapsed}});
           }
@@ -299,20 +297,18 @@ class RunnerStagesTest(unittest.TestCase):
         for result in results:
             with self.subTest(stage=result['id'], hz=result['hz']):
                 self.assertEqual(result['initialLives'], 2)
-                for frozen in ('readyFrozen', 'pauseFrozen', 'hurtFrozen', 'preserved',
-                               'doubleStable', 'shieldFrozen', 'endFrozen'):
+                for frozen in ('readyFrozen', 'pauseFrozen', 'doubleStable', 'shieldFrozen', 'endFrozen'):
                     self.assertTrue(result[frozen], (frozen, result))
                 first, final = result['first'], result['final']
-                self.assertEqual((first['mode'], first['reason'], first['lives']),
-                                 ('hurt', 'collision', 1))
+                self.assertEqual((first['mode'], first['reason'], first['lives']), ('running', None, 1))
                 self.assertGreater(first['score'], 0)
-                self.assertFalse(result['hurtJump'])
                 self.assertTrue(result['resumed'])
                 self.assertFalse(result['doubleResume'])
-                self.assertAlmostEqual(result['invincible'], 1, delta=1e-9)
+                self.assertAlmostEqual(result['invincible'], 1, delta=1/result['hz']+1e-9)
                 self.assertEqual((result['protectedState']['mode'], result['protectedState']['lives']),
                                  ('running', 1))
-                self.assertAlmostEqual(result['protectedState']['invincibleRemaining'], .1, delta=1e-6)
+                self.assertAlmostEqual(result['protectedState']['invincibleRemaining'], .1,
+                                       delta=1/result['hz']+1e-9)
                 self.assertEqual((final['mode'], final['reason'], final['lives']),
                                  ('finished', 'collision', 0))
                 self.assertFalse(result['endJump'])
@@ -325,7 +321,57 @@ class RunnerStagesTest(unittest.TestCase):
         for stage_id in EXPECTED:
             pair = [r for r in results if r['id'] == stage_id]
             for moment in ('first', 'final'):
-                self.assertEqual(pair[0][moment], pair[1][moment])
+                self.assertAlmostEqual(pair[0][moment]['elapsed'], pair[1][moment]['elapsed'], delta=1/60)
+                self.assertAlmostEqual(pair[0][moment]['distance'], pair[1][moment]['distance'], delta=200/60)
+        self.assert_isolated(page, errors, requests)
+
+    def test_collision_preserves_motion_support_events_and_star_scoring(self):
+        page, errors, requests = self.model_runner()
+        outcomes = page.evaluate("""()=>{
+          const m=runnerModel,results=[];
+          const checkpoint=s=>JSON.stringify({...s,lives:null,invincibleRemaining:null,
+            objects:s.objects.filter(o=>o.type!=='obstacle')});
+          for(const phase of ['ground','ascending','descending','platform','landing'])for(const hz of [60,120]){
+            const s=m.createRunnerState([{at:0,type:'star',height:120},
+              {at:.03,type:'platform'}]);s.mode='running';s.score=20;
+            if(phase==='ascending'||phase==='descending'){
+              m.startJump(s);m.updateRunner(s,phase==='ascending'?.02:.88);
+            }
+            if(phase==='platform'||phase==='landing'){
+              s.objects.push({id:'support',type:'platform',x:186,height:20});
+              s.feetY=phase==='platform'?450:449.5;s.velocityY=phase==='platform'?0:100;
+              s.supportId=phase==='platform'?'support':null;s.airAction=phase==='platform'?null:'jump';
+            }
+            const control=structuredClone(s);
+            m.updateRunner(control,1/hz);
+            const height=m.GROUND_Y-control.feetY+m.characterBob(control);
+            // 同じサブステップにスターと複数の岩が接触する。
+            s.objects.push({id:'earned-now',type:'star',x:186,height},
+              {id:'future-star',type:'star',x:800,height:0});
+            const expected=structuredClone(s);
+            s.objects.push({id:'rock-a',type:'obstacle',x:186},
+              {id:'rock-b',type:'obstacle',x:186});
+            m.updateRunner(expected,1/hz);m.updateRunner(s,1/hz);
+            const after={mode:s.mode,lives:s.lives,score:s.score,support:s.supportId,
+              airAction:s.airAction,shield:s.invincibleRemaining,preserved:checkpoint(s)===checkpoint(expected),
+              uncollected:s.objects.some(o=>o.id==='future-star'),
+              collected:!s.objects.some(o=>o.id==='earned-now'),nextSpawn:s.nextSpawn};
+            const score=s.score;m.updateRunner(s,0);
+            after.noDuplicate=s.score===score;results.push({phase,hz,...after});
+          }
+          return results;
+        }""")
+        for row in outcomes:
+            with self.subTest(phase=row['phase'], hz=row['hz']):
+                self.assertEqual((row['mode'],row['lives'],row['score']), ('running',1,30))
+                self.assertAlmostEqual(row['shield'], 1-(1/row['hz']-1/120), delta=1e-9)
+                self.assertTrue(row['preserved'] and row['uncollected'] and row['collected'] and row['noDuplicate'])
+                self.assertGreater(row['nextSpawn'], 0)
+                if row['phase'] in ('platform','landing'):
+                    self.assertEqual(row['support'], 'support')
+                if row['phase'] in ('ascending','descending'):
+                    self.assertIsNone(row['support'])
+                    self.assertEqual(row['airAction'], 'jump')
         self.assert_isolated(page, errors, requests)
 
     def test_states_copy_course_without_mutating_stage_or_other_plays(self):
@@ -407,12 +453,11 @@ class RunnerStagesTest(unittest.TestCase):
                 self.toggle(page)
                 page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
                 page.evaluate('runnerClock.advance(7000,60)')
-                self.assertEqual(page.locator('#runner-toggle').inner_text(), 'つづける')
-                self.assertEqual(self.snapshot(page)['pending'], 0)
+                self.assertEqual(page.locator('#runner-toggle').inner_text(), '一時停止')
+                self.assertEqual(self.snapshot(page)['pending'], 1)
                 first = page.evaluate('JSON.parse(JSON.stringify(runnerJumpProbe.state))')
-                self.assertEqual((first['mode'], first['lives']), ('hurt', 1))
-                self.toggle(page)
-                page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
+                self.assertEqual((first['mode'], first['lives']), ('running', 1))
+                self.assertEqual(page.locator('#runner-hearts').inner_text(), '♥♡')
                 page.evaluate('runnerClock.advance(7000,60)')
                 self.assertEqual(page.locator('#runner-result-title').inner_text(), 'ゲームオーバー')
                 self.assertEqual(page.evaluate('runnerJumpProbe.state.lives'), 0)
