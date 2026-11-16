@@ -599,6 +599,8 @@
     .runner-home-panel { background:linear-gradient(145deg,#edf7ee,#fffdf6); }
     #runner-choices { margin:16px 0; padding:16px; border:1px solid #d4e3d8; border-radius:16px; background:#fffdf6; }
     #runner-info { font-size:.85rem; }
+    .runner-character-bests { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+    .runner-character-bests dt, .runner-character-bests dd { margin:0; overflow-wrap:anywhere; }
     .runner-formal-frame { width:100%; height:85vh; height:85dvh; border:0; display:block; }
     @media (max-height:500px) and (min-width:481px) {
       .runner-formal-frame { height:90vh; height:90dvh; }
@@ -698,6 +700,12 @@
       <p>🔒のステージは、ひとつ前のステージを正式クリアすると遊べるよ。</p>
       <label for="formal-character">キャラクター</label><select id="formal-character" style="width:100%;min-height:48px"></select>
       <p id="formal-character-info"></p>
+      <section aria-labelledby="runner-records-heading">
+        <h3 id="runner-records-heading">このステージの最高得点</h3>
+        <p id="runner-stage-best" role="status" aria-live="polite"></p>
+        <dl id="runner-character-bests" class="runner-character-bests"></dl>
+        <details><summary>全ステージの最高得点</summary><dl id="runner-stage-bests" class="runner-character-bests"></dl></details>
+      </section>
     </div>
 
     <button id="runner-home" class="secondary" type="button" style="min-height:48px">学習ホームへ戻る</button>
@@ -951,7 +959,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.28";
+const APP_VERSION = "v1.7.29";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3187,7 +3195,7 @@ function summarizeRunnerPlays(records, who) {
 // C3-B 内部API。無料試遊のURL/選択UIからは呼ばない。
 let runnerModelPromise;
 function loadRunnerModel() {
-  return runnerModelPromise ||= import('./runner/game.js?v=1.7.28');
+  return runnerModelPromise ||= import('./runner/game.js?v=1.7.29');
 }
 function runnerTransaction(names, action) {
   return new Promise((resolve,reject)=>{
@@ -3311,10 +3319,39 @@ let formalRunner=null, runnerStarting=false;
 async function runnerLobbyData(who) {
   return runnerTransaction(['runnerPlays','arcadePrizes','coinEvents','reviewEvents','coinSpends'],(tx,d)=>({
     active:d.runnerPlays.find(p=>p.profile===who&&p.status==='active'),
+    records:d.runnerPlays.filter(p=>p.profile===who&&p.status==='finished'),
+    summary:summarizeRunnerPlays(d.runnerPlays,who),
     unlocked:summarizeRunnerPlays(d.runnerPlays,who).unlockedStageIds,
     secret:d.arcadePrizes.some(p=>p.profile===who&&p.prizeId==='secret_yuniko'),
     balance:availableCoins(d.coinEvents,d.reviewEvents,d.coinSpends,who)
   }));
+}
+// 最高得点は毎回runnerPlaysから集計。別ストア・永続キャッシュは持たない。
+function renderRunnerRecords(d,m) {
+  const stageId=$('formal-stage').value;
+  const score=p=>p?`${p.score}点`:'記録なし';
+  $('runner-stage-best').textContent=`${stageId} 総合：${score(d.summary.bestByStage[stageId])}`;
+  const fill=(id,rows)=>{
+    const nodes=rows.flatMap(([name,value])=>{
+      const dt=document.createElement('dt'),dd=document.createElement('dd');
+      dt.textContent=name;dd.textContent=value;return [dt,dd];
+    });$(id).replaceChildren(...nodes);
+  };
+  fill('runner-character-bests',[...m.CHARACTERS,...(d.secret?[m.getCharacter('secret_yuniko')]:[])].map(c=>[
+    `${c.characterId===$('formal-character').value?'▶ ':''}${c.name}`,score(d.summary.bestByStageCharacter[`${stageId}:${c.characterId}`])
+  ]));
+  fill('runner-stage-bests',m.STAGES.map(stage=>[`${stage.stageId} ${stage.name}`,score(d.summary.bestByStage[stage.stageId])]));
+}
+function runnerResultData(d,play) {
+  play=play?.status==='finished'?d.records.find(p=>p.id===play.id):null;
+  if(!play||play.characterId==='secret_yuniko'&&!d.secret)return null;
+  const before=summarizeRunnerPlays(d.records.filter(p=>p.id!==play.id&&p.result.at<=play.result.at),play.profile);
+  const key=`${play.stageId}:${play.characterId}`;
+  const stageBefore=before.bestByStage[play.stageId],characterBefore=before.bestByStageCharacter[key];
+  return {play,stageBest:d.summary.bestByStage[play.stageId].score,characterBest:d.summary.bestByStageCharacter[key].score,
+    stageRecord:!stageBefore?'初記録':play.score>stageBefore.score?'新記録！':'',
+    characterRecord:!characterBefore?'初記録':play.score>characterBefore.score?'新記録！':'',
+    unlocked:play.result.reason==='clear'?RUNNER_STAGE_IDS.filter((id,i)=>i>0&&RUNNER_STAGE_IDS[i-1]===play.stageId&&!before.unlockedStageIds.includes(id)):[]};
 }
 function runnerPrice(who,d) {return `${who==='test'?'テスト用：無料':'1プレイ30コイン'} ／ コイン ${d.balance}枚`;}
 async function refreshRunnerHome(ctx) {
@@ -3347,7 +3384,7 @@ async function renderRunnerLobby() {
     }
     describe();
   }
-  stages.onchange=select;characters.onchange=select;describe();
+  stages.onchange=select;characters.onchange=select;describe();renderRunnerRecords(d,m);
   await startFormalRunner(ctx,d,m);
 }
 async function closeFormalRunner() {
@@ -3362,7 +3399,7 @@ async function closeFormalRunner() {
 // このbridgeのreadyは表示専用。正式sessionがない間はadvance/jumpを実行しない。
 async function startFormalRunner(ctx,d,m) {
   let waiting=m.createRunnerState(m.STAGES.find(s=>s.stageId===$('formal-stage').value),$('formal-character').value);
-  let localError=null, closed=false;
+  let localError=null, closed=false, latestData=d, resultData=null;
   const current={session:null,frame:document.createElement('iframe')};
   const choices=()=>{
     const state=current.bridge.view.state;
@@ -3374,7 +3411,19 @@ async function startFormalRunner(ctx,d,m) {
   async function refresh(){
     const latest=await runnerLobbyData(ctx.who);
     if(!closed&&viewCurrent(ctx)){
-      $('runner-info').textContent=runnerPrice(ctx.who,latest);
+      if(current.session&&!latest.records.some(p=>p.id===current.session.view.savedPlay.id)&&latest.active?.id!==current.session.view.savedPlay.id){await reconcilePage();return;}
+      if(!latest.secret&&current.session?.view.state.characterId==='secret_yuniko'){await reconcilePage();return;}
+      if(current.session?.view.savedPlay.status==='active'&&latest.active?.id===current.session.view.savedPlay.id&&latest.active.updatedAt!==current.session.view.savedPlay.updatedAt&&!current.session.view.dirty){await reconcilePage();return;}
+      latestData=latest;resultData=runnerResultData(latest,current.session?.view.savedPlay);
+      $('runner-info').textContent=localError||runnerPrice(ctx.who,latest);
+      const character=$('formal-character').value;
+      $('formal-character').replaceChildren(...[...m.CHARACTERS,...(latest.secret?[m.getCharacter('secret_yuniko')]:[])].map(c=>new Option(c.name,c.characterId)));
+      if([...$('formal-character').options].some(o=>o.value===character))$('formal-character').value=character;
+      if(!latest.secret&&waiting.characterId==='secret_yuniko')waiting=m.createRunnerState(m.STAGES.find(s=>s.stageId===waiting.stageId),'shiba');
+      const selected=m.getCharacter($('formal-character').value);
+      $('formal-character-info').textContent=`${selected.feature} ／ ハート${selected.initialLives}個`;
+      renderRunnerRecords(latest,m);
+      current.frame.contentWindow?.refreshFormalRunner?.();
       for(const option of $('formal-stage').options){
         option.disabled=!latest.unlocked.includes(option.value);
         const stage=m.STAGES.find(s=>s.stageId===option.value);
@@ -3383,14 +3432,22 @@ async function startFormalRunner(ctx,d,m) {
     }
   }
   current.bridge={
-    get view(){return {...(current.session?.view||{state:structuredClone(waiting),dirty:false,error:null}),message:localError};},
+    get view(){return {...(current.session?.view||{state:structuredClone(waiting),dirty:false,error:null}),message:localError,result:resultData};},
     async resume(){
       if(closed||runnerStarting||!viewCurrent(ctx))return;
-      if(current.session&&current.session.view.state.mode!=='finished')return current.session.resume();
+      if(current.session?.view.state.mode==='finished'&&!current.session.view.error&&(current.session.view.dirty||!resultData))return;
       runnerStarting=true;localError=null;choices();
       try {
+        if(current.session?.view.error){
+          await current.session.close().catch(()=>{});current.session=null;resultData=null;
+          const recovery=await runnerLobbyData(ctx.who);
+          if(!recovery.active)throw new Error('途中のプレイが見つかりません。記録を確認して選び直してください。');
+          current.session=await openRunnerSession(ctx.who,recovery.active.id);
+        }
+        if(current.session&&current.session.view.state.mode!=='finished')return await current.session.resume();
         const latest=await runnerLobbyData(ctx.who);
         if(closed||!viewCurrent(ctx))return;
+        if(current.session?.view.savedPlay.status==='finished'){const p=current.session.view.savedPlay;waiting=m.createRunnerState(m.STAGES.find(s=>s.stageId===p.stageId),p.characterId);}
         if(!latest.active){
           if(!latest.unlocked.includes(waiting.stageId)||waiting.characterId==='secret_yuniko'&&!latest.secret)throw new Error('ステージ・キャラクターを選び直してください。');
           if(ctx.who!=='test'&&latest.balance<30)throw new Error(`あと${30-latest.balance}コイン必要です。`);
@@ -3404,9 +3461,8 @@ async function startFormalRunner(ctx,d,m) {
         if(closed||!viewCurrent(ctx)){await current.session.close();return;}
         // 別タブですでに購入されたプレイも、その正本を接続してから走行する。
         await current.session.resume();
-        await refresh();
       } catch(e){localError=e.message;$('runner-info').textContent=e.message;}
-      finally{runnerStarting=false;if(!closed){choices();current.frame.contentWindow?.refreshFormalRunner?.();}}
+      finally{runnerStarting=false;if(!closed){await refresh();choices();current.frame.contentWindow?.refreshFormalRunner?.();}}
     },
     async advance(seconds){
       if(!current.session)return;
@@ -3416,6 +3472,7 @@ async function startFormalRunner(ctx,d,m) {
         if(!wasFinished&&current.session.view.state.mode==='finished'){choices();await refresh();}
       }
     },
+    home(){return navigateHome().catch(err);},
     async jump(){if(current.session)await current.session.jump();},
     async pause(){if(current.session)await current.session.pause();}
   };
@@ -3424,8 +3481,9 @@ async function startFormalRunner(ctx,d,m) {
     waiting=m.createRunnerState(m.STAGES.find(s=>s.stageId===stageId),characterId);
     // 終了記録は確定済み。新しい選択は未購入の待機状態へ戻す。
     if(current.session){current.session.close().catch(e=>{$('runner-info').textContent=e.message;});current.session=null;}
-    localError=null;current.frame.contentWindow?.refreshFormalRunner?.();return true;
+    localError=null;resultData=null;renderRunnerRecords(latestData,m);current.frame.contentWindow?.refreshFormalRunner?.();return true;
   };
+  current.refresh=refresh;
   current.stop=()=>{closed=true;};
   formalRunner=current;
   try{if(d.active)current.session=await openRunnerSession(ctx.who,d.active.id);}
@@ -3434,7 +3492,7 @@ async function startFormalRunner(ctx,d,m) {
   const frame=current.frame;
   frame.title='わくわくランナー';frame.className='runner-formal-frame';
   frame.onload=()=>{if(formalRunner===current){frame.contentWindow.mountFormalRunner(current.bridge);choices();frame.scrollIntoView({block:'start'});}};
-  frame.src='./runner/?embedded=1&v=1.7.28';
+  frame.src='./runner/?embedded=1&v=1.7.29';
   $('runner-frame-host').replaceChildren(frame);choices();
 }
 $('open-runner').addEventListener('click',()=>navigate('runner').catch(err));
@@ -3942,6 +4000,10 @@ window.addEventListener("pageshow",event=>{
   // 初回/reloadは起動処理が復元。bfcacheだけここで再照合し、二重初期化しない。
   if(event.persisted)reconcilePage().catch(err);
 });
+document.addEventListener('visibilitychange',()=>{
+  if(appReady&&!document.hidden&&historyRoute(history.state)?.screen==='runner')reconcilePage().catch(err);
+});
+window.addEventListener('focus',()=>{formalRunner?.refresh().catch(err);});
 // 別ウインドウで増減した場合も、問題画面へフォーカスが戻ったら保存残高を再取得。
 window.addEventListener("visibilitychange",()=>{
   if(appReady&&!document.hidden&&!saving&&historyRoute(history.state)?.screen==="study")reconcilePage().catch(err);
