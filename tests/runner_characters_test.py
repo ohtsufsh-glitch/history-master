@@ -8,11 +8,12 @@ import unittest
 
 import runner_canvas_test as canvas
 import runner_preview_test as preview
-from runner_stages_test import EXPECTED, SOLUTIONS
+from runner_difficulty_cases import EXPECTED, SOLUTIONS, character_inputs
 
 
 # 変更前main 663585b8e881317f330bcd69f800be0edd43dc96 の全フレームの記録。
 # 各行は60Hz完全取得、120Hz完全取得のSHA256。
+# Issue #84で配置を変更したS02〜S06は設計値・実入力の検証に置換。
 # 衝突時の変更はIssue #81で意図したため旧衝突トレースは比較対象外。
 # しば犬の位置・足場・ジャンプ・姿勢・得点を1e-6px/秒で比較する。
 BASELINE_TRACES = {
@@ -22,21 +23,7 @@ BASELINE_TRACES = {
     'S01': (
         '14279221e53aae9167b5ffdc55de02a4542f248f7db3a9c277d077870f59a8ea',
         '15af906f435c141a3d4a6384202c29615af5bfb2eb6cb202cae6aee5af5aadcd'),
-    'S02': (
-        '5fbe5b25100d952273be91fa5c39bd7c4ecef12b499add6b6dcbc51836195312',
-        'c14440d0aab3bb940cf6d4f6e175a6988dbea8032107fe424e303269cf67494d'),
-    'S03': (
-        '583a64d5c67ba154aec92f731349d1f588fb94934a1871db9096a6aff5844663',
-        'f3c1727eb05c1e965f625ae5da67bbbc549060bdd5d477118b8e00b80af46e2f'),
-    'S04': (
-        'a6157480579501225b971ec84f349b276df98943ba91af104658e573c426e096',
-        '26b89723dee7cede565f3b9c5750779c7cd37d28e9d5489575a8dfe8884f9e4d'),
-    'S05': (
-        'b061eff65f12fa5018f5ae1ee6eb6bceb384f1ee533210fe17c51920ec5f90a8',
-        '48ba2617f7ee07a0d0cab63ed23dc442e43084938d4258e7c1e1e5948ed4b701'),
-    'S06': (
-        'bb08d808477ad93e2b634b380601bc288f37f7e9938ba0c9ac92747b0a256d0f',
-        'f3d3b5ec36537c97f0e87ac4eba6ef16f818543c0a6bd70c69a61235607b715b'),
+
 }
 
 SHIBA_TRACE = """({stageId,hz,path,solutions})=>{
@@ -134,17 +121,16 @@ class RunnerCharactersTest(unittest.TestCase):
 
     def test_all_characters_clear_100_and_keep_world_positions_at_60_and_120_hz(self):
         page, errors, requests = self.character_runner()
-        outcomes = page.evaluate("""specs=>{
+        outcomes = page.evaluate("""solutions=>{
           const m=runnerModel,results=[];
           for(const c of m.CHARACTERS)for(const stage of runnerStages)for(const hz of [60,120]){
             const s=m.createRunnerState(stage,c.characterId);s.mode='running';
-            const spec=specs[stage.stageId];
-            const inputs=[...spec.rocks.map(t=>t*200/c.speed-c.jump.duration/2),
-              ...spec.upper.map(t=>t*200/c.speed-200/c.speed)].sort((a,b)=>a-b);
-            let next=0,maxPositionError=0,wrongSpawns=0;const accepted=[],seen=new Set(),landings=new Set();
+            const inputs=solutions[c.characterId][stage.stageId];
+            let next=0,maxPositionError=0,wrongSpawns=0,maxShield=0;const accepted=[],seen=new Set(),landings=new Set();
             for(let f=0;f<hz*60&&s.mode==='running';f++){
               if(next<inputs.length&&f/hz+1e-9>=inputs[next]){accepted.push(m.startJump(s));next++;}
               m.updateRunner(s,1/hz);
+              maxShield=Math.max(maxShield,s.invincibleRemaining);
               for(const o of s.objects){
                 seen.add(o.id);
                 // 独立した200px/s基準。新しい速度やspawnDistance自身から正解を作らない。
@@ -156,12 +142,14 @@ class RunnerCharactersTest(unittest.TestCase):
             const ended=JSON.stringify(s);m.updateRunner(s,100);const endJump=m.startJump(s);
             results.push({character:c.characterId,stage:stage.stageId,hz,mode:s.mode,reason:s.reason,
               distance:s.distance,elapsed:s.elapsed,score:s.score,lives:s.lives,next,accepted,
-              progress:m.progressPercent(s),landings:landings.size,maxPositionError,wrongSpawns,
+              progress:m.progressPercent(s),landings:landings.size,maxPositionError,wrongSpawns,maxShield,
               seen:seen.size,events:stage.course.length,goal:m.goalX(s),
               frozen:ended===JSON.stringify(s),endJump});
           }
           return results;
-        }""", EXPECTED)
+        }""", {c: {key: character_inputs(key, speed, duration)
+            for key in EXPECTED} for c, speed, duration in
+            [('shiba',200,.90),('sloth',170,1.10),('goldfish',185,1.05),('salamander',230,.82)]})
         self.assertEqual(len(outcomes), 48)
         speeds = {'shiba': 200, 'sloth': 170, 'goldfish': 185, 'salamander': 230}
         for row in outcomes:
@@ -170,8 +158,10 @@ class RunnerCharactersTest(unittest.TestCase):
                 self.assertEqual((row['mode'], row['reason'], row['progress'], row['score']),
                                  ('finished', 'clear', 100, 100), row)
                 self.assertEqual(row['lives'], 3 if row['character'] == 'salamander' else 2)
+                self.assertEqual(row['maxShield'], 0)
                 self.assertTrue(all(row['accepted']), row)
-                self.assertEqual(row['next'], len(spec['rocks']) + len(spec['upper']))
+                self.assertEqual(row['next'], len(character_inputs(row['stage'], speeds[row['character']],
+                    {'shiba':.9,'sloth':1.1,'goldfish':1.05,'salamander':.82}[row['character']])))
                 self.assertGreaterEqual(row['landings'], len(spec['upper']))
                 self.assertEqual(row['distance'], spec['length'])
                 self.assertAlmostEqual(row['elapsed'], spec['length']/speeds[row['character']], delta=1e-6)
@@ -301,8 +291,7 @@ class RunnerCharactersTest(unittest.TestCase):
             page.wait_for_function('runnerImages.every(image=>image.complete)', polling=50)
             self.settle(page)
             for stage_id, spec in EXPECTED.items():
-                inputs = sorted([t*200/speed-duration/2 for t in spec['rocks']] +
-                                [t*200/speed-200/speed for t in spec['upper']])
+                inputs = character_inputs(stage_id, speed, duration)
                 for hz in (60, 120):
                     with self.subTest(character=character_id, stage=stage_id, hz=hz):
                         # 実画面のchange/clickと描画RAFのみ。状態は読み取り専用で使う。

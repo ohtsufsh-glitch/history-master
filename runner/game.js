@@ -1,5 +1,5 @@
-import { STAGES } from "./stages.js?v=1.7.21";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.21";
+import { STAGES } from "./stages.js?v=1.7.22";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.22";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -86,6 +86,13 @@ function platformBounds(object) {
     top, bottom: top + thickness, width, thickness };
 }
 
+// 壁は地面からの矩形。描画と接触で同じ実体を使い、足場にはしない。
+function wallBounds(object) {
+  return { left: object.x - object.width / 2, right: object.x + object.width / 2,
+    top: GROUND_Y - object.height, bottom: GROUND_Y,
+    width: object.width, height: object.height };
+}
+
 function overlapsPlatform(object, x = object.x) {
   const halfWidth = (object.width ?? PLATFORM.width) / 2;
   return x + halfWidth > CHARACTER_X - PLATFORM.footHalfWidth + PHYSICS_EPSILON &&
@@ -94,6 +101,7 @@ function overlapsPlatform(object, x = object.x) {
 
 function objectHalfWidth(object) {
   if (object.type === "platform") return (object.width ?? PLATFORM.width) / 2;
+  if (object.type === "wall") return object.width / 2;
   return object.type === "star" ? COLLISION.starRadius : OBSTACLE_IMAGE.width / 2;
 }
 
@@ -186,6 +194,12 @@ function touchesObject(state, object) {
     const radius = COLLISION.characterRadius + COLLISION.starHitRadius;
     return Math.hypot(character.x - object.x, character.y - (ground - 43 - (object.height ?? 0))) <= radius;
   }
+  if (object.type === "wall") {
+    const bounds = wallBounds(object);
+    const closestX = Math.max(bounds.left, Math.min(character.x, bounds.right));
+    const closestY = Math.max(bounds.top, Math.min(character.y, bounds.bottom));
+    return Math.hypot(character.x - closestX, character.y - closestY) <= COLLISION.characterRadius;
+  }
   if (object.type !== "obstacle") return false;
   const scale = OBSTACLE_IMAGE.width / 80;
   return COLLISION.obstacleRegions.some(region => {
@@ -229,7 +243,8 @@ function updateRunner(state, seconds) {
     state.invincibleRemaining = Math.max(0, state.invincibleRemaining - step);
     state.objects = state.objects.filter(object => object.x +
       objectHalfWidth(object) >= 0);
-    if (!invincible && state.objects.some(object => object.type === "obstacle" && touchesObject(state, object))) {
+    if (!invincible && state.objects.some(object =>
+      (object.type === "obstacle" || object.type === "wall") && touchesObject(state, object))) {
       state.lives = Math.max(0, state.lives - 1);
       if (state.lives === 0) {
         state.mode = "finished";
@@ -449,6 +464,40 @@ function drawPlatform(context, object) {
   context.strokeRect(left + 1, top + 1, width - 2, thickness - 2);
 }
 
+function drawWall(context, object) {
+  const { left, top, width, height } = wallBounds(object);
+  context.fillStyle = "#936247";
+  context.fillRect(left, top, width, height);
+  // 目地も斜線も実体の内側に収める。画像の読み込みには依存しない。
+  context.save();
+  context.beginPath();
+  context.rect(left, top, width, height);
+  context.clip();
+  context.strokeStyle = "#e8ba85";
+  context.lineWidth = 2;
+  for (let y = top + 30, row = 0; y < GROUND_Y; y += 30, row++) {
+    context.beginPath();
+    context.moveTo(left, y);
+    context.lineTo(left + width, y);
+    const seam = left + width * (row % 2 ? .35 : .65);
+    context.moveTo(seam, y - 30);
+    context.lineTo(seam, y);
+    context.stroke();
+  }
+  context.strokeStyle = "#ffe099";
+  context.lineWidth = 4;
+  context.beginPath();
+  context.moveTo(left + width * .25, top + 12);
+  context.lineTo(left + width * .75, top + 26);
+  context.moveTo(left + width * .25, top + 26);
+  context.lineTo(left + width * .75, top + 40);
+  context.stroke();
+  context.restore();
+  context.strokeStyle = "#573c32";
+  context.lineWidth = 2;
+  context.strokeRect(left + 1, top + 1, width - 2, height - 2);
+}
+
 function drawObjects(context, state, obstacleImage) {
   for (const object of state.objects) {
     const radius = objectHalfWidth(object);
@@ -456,6 +505,8 @@ function drawObjects(context, state, obstacleImage) {
     const ground = GROUND_Y;
     if (object.type === "obstacle") {
       drawObstacle(context, object, obstacleImage);
+    } else if (object.type === "wall") {
+      drawWall(context, object);
     } else if (object.type === "platform") {
       drawPlatform(context, object);
     } else if (object.type === "star") {
@@ -558,7 +609,7 @@ function initializeRunner() {
     const count = type => definition.course.filter(entry => entry.type === type).length;
     return `${definition.stageId} ${definition.name} ｜ 難易度 ${definition.difficulty} ｜ ` +
       `約${Math.ceil(definition.goalDistance / state.speed)}秒 ｜ ` +
-      `トゲ岩 ${count("obstacle")}個・足場 ${count("platform")}個`;
+      `トゲ岩 ${count("obstacle")}個・足場 ${count("platform")}個・壁 ${count("wall")}個`;
   }
   if (isStagePreview) {
     for (const definition of STAGES) {
@@ -804,4 +855,4 @@ initializeRunner();
 // コースとゲーム状態はDOMから独立。配置の差し替えや決定的なルール検証に使う。
 export { CHARACTERS, getCharacter, COURSE, COLLISION, CHARACTER_X, SPAWN_X, CHARACTER_IMAGE, CHARACTER_SET, OBSTACLE_IMAGE, PLATFORM, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
   createRunnerState, updateRunner, resumeRunner, startJump, progressPercent, goalX, characterCenter, characterPose,
-  platformBounds, characterBob, shadowY };
+  platformBounds, wallBounds, characterBob, shadowY };
