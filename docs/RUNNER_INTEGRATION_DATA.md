@@ -23,7 +23,7 @@ runnerPlays: keyPath `id`、autoIncrementなし、追加indexなし（現段階�
 
 ## 支払対応と取引境界
 
-coinSpendsのidがプレイid。runnerはgame:runner、studentはamount:30、testはamount:0、atはstartedAtと一致。全プレイにちょうど1支出。ゲーム跨ぎのid衝突・重複・欠落・プロフィール差異・負残高を拒否。craneは従来の100/0互換を保持し、日時対応も検証。v1〜v9にrunner支出が混入したら拒否する。
+coinSpendsのidがプレイid。runnerはgame:runner、studentはamount:30、testはamount:0、atはstartedAtと一致。全プレイにちょうど1支出。ゲーム跨ぎのid衝突・重複・欠落・プロフィール差異・負残高を拒否。craneは従来の100/0互換を保持し、atはv9と同じ非空文字列（64文字以下）のみ検証する。craneのatとstartedAtの一致は要求しない。v1〜v9にrunner支出が混入したら拒否する。
 形式検証だけでは多重タブ競合を防げない。後続の購入処理はcoinEvents/reviewEvents/coinSpends/runnerPlaysを同一readwrite TXで読み、残高と既存activeを再確認し支出・activeをaddする。同じ支払済みidを再利用し、再開には課金しない。終了確定も同一TXで既存状態を確認して冪等に更新する。C3-Aは書込APIや実課金を追加しない。
 
 ## 導出と認可の境界
@@ -52,3 +52,9 @@ iPhone/iPad Safari実機でバックアップ保存・再読込、v9→v10の履
 - テスト期待値はv10/17ストアへ更新。旧版用の入力フィクスチャは旧版のまま維持。テスト実装のAPI誤り等は修正して該当ケースを再確認済み。未解決の失敗なし。
 - 未実施: Safari/WebKit/VoiceOver実機、全体回帰、ランナー全攻略、無関係なUFO描画回帰。実機項目は上記マージ条件に従う。
 - アプリ版v1.7.24→v1.7.25。runner/index.htmlとgame.jsの配信クエリも1.7.25へ統一。ゲーム挙動・画像・問題JSON・公開の秘密キャラ選択は変更しない。
+
+### PR #95レビュー修正：クレーン日時の旧版互換
+
+全ゲームに要求していた支出日時と開始日時の一致をrunnerだけに限定した。craneはv9と同じくatの非空文字列・64文字以下を検証し、既存レコードの値は変更しない。DB/BACKUP_VERSION=10、アプリv1.7.25を維持する。
+実際の旧v9コードで、student/testの開始日時と異なる支出日時（旧版が受理する非ISO文字列も含む）を検証・保存し、v10へDB更新した後の旧v9復元・v10ダウンロード・再復元で全ストアの値が一致する回帰テストを追加。修正前の互換性エラーを再現し、修正後の成功を確認した。
+今回の選択テストはrunner_storage_testの9件と既存クレーン整合/課金/取引の4件、計13件成功（18.7秒）。さらにクレーンの空/長すぎるat、student/test両方のrunner日時不一致の拒否ケースを追加して該当テストの成功を確認。JS構文・差分空白・コミット済み版検査も確認する。無関係な全体回帰とSafari実機は未実施。実学習データは使用していない。

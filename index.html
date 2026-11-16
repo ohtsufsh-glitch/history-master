@@ -3271,8 +3271,9 @@ function validateBackup(obj) {
   const spends=new Set();
   for(const s of data.coinSpends) {
     const play=s?.game==='runner'?runnerPlays.get(s.id):s?.game==='crane'?plays.get(s.id):null;
+    // クレーンの日時条件はv9互換。開始日時との一致は新規ランナーだけに要求する。
     const validAmount=s?.game==='runner'?s.amount===(s.profile==='test'?0:30):(s?.amount===CRANE_COST||(s?.profile==='test'&&s.amount===0));
-    if(!s || !isNonemptyString(s.id,100) || spends.has(s.id) || !isProfile(s.profile) || !play || play.profile!==s.profile || !validAmount || !isNonemptyString(s.at,64) || s.at!==play.startedAt) throw new Error("コイン消費履歴が不正です。");
+    if(!s || !isNonemptyString(s.id,100) || spends.has(s.id) || !isProfile(s.profile) || !play || play.profile!==s.profile || !validAmount || !isNonemptyString(s.at,64) || (s.game==='runner' && s.at!==play.startedAt)) throw new Error("コイン消費履歴が不正です。");
     spends.add(s.id);
   }
   if(spends.size!==plays.size+runnerPlays.size) throw new Error("ゲームの料金記録が不足しています。");

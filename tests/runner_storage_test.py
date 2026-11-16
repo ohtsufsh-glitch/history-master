@@ -118,6 +118,9 @@ class RunnerStorageTest(unittest.TestCase):
             "d.coinSpends.push(structuredClone(d.coinSpends[1]))", "d.coinSpends[1].amount=0",
             "d.coinSpends[1].profile='test'", "d.coinSpends[1].game='crane'", "d.coinSpends[1].at='wrong'",
             "d.coinSpends[4].amount=30", "d.reviewEvents=[]",
+            "d.coinSpends[0].at=''", "d.coinSpends[0].at='x'.repeat(65)",
+            "d.coinSpends[1].at='2020-01-01T00:00:01.000Z'",
+            "d.coinSpends[4].at='2020-01-01T00:00:01.000Z'",
             "addRunner(d,'active2','student','S01','shiba',0,'active')",
             "p.id=d.arcadePlays[0].id", "d.runnerPlays=Array(100001).fill(p)"
         ]
@@ -207,3 +210,36 @@ class RunnerStorageTest(unittest.TestCase):
           const summary=summarizeRunnerPlays([...d.runnerPlays].reverse(),'student');
           return summary.unlockedStageIds.join()===RUNNER_STAGE_IDS.join()&&summary.bestByStage.S01.id==='a';
         }"""))
+
+
+    def test_v9_crane_mismatched_spend_time_survives_upgrade_export_and_restore(self):
+        # 実際の旧v9検証で受理したデータを、一時DBのv10更新後も復元する。
+        old = subprocess.check_output(['git','show','b7b6b19182bb1e82a8a16a715df2f82548983256:index.html'], cwd=ROOT, text=True)
+        self.page.evaluate('db.close()')
+        self.page.evaluate("() => new Promise(ok=>{const r=indexedDB.deleteDatabase(DB_NAME);r.onsuccess=ok;})")
+        self.page.route(self.url, lambda r:r.fulfill(body=old,content_type='text/html'))
+        self.page.reload();self.page.wait_for_function('appReady')
+        self.page.evaluate(FIXTURE_HELPERS)
+        legacy=self.page.evaluate("""async()=>{
+          const d=plushFixture(['shiba'],'student'),test=plushFixture(['sloth'],'test');
+          for(const name of ['arcadePlays','coinSpends','arcadePrizes'])d[name].push(...test[name]);
+          d.coinSpends[0].at='2020-01-01T00:00:01.000Z';
+          d.coinSpends[1].at='legacy nonempty timestamp'; // v9はISO形式も要求しない。
+          const backup={backupFormat:BACKUP_FORMAT,backupVersion:BACKUP_VERSION,data:d};
+          await plushInstall(validateBackup(backup));return {...backup,data:await snapshotAllStores()};
+        }""")
+        self.assertEqual(legacy['backupVersion'],9)
+        self.page.unroute(self.url);self.page.reload();self.page.wait_for_function('appReady')
+        expected=legacy['data'] | {'runnerPlays':[]}
+        self.assertEqual(self.page.evaluate('snapshotAllStores()'),expected)
+        # 旧v9バックアップをv10の検証・復元に通しても元レコードを変更しない。
+        self.page.evaluate('async backup=>replaceAllStores(validateBackup(backup))',legacy)
+        self.assertEqual(self.page.evaluate('snapshotAllStores()'),expected)
+        with self.page.expect_download() as event:
+            self.page.evaluate('exportBackup()')
+        from pathlib import Path
+        exported=json.loads(Path(event.value.path()).read_text())
+        self.assertEqual(exported['backupVersion'],10)
+        self.assertEqual(exported['data'],expected)
+        self.page.evaluate('async backup=>replaceAllStores(validateBackup(backup))',exported)
+        self.assertEqual(self.page.evaluate('snapshotAllStores()'),expected)
