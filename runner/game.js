@@ -1,5 +1,5 @@
-import { STAGES } from "./stages.js?v=1.7.22";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.22";
+import { STAGES } from "./stages.js?v=1.7.23";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.23";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -18,6 +18,7 @@ const MAX_FRAME_SECONDS = 0.05; // 長い処理停止後の急な飛びを防ぐ
 const COURSE_LENGTH = 6400; // 既存の独立コース用。各ステージの距離はstate.goalDistanceで扱う。
 const SIMULATION_STEP = 1 / 120;
 const RESPAWN_INVINCIBLE_SECONDS = 1;
+const HIT_FEEDBACK_SECONDS = 0.24;
 const CHARACTER_X = 186;
 const GROUND_Y = 470;
 const CHARACTER_IMAGE = Object.freeze({ src: "../assets/plush/shiba.webp", maxSize: 100,
@@ -71,6 +72,7 @@ function createRunnerState(course = COURSE, characterId = course?.characterId ??
   return { stageId: stage.stageId ?? null, goalDistance: stage.goalDistance,
     characterId: character.characterId, speed: character.speed, jump: character.jump,
     initialLives: character.initialLives,
+    hitFeedbackRemaining: 0, hitPoint: null,
     mode: "ready", lives: character.initialLives, invincibleRemaining: 0, distance: 0, animationTime: 0,
     feetY: GROUND_Y, velocityY: 0, supportId: "ground", jumpOriginY: GROUND_Y, airAction: null,
     landingUntil: 0,
@@ -241,6 +243,8 @@ function updateRunner(state, seconds) {
     // 実時間ではなく、走行した時間だけ保護を消費する。再開入力だけでは減らない。
     const invincible = state.invincibleRemaining > PHYSICS_EPSILON;
     state.invincibleRemaining = Math.max(0, state.invincibleRemaining - step);
+    state.hitFeedbackRemaining = Math.max(0, state.hitFeedbackRemaining - step);
+    if (state.hitFeedbackRemaining <= PHYSICS_EPSILON) state.hitPoint = null;
     state.objects = state.objects.filter(object => object.x +
       objectHalfWidth(object) >= 0);
     if (!invincible && state.objects.some(object =>
@@ -254,6 +258,11 @@ function updateRunner(state, seconds) {
       // 同じプレイ・サブステップを継続する。位置・ジャンプ・足場・得点は戻さない。
       // この接触の直後から保護し、残りのサブステップでも多重減算を防ぐ。
       state.invincibleRemaining = RESPAWN_INVINCIBLE_SECONDS;
+      state.hitFeedbackRemaining = HIT_FEEDBACK_SECONDS;
+      const center = characterCenter(state);
+      // 接触時の地点を記録。描画だけで使い、衝突・足場・ジャンプには戻さない。
+      state.hitPoint = { x: center.x + COLLISION.characterRadius, y: center.y,
+        distance: state.distance };
     }
     state.objects = state.objects.filter(object => {
       if (object.type === "star" && touchesObject(state, object)) {
@@ -536,6 +545,12 @@ function renderScene(context, canvas, state, characterImages, obstacleImage) {
   drawGround(context, state);
   drawObjects(context, state, obstacleImage);
   drawGoal(context, state);
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const hitProgress = 1 - state.hitFeedbackRemaining / HIT_FEEDBACK_SECONDS;
+  const offset = state.hitFeedbackRemaining > PHYSICS_EPSILON && !reducedMotion ?
+    -36 * Math.sin(Math.PI * Math.max(0, hitProgress)) : 0;
+  context.save();
+  context.translate(offset, 0);
   drawCharacter(context, state, characterImages);
   if (state.invincibleRemaining > PHYSICS_EPSILON) {
     // 点滅させず静かなシールドで示す（動きを減らす設定でも同じ表示）。
@@ -547,6 +562,24 @@ function renderScene(context, canvas, state, characterImages, obstacleImage) {
     context.strokeStyle = "#287da4";
     context.lineWidth = 4;
     context.stroke();
+  }
+  context.restore();
+  if (state.hitPoint && state.hitFeedbackRemaining > PHYSICS_EPSILON) {
+    const point = state.hitPoint;
+    const x = point.x - (state.distance - point.distance);
+    const radius = reducedMotion ? 22 : 16 + 16 * hitProgress;
+    context.save();
+    context.strokeStyle = "#bd5425";
+    context.lineWidth = 5;
+    context.beginPath();
+    context.arc(x, point.y, radius, 0, Math.PI * 2);
+    for (let i = 0; i < 6; i++) {
+      const angle = i * Math.PI / 3;
+      context.moveTo(x + Math.cos(angle) * (radius + 5), point.y + Math.sin(angle) * (radius + 5));
+      context.lineTo(x + Math.cos(angle) * (radius + 14), point.y + Math.sin(angle) * (radius + 14));
+    }
+    context.stroke();
+    context.restore();
   }
 }
 

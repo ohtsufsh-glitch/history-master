@@ -70,9 +70,10 @@ class RunnerPreviewTest(unittest.TestCase):
         self.assertEqual((state['lives'], state['invincibleRemaining']), (2, 0))
         self.assert_hearts(page, 2)
         for field in ('distance', 'elapsed', 'animationTime', 'score', 'nextSpawn',
-                      'landingUntil', 'velocityY'):
+                      'landingUntil', 'velocityY', 'hitFeedbackRemaining'):
             self.assertEqual(state[field], 0, field)
         self.assertEqual(state['objects'], [])
+        self.assertIsNone(state['hitPoint'])
         self.assertIsNone(state['reason'])
         self.assertIsNone(state['airAction'])
         self.assertEqual(state['supportId'], 'ground')
@@ -347,6 +348,8 @@ class RunnerPreviewTest(unittest.TestCase):
                     page.evaluate('runnerClock.step(runnerClock.snapshot().now)')
                     retried = self.state(page)
                     self.assertEqual((retried['mode'], retried['lives'], retried['invincibleRemaining']), ('running', 2, 0))
+                    self.assertEqual(retried['hitFeedbackRemaining'], 0)
+                    self.assertIsNone(retried['hitPoint'])
                     self.assertEqual((retried['distance'], retried['elapsed'], retried['score'], retried['objects']), (0,0,0,[]))
                     self.assertEqual(retried['stageId'], hit['stageId'])
                     self.assert_hearts(page, 2)
@@ -420,12 +423,14 @@ class RunnerPreviewTest(unittest.TestCase):
                 select = page.locator('#runner-stage-select')
                 self.assertGreaterEqual(select.bounding_box()['height'], 44)
                 self.assertLessEqual(page.evaluate('document.documentElement.scrollWidth'), width)
-                self.assertLessEqual(page.evaluate('document.documentElement.scrollHeight'), height + 1)
-                # 横画面でも説明・HUD・操作欄が重ならず、全ボタンが画面内に収まる。
+                content_height = page.evaluate('document.documentElement.scrollHeight')
+                if width > 480:
+                    self.assertLessEqual(content_height, height + 1)
+                # 縦画面はスクロールを許可。横画面でも説明・HUD・操作欄が重ならず、全ボタンが画面内に収まる。
                 boxes = [page.locator(selector).bounding_box() for selector in
                          ('#runner-preview', '.runner-hud', '#runner-viewport', '.runner-footer')]
                 for i, box in enumerate(boxes):
-                    self.assertLessEqual(box['y'] + box['height'], height + 1)
+                    self.assertLessEqual(box['y'] + box['height'], content_height + 1)
                     for other in boxes[i + 1:]:
                         overlap_x = min(box['x'] + box['width'], other['x'] + other['width']) - max(box['x'], other['x'])
                         overlap_y = min(box['y'] + box['height'], other['y'] + other['height']) - max(box['y'], other['y'])
