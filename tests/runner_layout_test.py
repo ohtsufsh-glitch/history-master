@@ -34,7 +34,15 @@ MEASURE = """()=>{
 class RunnerLayoutTest(unittest.TestCase):
     setUpClass = classmethod(results.RunnerResultsTest.setUpClass.__func__)
     tearDownClass = classmethod(results.RunnerResultsTest.tearDownClass.__func__)
-    enter = results.RunnerResultsTest.enter
+    def enter(self):
+        results.RunnerResultsTest.enter(self)
+        self.page.frame_locator('iframe').locator('#runner-toggle').wait_for()
+        # #120: 入口はページ先頭。以降はユーザーがゲームへ移動した状態を検証する。
+        self.page.evaluate("""()=>{
+          const header=document.querySelector('main > header');
+          const inset=getComputedStyle(header).position==='sticky'?header.getBoundingClientRect().height+8:0;
+          scrollTo(0,scrollY+document.querySelector('#runner-frame-host').getBoundingClientRect().top-inset);
+        }""")
     finish = results.RunnerResultsTest.finish
 
     def setUp(self):
@@ -93,7 +101,8 @@ class RunnerLayoutTest(unittest.TestCase):
                 self.assertAlmostEqual(b['x']+b['width']/2, canvas['x']+canvas['width']/2, delta=1)
                 self.assertGreaterEqual(b['height'], 48)
             self.assertGreaterEqual(jump['y'], canvas['bottom'])
-            self.assertGreaterEqual(toggle['y'], jump['bottom']+8)
+            self.assertGreaterEqual(jump['height'], 64)
+            self.assertGreaterEqual(toggle['y'], jump['bottom']+16)
         if p['width'] == 390:
             self.assertAlmostEqual(jump['y']-canvas['bottom'], 12, delta=1)
         if result:
@@ -156,6 +165,11 @@ class RunnerLayoutTest(unittest.TestCase):
                 self.measure('paused', initial)
                 self.tap(frame, '再開')
                 self.measure('resumed', initial)
+                for _ in range(2):
+                    self.tap(frame, '一時停止')
+                    self.measure('repeated pause', initial)
+                    self.tap(frame, '再開')
+                    self.measure('repeated resume', initial)
                 self.finish()
                 frame.locator('#runner-result-title').filter(has_text='ゲームオーバー').wait_for()
                 self.measure('gameover', initial, result=True)

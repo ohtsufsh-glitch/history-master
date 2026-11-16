@@ -305,7 +305,27 @@ class RunnerIntegrationTest(unittest.TestCase):
         self.assertEqual(self.page.evaluate("async()=>[(await readAll('coinSpends')).length,(await readAll('runnerPlays'))[0].status,formalRunner.bridge.view.state.mode]"),[1,'active','ready'])
 
 
-    def test_home_entry_positions_canvas_once_then_preserves_user_scroll(self):
+    def test_home_top_and_bottom_entry_show_page_top(self):
+        from runner_layout_test import SIZES
+        for width,height in SIZES + [(700,900)]:
+            self.page.set_viewport_size(dict(width=width,height=height))
+            for position in ['top','bottom']:
+                with self.subTest(size=(width,height),position=position):
+                    self.page.evaluate("navigateHome('test')")
+                    self.page.evaluate("p=>scrollTo(0,p==='top'?0:document.documentElement.scrollHeight)",position)
+                    if position=='bottom':self.assertGreater(self.page.evaluate('scrollY'),0)
+                    # DOM click avoids Playwright's automatic scrolling of an offscreen home card.
+                    self.page.evaluate("document.querySelector('#open-runner').click()")
+                    self.assertEqual(self.page.evaluate('scrollY'),0)
+                    self.page.frame_locator('iframe').locator('#runner-toggle').wait_for()
+                    self.assertEqual(self.page.evaluate('scrollY'),0)
+                    title=self.page.locator('#runner-heading').bounding_box()
+                    header=self.page.locator('main > header').bounding_box()
+                    self.assertGreaterEqual(title['y'],header['y']+header['height'])
+                    self.assertLessEqual(title['y']+title['height'],height)
+                    self.assertEqual(self.page.frames[-1].evaluate('document.scrollingElement.scrollTop'),0)
+
+    def test_home_entry_shows_top_then_preserves_user_scroll(self):
         self.context.close()
         self.context=self.browser.new_context(has_touch=True,viewport=dict(width=390,height=844))
         self.page=self.context.new_page();self.page.goto(self.url);self.page.wait_for_function('appReady')
@@ -318,11 +338,11 @@ class RunnerIntegrationTest(unittest.TestCase):
                 self.page.locator('#open-runner').tap()
                 frame=self.page.frame_locator('#runner-frame-host iframe')
                 frame.locator('#runner-toggle').filter(has_text='ゲーム開始').wait_for()
-                # Locatorの操作による自動スクロール前に、初期表示の可視性を確認。
-                for selector in ['#runner-canvas','#runner-jump','#runner-toggle']:
-                    b=frame.locator(selector).bounding_box()
-                    self.assertGreaterEqual(b['y'],-1)
-                    self.assertLessEqual(b['y']+b['height'],height+1)
+                # ゲームへの自動移動はせず、タイトルを含むページ先頭を表示。
+                self.assertEqual(self.page.evaluate('scrollY'), 0)
+                title=self.page.locator('#runner-heading').bounding_box()
+                self.assertGreaterEqual(title['y'],0)
+                self.assertLess(title['y']+title['height'],height)
                 self.page.locator('#formal-character-cards').scroll_into_view_if_needed()
                 before=self.page.evaluate('scrollY')
                 self.assertGreater(before,300)

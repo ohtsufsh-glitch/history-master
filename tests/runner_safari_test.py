@@ -148,13 +148,14 @@ class RunnerSafariTest(unittest.TestCase):
         self.page.route('**/runner/?embedded=1&v=*',lambda route:held.append(route))
         self.page.evaluate("""()=>{
           window.entryScrolls=0;
-          const original=Element.prototype.scrollIntoView;
-          Element.prototype.scrollIntoView=function(...args){if(this.id==='runner-frame-host')entryScrolls++;return original.apply(this,args);};
+          const original=window.scrollTo;
+          window.scrollTo=function(...args){entryScrolls++;return original.apply(this,args);};
         }""")
         self.page.locator('#open-runner').scroll_into_view_if_needed()
         self.page.locator('#open-runner').click()
         self.page.locator('#formal-character-cards button').first.wait_for()
         self.page.wait_for_timeout(100)
+        self.assertEqual(self.page.evaluate('scrollY'),0)
         self.assertEqual(len(held),1)
         self.assertEqual(self.page.evaluate('entryScrolls'),1)
         self.page.locator('#formal-character-cards').scroll_into_view_if_needed()
@@ -170,8 +171,8 @@ class RunnerSafariTest(unittest.TestCase):
         self.page.set_viewport_size(dict(width=390,height=844))
         self.page.evaluate("""()=>{
           window.entryScrolls=0;
-          const original=Element.prototype.scrollIntoView;
-          Element.prototype.scrollIntoView=function(...args){if(this.id==='runner-frame-host')entryScrolls++;return original.apply(this,args);};
+          const original=window.scrollTo;
+          window.scrollTo=function(...args){entryScrolls++;return original.apply(this,args);};
         }""")
         self.page.locator('#open-runner').scroll_into_view_if_needed()
         home_y=self.page.evaluate('scrollY')
