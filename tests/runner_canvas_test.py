@@ -283,9 +283,10 @@ class RunnerCanvasTest(unittest.TestCase):
     def assert_isolated(self, page, errors, requests):
         self.assertEqual(errors, [])
         self.assertEqual(page.evaluate('runnerStorageAccesses'), [])
-        # 再利用するしば犬画像1点だけを許可し、親アプリのJSやページは読まない。
-        shiba = self.url.removesuffix('runner/') + 'assets/plush/shiba.webp'
-        self.assertTrue(all(url.startswith(self.url) or url == shiba for url in requests), requests)
+        # 選択カードの既存4画像だけを許可。親アプリのJSやページは読まない。
+        allowed = {self.url.removesuffix('runner/') + f'assets/plush/{id}.webp'
+                   for id in ('shiba', 'sloth', 'goldfish', 'salamander')}
+        self.assertTrue(all(url.startswith(self.url) or url in allowed for url in requests), requests)
 
     def assert_geometry(self, page):
         page.wait_for_function(HAS_DRAWING)
@@ -1260,7 +1261,7 @@ class RunnerCanvasTest(unittest.TestCase):
         self.assertEqual(page.locator('#runner-toggle').inner_text(),'一時停止')
         self.assertTrue(page.locator('#runner-result').is_hidden())
         self.assertEqual(page.locator('#runner-hearts').inner_text(),'♥♡')
-        self.assertEqual(page.locator('#runner-lives').get_attribute('aria-label'),'残機2機中あと1機')
+        self.assertEqual(page.locator('#runner-lives').get_attribute('aria-label'),'ハートはあと1個（全部で2個）')
         self.assertEqual(page.locator('#runner-continue, #runner-protection').count(),0)
         self.assertNotIn('つづける',page.locator('body').inner_text())
         self.assertNotIn('無敵中',page.locator('body').inner_text())

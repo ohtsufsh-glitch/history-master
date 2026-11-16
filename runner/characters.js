@@ -12,19 +12,19 @@ function defineCharacters(definitions) {
 
 const CHARACTERS = defineCharacters([
   { characterId: "shiba", name: "しば犬", speed: 200, height: 120, duration: 0.90,
-    initialLives: 2, feature: "バランスよく走る", feet: 465 },
+    ability: Object.freeze({ speed: "中", jump: "中" }), initialLives: 2, feature: "バランスよく走る", feet: 465 },
   { characterId: "sloth", name: "なまけもの", speed: 170, height: 125, duration: 1.10,
-    initialLives: 2, feature: "ゆっくり走る", feet: 512 },
+    ability: Object.freeze({ speed: "低", jump: "中" }), initialLives: 2, feature: "ゆっくり走る", feet: 512 },
   { characterId: "goldfish", name: "金魚", speed: 185, height: 160, duration: 1.05,
-    initialLives: 2, feature: "高くジャンプ", feet: 454 },
+    ability: Object.freeze({ speed: "中", jump: "高" }), initialLives: 2, feature: "高くジャンプ", feet: 454 },
   { characterId: "salamander", name: "オオサンショウウオ", speed: 230, height: 105, duration: 0.82,
-    initialLives: 3, feature: "速く走る・低いジャンプ", feet: 466 },
+    ability: Object.freeze({ speed: "高", jump: "低" }), initialLives: 3, feature: "速く走る・低いジャンプ", feet: 466 },
 ]);
 
 // 定義の取得は使用権の付与ではない。公開UIはCHARACTERSだけを参照する。
 const SECRET_CHARACTERS = defineCharacters([
   { characterId: "secret_yuniko", name: "ゆにこ", speed: 200, height: 120, duration: 0.90,
-    initialLives: 3, airJumps: 1, feature: "空中で追加ジャンプ1回", feet: 414 },
+    ability: Object.freeze({ speed: "中", jump: "中" }), initialLives: 3, airJumps: 1, feature: "空中で追加ジャンプ1回", feet: 414 },
 ]);
 
 function getCharacter(characterId) {

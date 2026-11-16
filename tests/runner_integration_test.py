@@ -114,7 +114,7 @@ class RunnerIntegrationTest(unittest.TestCase):
           const data=plushFixture(['secret_yuniko'],'student');await replaceAllStores(data);await renderRunnerLobby();
         }""")
         self.assertEqual(self.page.locator('#formal-character option').count(),5)
-        self.page.locator('#formal-character').select_option('secret_yuniko')
+        self.page.locator('#formal-character-cards [data-choice="secret_yuniko"]').click()
         self.page.evaluate("async()=>{await runnerTransaction(['arcadePrizes'],tx=>tx.objectStore('arcadePrizes').clear());}")
         self.page.frame_locator('iframe').locator('#runner-toggle').click()
         self.page.wait_for_function("!runnerStarting")
@@ -236,7 +236,7 @@ class RunnerIntegrationTest(unittest.TestCase):
         frame.locator('#runner-toggle').filter(has_text='ゲーム開始').wait_for()
         self.page.wait_for_timeout(100)
         self.assertEqual(self.page.evaluate("async()=>[formalRunner.bridge.view.state.mode,(await readAll('runnerPlays')).length,(await readAll('coinSpends')).length]"),['ready',0,0])
-        self.page.locator('#formal-character').select_option('salamander')
+        self.page.locator('#formal-character-cards [data-choice="salamander"]').click()
         self.assertEqual(frame.locator('#runner-hearts').inner_text(),'♥♥♥')
         self.page.once('dialog',lambda dialog:dialog.dismiss())
         frame.locator('#runner-toggle').click()
@@ -284,8 +284,8 @@ class RunnerIntegrationTest(unittest.TestCase):
         }""",SOLUTIONS['S01']['perfect'])
         self.assertTrue(self.page.locator('#formal-stage option[value="S02"]').is_enabled())
         self.assertNotIn('🔒',self.page.locator('#formal-stage option[value="S02"]').inner_text())
-        self.page.locator('#formal-stage').select_option('S02')
-        self.page.locator('#formal-character').select_option('goldfish')
+        self.page.locator('#formal-stage-cards [data-choice="S02"]').click()
+        self.page.locator('#formal-character-cards [data-choice="goldfish"]').click()
         self.assertEqual(self.page.evaluate("[formalRunner.bridge.view.state.stageId,formalRunner.bridge.view.state.characterId,formalRunner.bridge.view.state.mode]"),['S02','goldfish','ready'])
         self.assertEqual(self.page.evaluate("async()=>(await readAll('coinSpends')).length"),1)
 

@@ -1,0 +1,11 @@
+.runner-choice-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; min-width:0; }
+.runner-choice-card { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; min-width:0; min-height:72px; margin:0; padding:12px 8px; border:2px solid #9ab7a5; border-radius:14px; background:#fff; color:#263f3b; font:inherit; white-space:normal; overflow-wrap:anywhere; cursor:pointer; touch-action:manipulation; }
+.runner-choice-card img { width:72px; height:72px; object-fit:contain; }
+.runner-choice-card > span:first-child { font-size:1.7rem; }
+.runner-choice-card small { font-size:.8rem; line-height:1.5; }
+.runner-choice-card[aria-pressed="true"] { border:4px solid #28634d; padding:10px 6px; background:#e4f4e6; }
+.runner-choice-mark { min-height:1.4em; font-size:.85rem; font-weight:800; }
+.runner-choice-card:disabled { opacity:1; background:#edf0ed; color:#57635b; cursor:default; }
+.runner-choice-card[aria-pressed="true"]:disabled { border-style:double; border-width:4px; }
+.runner-choice-card:focus-visible { outline:3px solid #c27a18; outline-offset:3px; }
+@media (min-width:700px) { .runner-choice-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }

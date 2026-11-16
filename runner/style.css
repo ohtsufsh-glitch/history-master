@@ -202,3 +202,19 @@ h1 { margin: 0; font-size: clamp(1.2rem, 3vw, 1.65rem); line-height: 1.3; }
 .runner-result[data-reason="gameover"] { border-color:#a96853; }
 .runner-record { color:#835000; font-weight:800; }
 #runner-result-home { margin-top:12px; min-width:0; width:100%; }
+
+/* 選択一覧は常に操作ボタンの下へ。文字拡大時も自然に縦へ伸びる。 */
+.runner-app-preview { height:auto; min-height:100dvh; grid-template-rows:auto auto auto auto auto; }
+.runner-app-preview .runner-preview { display:block; grid-column:1 / -1; grid-row:auto; }
+.runner-app-preview .runner-stage-choice { display:block; }
+.runner-app-preview .runner-stage-choice label { display:block; margin:8px 0; width:auto; }
+.runner-app-preview .runner-character-choice { margin-top:12px; }
+@media (max-height:500px) and (min-width:481px) {
+  .runner-app-preview { grid-template-rows:auto auto minmax(220px,auto) auto; }
+  .runner-app-preview .runner-viewport { grid-row:2 / 4; }
+  .runner-app-preview .runner-hud { grid-row:2; }
+  .runner-app-preview .runner-footer { grid-row:3; }
+  .runner-app-preview .runner-controls { flex-direction:column; }
+  .runner-app-preview .runner-jump, .runner-app-preview .runner-start { width:100%; }
+  .runner-app-preview .runner-preview { grid-row:4; }
+}
