@@ -32,6 +32,10 @@
 `壁高さ-15px` 以上上がる必要がある。高さ180pxの壁は金魚の160pxでも越せない。
 100pxの足場は全員が到達でき、最も低いキャラでも足場から最大205px上昇できる。
 岩の幅80pxを単純に密着させた地上2連は全員の共通解にならないため採用しない。
+S03の100px間隔の岩では、地上の衝突区間の半幅が少なくとも
+`28 + sqrt(28²-13²) ≈ 52.8px`（岩中段と地上の共通円判定）となる。
+2岩の間に安全に地上着地できる場所はなく、1跳びでも必要な水平距離は約205.6pxで、
+最大の金魚194.25pxを上回る。地上で2回跳ぶ経路も成立せず、足場の高さが意味を持つ。
 
 ## 座標と操作表
 
@@ -173,3 +177,41 @@ S04の壁は約1.62秒前から、S06の連続足場の最後の壁も最初の�
 2連で旧固定待ち時間の途中にハート0へ進むため、画面テストは1回目の接触フレームで止めて
 自動継続とハート表示を確認し、その後ゲームオーバーまで実RAFを進める。
 接触時刻そのものの独立した座標検証と、停止・リトライの検証は維持する。
+
+## 自動テストの実行記録
+
+```sh
+python3 -m unittest discover -s tests -p 'runner*_test.py' -v
+python3 -m unittest discover -s tests -p '*_test.py' -v
+python3 -m unittest discover -s tests -p 'runner_stages_test.py' -v
+PYTHONPATH=tests python3 -m unittest secret_plush_test study_coin_integration_test study_modes_test ui_cleanup_test -v
+HISTORY_MASTER_ENGINE=webkit python3 -m unittest discover -s tests -p 'runner_difficulty_test.py' -v
+python3 scripts/check_app_version.py --base origin/main --head HEAD
+```
+
+全体回帰中に検出した既存UFOテスト:
+`arcade_board_test.ArcadeBoardTest.test_crane_grip_and_lift_stay_together_across_widths_and_prize_sizes`。
+`tests/arcade_board_test.py:627` の `opacity == '0'` が、CSSアニメーション終端の
+微小値（例 `0.000419493`）で失敗する。変更前main `eb9e2b7` の独立worktreeでも
+同じテストを実行し、同じ行で再現した（1テスト・5サブケース失敗）。
+既存の `docs/RUNNER_STAGE_PREVIEW.md` にも記載されている問題で、今回この判定やUFO本体を変更しない。
+
+WebKitは `webkit-2336/pw_run.sh` が未導入でブラウザを起動できず、実行0件。
+Safari実機・VoiceOverは未実施。Chromiumによる端末サイズ再現と区別する。
+mainへのマージ、タグ作成、本番デプロイは行わず、ドラフトPRで停止する。
+
+### 最終集計（Chromium）
+
+| 実行範囲 | 結果 |
+|---|---|
+| ランナー最終一括（追加6件を含む） | 69件すべて成功 |
+| 全体回帰の前半・ランナー以外 | 260件中259件成功、既存UFOの1テスト失敗（4サブケース） |
+| 全体回帰の後半・景品／学習モード／画面 | 64件すべて成功 |
+| 重複を除く全体 | **393件実行、392件成功、既存1件失敗、未実行0件** |
+| アプリ版検査・git diff --check | 成功 |
+
+全件discoverの実行は前半260件を終えた後、ランナーの重複実行を止め、修正後の
+ランナー最終69件と後半64件へ集約した。全393件のdiscovery結果と各実行ログの
+テストID集合を照合し、抜け・想定外の重複がないことを確認した。
+旧配置に依存していた接触時刻・固定待ち時間の期待値は設計表に合わせて修正し、
+ステージ10件の再実行とランナー最終69件で成功を確認した。
