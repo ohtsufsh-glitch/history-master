@@ -290,6 +290,9 @@ class RunnerCharacterUITest(unittest.TestCase):
     def test_broken_existing_plush_images_do_not_block_play(self):
         page, errors, requests = self.preview_runner()
         page.route('**/assets/plush/*.webp', lambda route: route.fulfill(status=404, body='missing'))
+        # 静止画と新しい9コマが全て失敗した場合の名前フォールバック。
+        for id in ('sloth', 'goldfish', 'salamander'):
+            page.route(f'**/runner/assets/{id}/*.webp', lambda route: route.fulfill(status=404, body='missing'))
         page.evaluate("""()=>{
           window.missingArtLabels=[];
           const original=CanvasRenderingContext2D.prototype.fillText;
