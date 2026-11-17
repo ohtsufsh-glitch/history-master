@@ -85,7 +85,7 @@ class RunnerIntegrationTest(unittest.TestCase):
         self.assertTrue(self.page.evaluate("""async solutions=>{
           for(const id of ['S03','S04','S06']) {
             await install(100);
-            const state=m.createRunnerState(m.STAGES.find(s=>s.stageId===id));
+            const state=m.createRunnerState(m.getStage(id,1));
             const at=new Date().toISOString(),p={id:crypto.randomUUID(),profile:'student',game:'runner',schemaVersion:1,stageId:id,characterId:'shiba',stageVersion:1,startedAt:at,updatedAt:at,status:'active',score:0,snapshot:m.snapshotRunner(state)};
             await runnerTransaction(['runnerPlays','coinSpends'],tx=>{tx.objectStore('runnerPlays').put(p);tx.objectStore('coinSpends').put({id:p.id,profile:'student',game:'runner',amount:30,at});});
             const c=await openRunnerSession('student',p.id,{lifecycle:false});await c.resume();let n=0;

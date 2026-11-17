@@ -643,8 +643,8 @@
       #runner-frame-host { height:90vh; height:90dvh; }
     }
   </style>
-  <link rel="stylesheet" href="./runner/balance.css?v=1.7.42">
-  <link rel="stylesheet" href="./runner/selection.css?v=1.7.42">
+  <link rel="stylesheet" href="./runner/balance.css?v=1.7.43">
+  <link rel="stylesheet" href="./runner/selection.css?v=1.7.43">
 </head>
 <body>
 <!-- 立体的な金貨イラスト：ホーム・正解時に共用 -->
@@ -1006,7 +1006,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.42";
+const APP_VERSION = "v1.7.43";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3187,9 +3187,10 @@ function validIndexList(values, max) {
 // runnerPlaysの保存形式・集計・正式プレイの内部API。公開導線はIssue #93。
 const RUNNER_STAGE_IDS = Object.freeze(['S01','S02','S03','S04','S05','S06']);
 const RUNNER_CHARACTER_IDS = Object.freeze(['shiba','sloth','goldfish','salamander','secret_yuniko']);
-const RUNNER_STAGE_VERSION = 1;
+// 対応する(ID, 版)。コース実体との最終照合はgetStage/restoreRunnerが行う。
+const RUNNER_STAGE_VERSIONS = Object.freeze({S01:[1],S02:[1,2],S03:[1,2],S04:[1],S05:[1],S06:[1]});
 function runnerInitialLives(id) { return ['salamander','secret_yuniko'].includes(id)?3:2; }
-function runnerCanResume(play) { return play.status==='active' && play.stageVersion===RUNNER_STAGE_VERSION && play.snapshot?.version===2; }
+function runnerCanResume(play) { return play.status==='active' && RUNNER_STAGE_VERSIONS[play.stageId]?.includes(play.stageVersion) && play.snapshot?.version===2; }
 function exactRunnerFields(value, fields) {
   return value && typeof value==='object' && !Array.isArray(value) &&
     Object.keys(value).length===fields.length && fields.every(key=>Object.hasOwn(value,key));
@@ -3242,7 +3243,7 @@ function summarizeRunnerPlays(records, who) {
 // C3-B 内部API。無料試遊のURL/選択UIからは呼ばない。
 let runnerModelPromise;
 function loadRunnerModel() {
-  return runnerModelPromise ||= import('./runner/game.js?v=1.7.42');
+  return runnerModelPromise ||= import('./runner/game.js?v=1.7.43');
 }
 function runnerTransaction(names, action, {mode='readwrite', keys={}}={}) {
   return new Promise((resolve,reject)=>{
@@ -3274,8 +3275,9 @@ async function purchaseRunnerPlay({profile:who,stageId,characterId,id=crypto.ran
       (characterId==='secret_yuniko'&&!d.arcadePrizes.some(p=>p.profile===who&&p.prizeId==='secret_yuniko')))throw new Error('ステージまたはキャラクターが未解放です。');
     if(who==='student'&&availableCoins(d.coinEvents,d.reviewEvents,d.coinSpends,who)<30)throw new Error('コインが足りません。');
     const at=new Date().toISOString();
-    const state=model.createRunnerState(model.STAGES.find(s=>s.stageId===stageId),characterId);
-    const play={id,profile:who,game:'runner',schemaVersion:1,stageId,characterId,stageVersion:RUNNER_STAGE_VERSION,
+    const stage=model.STAGES.find(s=>s.stageId===stageId);
+    const state=model.createRunnerState(stage,characterId);
+    const play={id,profile:who,game:'runner',schemaVersion:1,stageId,characterId,stageVersion:state.stageVersion,
       startedAt:at,updatedAt:at,status:'active',score:0,snapshot:model.snapshotRunner(state)};
     validateRunnerPlays([play]);
     tx.objectStore('coinSpends').add({id,profile:who,game:'runner',amount:who==='test'?0:30,at});
@@ -3610,7 +3612,7 @@ async function startFormalRunner(ctx,d,m) {
   const frame=current.frame;
   frame.title='わくわくランナー';frame.className='runner-formal-frame';
   frame.onload=()=>{if(formalRunner===current){frame.contentWindow.mountFormalRunner(current.bridge);choices();}};
-  frame.src='./runner/?embedded=1&v=1.7.42';
+  frame.src='./runner/?embedded=1&v=1.7.43';
   $('runner-frame-host').replaceChildren(frame);choices();
 }
 $('open-runner').addEventListener('click',()=>navigate('runner').catch(err));

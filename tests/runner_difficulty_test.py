@@ -38,7 +38,7 @@ class RunnerDifficultyTest(unittest.TestCase):
         page, errors, requests = self.model_runner()
         page.evaluate('() => { window.difficultyTrial = (' + TRIAL + '); }')
         page.evaluate("""async()=>{
-          window.runnerStages=(await import('./stages.js')).STAGES;
+          window.runnerStages=(await import('./stages.js')).LEGACY_STAGES;
           // 実ステージから区間を抜き出し、平行移動するだけ。寸法や物理は変えない。
           window.modules=[
             {id:'double',stage:'S02',low:2500,high:3000,shift:1000,goal:2300,score:20},

@@ -29,7 +29,7 @@ class RunnerStagesTest(unittest.TestCase):
     def stage_runner(self):
         page, errors, requests = self.model_runner()
         page.evaluate("""async () => {
-          window.runnerStages = (await import('./stages.js')).STAGES;
+          window.runnerStages = (await import('./stages.js')).LEGACY_STAGES;
         }""")
         return page, errors, requests
 

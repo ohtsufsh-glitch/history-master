@@ -80,7 +80,7 @@ class RunnerSessionTest(unittest.TestCase):
         out=self.page.evaluate("""solutions=>{
           const seen=new Set();let samples=0;
           for(const characterId of ['shiba','secret_yuniko'])for(const path of ['perfect','fall','hit']) {
-            const s=m.createRunnerState(m.STAGES.find(s=>s.stageId==='S03'),characterId);s.mode='running';let n=0;
+            const s=m.createRunnerState(m.getStage('S03',1),characterId);s.mode='running';let n=0;
             for(let frame=0;frame<1800&&s.mode!=='finished';frame++) {
               const inputs=solutions.S03.perfect;
               if(path==='hit'&&characterId==='secret_yuniko'&&frame===10)m.startJump(s);
