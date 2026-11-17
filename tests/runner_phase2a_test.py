@@ -161,7 +161,7 @@ class RunnerPhase2ACompatibilityTest(unittest.TestCase):
           for(const {phase,play} of base.states){
             await installPhase([play]);const before=await snapshotAllStores();
             let c=await openRunnerSession('student',play.id,{lifecycle:false});
-            if(!runnerCanResume(play)||(await buy({stageId:'S04'})).id!==play.id)throw Error('legacy purchase changed');
+            if(!runnerCanResume(play)||(await buyLegacy({stageId:'S04'})).id!==play.id)throw Error('legacy purchase changed');
             const s=m.restoreRunner(play);await c.resume();m.resumeRunner(s);await c.advance(.1);m.updateRunner(s,.1);await c.pause();s.mode='paused';
             c=await openRunnerSession('student',play.id,{lifecycle:false});
             if(JSON.stringify(m.snapshotRunner(c.view.state))!==JSON.stringify(m.snapshotRunner(s)))throw Error('legacy trajectory');
@@ -176,9 +176,9 @@ class RunnerPhase2ACompatibilityTest(unittest.TestCase):
         self.page.reload();self.page.wait_for_function('appReady')
         self.assertEqual(self.page.evaluate("""async()=>{const p=(await readAll('runnerPlays')).find(p=>p.status==='active'),c=await openRunnerSession(p.profile,p.id,{lifecycle:false});return [c.view.state.stageVersion,c.view.state.goalDistance,c.view.state.birds.length];}"""),[1,6400,0])
 
-    def test_new_paid_s04_pause_resume_finish_history_scores_and_profiles(self):
+    def test_version2_paid_s04_pause_resume_finish_history_scores_and_profiles(self):
         self.assertTrue(self.page.evaluate("""async inputs=>{
-          await installPhase();const before=await snapshotAllStores(),p=await buy({stageId:'S04'});
+          await installPhase();const before=await snapshotAllStores(),p=await buyLegacy({stageId:'S04'});
           if(p.stageVersion!==2||!runnerCanResume(p)||p.snapshot.version!==2||DB_VERSION!==10||BACKUP_VERSION!==10)throw Error('versions');
           let c=await openRunnerSession('student',p.id,{lifecycle:false});await c.resume();let n=0;const saved=new Set();
           while(c.view.state.mode==='running'){
@@ -211,7 +211,7 @@ class RunnerPhase2ACompatibilityTest(unittest.TestCase):
           await installPhase();
           const previous=(await readAll('runnerPlays')).find(p=>p.profile==='student'&&p.stageId==='S04');
           previous.score=100;await runnerTransaction(['runnerPlays'],tx=>tx.objectStore('runnerPlays').put(previous));
-          const p=await buy({stageId:'S04'}),c=await openRunnerSession('student',p.id,{lifecycle:false});
+          const p=await buyLegacy({stageId:'S04'}),c=await openRunnerSession('student',p.id,{lifecycle:false});
           await c.resume();let n=0;const plan=inputs.filter((_,i)=>i!==2);
           while(c.view.state.mode==='running'){
             if(n<plan.length&&c.view.state.elapsed+1e-8>=plan[n]){await c.jump();n++;}
@@ -225,7 +225,7 @@ class RunnerPhase2ACompatibilityTest(unittest.TestCase):
     def test_s04_v1_v2_active_backup_roundtrip(self):
         self.assertTrue(self.page.evaluate("""async base=>{
           const old=base.states.find(r=>r.phase==='platform').play;await installPhase([old]);
-          const fresh=await purchaseRunnerPlay({profile:'test',stageId:'S04',characterId:'shiba'});
+          const fresh=await buyLegacy({profile:'test',stageId:'S04',characterId:'shiba'});
           const c=await openRunnerSession('test',fresh.id,{lifecycle:false});await c.resume();
           for(let f=0;f<830;f++){
             if(f===453||f===720)await c.jump();await c.advance(1/60);

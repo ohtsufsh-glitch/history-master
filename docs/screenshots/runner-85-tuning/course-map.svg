@@ -1,0 +1,351 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1030" viewBox="0 0 1500 1030"><style>text{font-family:"Noto Sans CJK JP",sans-serif}</style>
+<rect x="0.00" y="0.00" width="1500.00" height="1030.00" fill="#f8fbf9"/>
+<text x="35.00" y="43.00" font-size="25" fill="#263f3b" text-anchor="start">Issue #85  コース全体の配置と入力の比較</text>
+<text x="35.00" y="74.00" font-size="16" fill="#263f3b" text-anchor="start">同一縮尺・論理px。上段＝版2、下段＝版3。青い目盛りはしば犬のジャンプ入力（ゲーム内秒）。</text>
+<circle cx="50.00" cy="109.00" r="6" fill="#514650"/>
+<text x="65.00" y="114.00" font-size="14" fill="#263f3b" text-anchor="start">岩</text>
+<circle cx="180.00" cy="109.00" r="6" fill="#8e6144"/>
+<text x="195.00" y="114.00" font-size="14" fill="#263f3b" text-anchor="start">壁</text>
+<circle cx="310.00" cy="109.00" r="6" fill="#45a9bb"/>
+<text x="325.00" y="114.00" font-size="14" fill="#263f3b" text-anchor="start">足場</text>
+<circle cx="440.00" cy="109.00" r="6" fill="#354c62"/>
+<text x="455.00" y="114.00" font-size="14" fill="#263f3b" text-anchor="start">穴</text>
+<circle cx="570.00" cy="109.00" r="6" fill="#e64b65"/>
+<text x="585.00" y="114.00" font-size="14" fill="#263f3b" text-anchor="start">鳥</text>
+<circle cx="700.00" cy="109.00" r="6" fill="#d7a426"/>
+<text x="715.00" y="114.00" font-size="14" fill="#263f3b" text-anchor="start">スター</text>
+<text x="35.00" y="165.00" font-size="20" fill="#263f3b" text-anchor="start">S02  難所 3→5区間 ／ ジャンプ 3→6回</text>
+<text x="35.00" y="225.00" font-size="14" fill="#263f3b" text-anchor="start">版2（変更前）</text>
+<line x1="175.00" y1="185.00" x2="175.00" y2="273.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="175.00" y="290.00" font-size="11" fill="#263f3b" text-anchor="middle">0</text>
+<line x1="329.29" y1="185.00" x2="329.29" y2="273.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="329.29" y="290.00" font-size="11" fill="#263f3b" text-anchor="middle">1000</text>
+<line x1="483.57" y1="185.00" x2="483.57" y2="273.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="483.57" y="290.00" font-size="11" fill="#263f3b" text-anchor="middle">2000</text>
+<line x1="637.86" y1="185.00" x2="637.86" y2="273.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="637.86" y="290.00" font-size="11" fill="#263f3b" text-anchor="middle">3000</text>
+<line x1="792.14" y1="185.00" x2="792.14" y2="273.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="792.14" y="290.00" font-size="11" fill="#263f3b" text-anchor="middle">4000</text>
+<line x1="946.43" y1="185.00" x2="946.43" y2="273.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="946.43" y="290.00" font-size="11" fill="#263f3b" text-anchor="middle">5000</text>
+<line x1="175.00" y1="240.00" x2="946.43" y2="240.00" stroke="#74867d" stroke-width="2"/>
+<circle cx="341.63" cy="229.25" r="2.5" fill="#d7a426"/>
+<circle cx="378.66" cy="229.25" r="2.5" fill="#d7a426"/>
+<path d="M 416.8571428571429,240 l 5,-14 l 5,14 Z" fill="#514650"/>
+<text x="421.86" y="221.00" font-size="10" fill="#263f3b" text-anchor="middle">1600</text>
+<circle cx="421.86" cy="199.25" r="2.5" fill="#d7a426"/>
+<circle cx="491.29" cy="229.25" r="2.5" fill="#d7a426"/>
+<circle cx="566.89" cy="206.75" r="2.5" fill="#d7a426"/>
+<rect x="560.71" y="217.50" width="92.57" height="6.00" fill="#45a9bb"/>
+<circle cx="607.00" cy="206.75" r="2.5" fill="#d7a426"/>
+<rect x="582.31" y="220.00" width="52.46" height="20.00" fill="#8e6144"/>
+<circle cx="644.03" cy="206.75" r="2.5" fill="#d7a426"/>
+<circle cx="699.57" cy="229.25" r="2.5" fill="#d7a426"/>
+<path d="M 756.2857142857142,240 l 5,-14 l 5,14 Z" fill="#514650"/>
+<text x="761.29" y="221.00" font-size="10" fill="#263f3b" text-anchor="middle">3800</text>
+<circle cx="761.29" cy="199.25" r="2.5" fill="#d7a426"/>
+<circle cx="869.29" cy="229.25" r="2.5" fill="#d7a426"/>
+<line x1="407.97" y1="244.00" x2="407.97" y2="253.00" stroke="#286dc0" stroke-width="2"/>
+<text x="407.97" y="267.00" font-size="10" fill="#286dc0" text-anchor="middle">7.55</text>
+<line x1="545.29" y1="244.00" x2="545.29" y2="253.00" stroke="#286dc0" stroke-width="2"/>
+<text x="545.29" y="267.00" font-size="10" fill="#286dc0" text-anchor="middle">12</text>
+<line x1="747.40" y1="244.00" x2="747.40" y2="253.00" stroke="#286dc0" stroke-width="2"/>
+<text x="747.40" y="267.00" font-size="10" fill="#286dc0" text-anchor="middle">18.55</text>
+<text x="1460.00" y="215.00" font-size="12" fill="#263f3b" text-anchor="end">5000px</text>
+<text x="1460.00" y="233.00" font-size="12" fill="#263f3b" text-anchor="end">最大入力間隔 7.55秒</text>
+<text x="35.00" y="327.00" font-size="14" fill="#263f3b" text-anchor="start">版3（変更後）</text>
+<line x1="175.00" y1="287.00" x2="175.00" y2="375.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="175.00" y="392.00" font-size="11" fill="#263f3b" text-anchor="middle">0</text>
+<line x1="329.29" y1="287.00" x2="329.29" y2="375.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="329.29" y="392.00" font-size="11" fill="#263f3b" text-anchor="middle">1000</text>
+<line x1="483.57" y1="287.00" x2="483.57" y2="375.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="483.57" y="392.00" font-size="11" fill="#263f3b" text-anchor="middle">2000</text>
+<line x1="637.86" y1="287.00" x2="637.86" y2="375.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="637.86" y="392.00" font-size="11" fill="#263f3b" text-anchor="middle">3000</text>
+<line x1="792.14" y1="287.00" x2="792.14" y2="375.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="792.14" y="392.00" font-size="11" fill="#263f3b" text-anchor="middle">4000</text>
+<line x1="946.43" y1="287.00" x2="946.43" y2="375.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="946.43" y="392.00" font-size="11" fill="#263f3b" text-anchor="middle">5000</text>
+<line x1="175.00" y1="342.00" x2="946.43" y2="342.00" stroke="#74867d" stroke-width="2"/>
+<path d="M 308.85714285714283,342 l 5,-14 l 5,14 Z" fill="#514650"/>
+<text x="313.86" y="323.00" font-size="10" fill="#263f3b" text-anchor="middle">900</text>
+<circle cx="313.86" cy="301.25" r="2.5" fill="#d7a426"/>
+<circle cx="378.66" cy="331.25" r="2.5" fill="#d7a426"/>
+<path d="M 416.8571428571429,342 l 5,-14 l 5,14 Z" fill="#514650"/>
+<text x="421.86" y="323.00" font-size="10" fill="#263f3b" text-anchor="middle">1600</text>
+<circle cx="421.86" cy="301.25" r="2.5" fill="#d7a426"/>
+<circle cx="491.29" cy="331.25" r="2.5" fill="#d7a426"/>
+<circle cx="566.89" cy="308.75" r="2.5" fill="#d7a426"/>
+<rect x="560.71" y="319.50" width="92.57" height="6.00" fill="#45a9bb"/>
+<rect x="582.31" y="322.00" width="52.46" height="20.00" fill="#8e6144"/>
+<rect x="610.09" y="299.50" width="6.17" height="42.50" fill="#8e6144"/>
+<circle cx="613.17" cy="278.75" r="2.5" fill="#d7a426"/>
+<circle cx="644.03" cy="308.75" r="2.5" fill="#d7a426"/>
+<circle cx="715.00" cy="331.25" r="2.5" fill="#d7a426"/>
+<path d="M 756.2857142857142,342 l 5,-14 l 5,14 Z" fill="#514650"/>
+<text x="761.29" y="323.00" font-size="10" fill="#263f3b" text-anchor="middle">3800</text>
+<circle cx="761.29" cy="301.25" r="2.5" fill="#d7a426"/>
+<path d="M 879.7142857142857,342 l 5,-14 l 5,14 Z" fill="#514650"/>
+<text x="884.71" y="323.00" font-size="10" fill="#263f3b" text-anchor="middle">4600</text>
+<circle cx="884.71" cy="301.25" r="2.5" fill="#d7a426"/>
+<line x1="299.97" y1="346.00" x2="299.97" y2="355.00" stroke="#286dc0" stroke-width="2"/>
+<text x="299.97" y="369.00" font-size="10" fill="#286dc0" text-anchor="middle">4.05</text>
+<line x1="407.97" y1="346.00" x2="407.97" y2="355.00" stroke="#286dc0" stroke-width="2"/>
+<text x="407.97" y="369.00" font-size="10" fill="#286dc0" text-anchor="middle">7.55</text>
+<line x1="545.29" y1="346.00" x2="545.29" y2="355.00" stroke="#286dc0" stroke-width="2"/>
+<text x="545.29" y="369.00" font-size="10" fill="#286dc0" text-anchor="middle">12</text>
+<line x1="599.29" y1="346.00" x2="599.29" y2="355.00" stroke="#286dc0" stroke-width="2"/>
+<text x="599.29" y="369.00" font-size="10" fill="#286dc0" text-anchor="middle">13.75</text>
+<line x1="747.40" y1="346.00" x2="747.40" y2="355.00" stroke="#286dc0" stroke-width="2"/>
+<text x="747.40" y="369.00" font-size="10" fill="#286dc0" text-anchor="middle">18.55</text>
+<line x1="870.83" y1="346.00" x2="870.83" y2="355.00" stroke="#286dc0" stroke-width="2"/>
+<text x="870.83" y="369.00" font-size="10" fill="#286dc0" text-anchor="middle">22.55</text>
+<text x="1460.00" y="317.00" font-size="12" fill="#263f3b" text-anchor="end">5000px</text>
+<text x="1460.00" y="335.00" font-size="12" fill="#263f3b" text-anchor="end">最大入力間隔 4.80秒</text>
+<text x="175.00" y="417.00" font-size="15" fill="#263f3b" text-anchor="start"></text>
+<text x="35.00" y="435.00" font-size="20" fill="#263f3b" text-anchor="start">S03  難所 5→7区間 ／ ジャンプ 6→8回</text>
+<text x="35.00" y="495.00" font-size="14" fill="#263f3b" text-anchor="start">版2（変更前）</text>
+<line x1="175.00" y1="455.00" x2="175.00" y2="543.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="175.00" y="560.00" font-size="11" fill="#263f3b" text-anchor="middle">0</text>
+<line x1="329.29" y1="455.00" x2="329.29" y2="543.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="329.29" y="560.00" font-size="11" fill="#263f3b" text-anchor="middle">1000</text>
+<line x1="483.57" y1="455.00" x2="483.57" y2="543.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="483.57" y="560.00" font-size="11" fill="#263f3b" text-anchor="middle">2000</text>
+<line x1="637.86" y1="455.00" x2="637.86" y2="543.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="637.86" y="560.00" font-size="11" fill="#263f3b" text-anchor="middle">3000</text>
+<line x1="792.14" y1="455.00" x2="792.14" y2="543.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="792.14" y="560.00" font-size="11" fill="#263f3b" text-anchor="middle">4000</text>
+<line x1="946.43" y1="455.00" x2="946.43" y2="543.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="946.43" y="560.00" font-size="11" fill="#263f3b" text-anchor="middle">5000</text>
+<line x1="1100.71" y1="455.00" x2="1100.71" y2="543.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="1100.71" y="560.00" font-size="11" fill="#263f3b" text-anchor="middle">6000</text>
+<line x1="175.00" y1="510.00" x2="1100.71" y2="510.00" stroke="#74867d" stroke-width="2"/>
+<rect x="529.86" y="510.00" width="18.51" height="14.00" fill="#354c62"/>
+<text x="539.11" y="505.00" font-size="10" fill="#263f3b" text-anchor="middle">2300</text>
+<rect x="869.29" y="510.00" width="20.06" height="14.00" fill="#354c62"/>
+<text x="879.31" y="505.00" font-size="10" fill="#263f3b" text-anchor="middle">4500</text>
+<circle cx="347.80" cy="499.25" r="2.5" fill="#d7a426"/>
+<path d="M 416.8571428571429,510 l 5,-14 l 5,14 Z" fill="#514650"/>
+<text x="421.86" y="491.00" font-size="10" fill="#263f3b" text-anchor="middle">1600</text>
+<circle cx="421.86" cy="469.25" r="2.5" fill="#d7a426"/>
+<circle cx="486.66" cy="499.25" r="2.5" fill="#d7a426"/>
+<circle cx="539.11" cy="469.25" r="2.5" fill="#d7a426"/>
+<rect x="668.71" y="487.50" width="40.11" height="6.00" fill="#45a9bb"/>
+<circle cx="688.77" cy="476.75" r="2.5" fill="#d7a426"/>
+<rect x="681.06" y="490.00" width="80.23" height="20.00" fill="#8e6144"/>
+<circle cx="735.06" cy="471.75" r="2.5" fill="#d7a426"/>
+<rect x="725.80" y="482.50" width="46.29" height="6.00" fill="#45a9bb"/>
+<circle cx="769.00" cy="471.75" r="2.5" fill="#d7a426"/>
+<circle cx="878.54" cy="469.25" r="2.5" fill="#d7a426"/>
+<path d="M 941.4285714285714,510 l 5,-14 l 5,14 Z" fill="#514650"/>
+<text x="946.43" y="491.00" font-size="10" fill="#263f3b" text-anchor="middle">5000</text>
+<circle cx="946.43" cy="469.25" r="2.5" fill="#d7a426"/>
+<circle cx="1023.57" cy="499.25" r="2.5" fill="#d7a426"/>
+<line x1="407.97" y1="514.00" x2="407.97" y2="523.00" stroke="#286dc0" stroke-width="2"/>
+<text x="407.97" y="537.00" font-size="10" fill="#286dc0" text-anchor="middle">7.55</text>
+<line x1="525.23" y1="514.00" x2="525.23" y2="523.00" stroke="#286dc0" stroke-width="2"/>
+<text x="525.23" y="537.00" font-size="10" fill="#286dc0" text-anchor="middle">11.35</text>
+<line x1="653.29" y1="514.00" x2="653.29" y2="523.00" stroke="#286dc0" stroke-width="2"/>
+<text x="653.29" y="537.00" font-size="10" fill="#286dc0" text-anchor="middle">15.5</text>
+<line x1="702.66" y1="514.00" x2="702.66" y2="523.00" stroke="#286dc0" stroke-width="2"/>
+<text x="702.66" y="537.00" font-size="10" fill="#286dc0" text-anchor="middle">17.1</text>
+<line x1="864.66" y1="514.00" x2="864.66" y2="523.00" stroke="#286dc0" stroke-width="2"/>
+<text x="864.66" y="537.00" font-size="10" fill="#286dc0" text-anchor="middle">22.35</text>
+<line x1="932.54" y1="514.00" x2="932.54" y2="523.00" stroke="#286dc0" stroke-width="2"/>
+<text x="932.54" y="537.00" font-size="10" fill="#286dc0" text-anchor="middle">24.55</text>
+<text x="1460.00" y="485.00" font-size="12" fill="#263f3b" text-anchor="end">6000px</text>
+<text x="1460.00" y="503.00" font-size="12" fill="#263f3b" text-anchor="end">最大入力間隔 7.55秒</text>
+<text x="35.00" y="597.00" font-size="14" fill="#263f3b" text-anchor="start">版3（変更後）</text>
+<line x1="175.00" y1="557.00" x2="175.00" y2="645.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="175.00" y="662.00" font-size="11" fill="#263f3b" text-anchor="middle">0</text>
+<line x1="329.29" y1="557.00" x2="329.29" y2="645.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="329.29" y="662.00" font-size="11" fill="#263f3b" text-anchor="middle">1000</text>
+<line x1="483.57" y1="557.00" x2="483.57" y2="645.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="483.57" y="662.00" font-size="11" fill="#263f3b" text-anchor="middle">2000</text>
+<line x1="637.86" y1="557.00" x2="637.86" y2="645.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="637.86" y="662.00" font-size="11" fill="#263f3b" text-anchor="middle">3000</text>
+<line x1="792.14" y1="557.00" x2="792.14" y2="645.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="792.14" y="662.00" font-size="11" fill="#263f3b" text-anchor="middle">4000</text>
+<line x1="946.43" y1="557.00" x2="946.43" y2="645.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="946.43" y="662.00" font-size="11" fill="#263f3b" text-anchor="middle">5000</text>
+<line x1="1100.71" y1="557.00" x2="1100.71" y2="645.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="1100.71" y="662.00" font-size="11" fill="#263f3b" text-anchor="middle">6000</text>
+<line x1="175.00" y1="612.00" x2="1100.71" y2="612.00" stroke="#74867d" stroke-width="2"/>
+<rect x="529.86" y="612.00" width="18.51" height="14.00" fill="#354c62"/>
+<text x="539.11" y="607.00" font-size="10" fill="#263f3b" text-anchor="middle">2300</text>
+<rect x="869.29" y="612.00" width="20.06" height="14.00" fill="#354c62"/>
+<text x="879.31" y="607.00" font-size="10" fill="#263f3b" text-anchor="middle">4500</text>
+<rect x="1008.14" y="612.00" width="18.51" height="14.00" fill="#354c62"/>
+<text x="1017.40" y="607.00" font-size="10" fill="#263f3b" text-anchor="middle">5400</text>
+<rect x="283.00" y="592.00" width="83.31" height="6.00" fill="#45a9bb"/>
+<circle cx="329.29" cy="581.25" r="2.5" fill="#d7a426"/>
+<rect x="320.03" y="594.50" width="49.37" height="17.50" fill="#8e6144"/>
+<path d="M 416.8571428571429,612 l 5,-14 l 5,14 Z" fill="#514650"/>
+<text x="421.86" y="593.00" font-size="10" fill="#263f3b" text-anchor="middle">1600</text>
+<circle cx="421.86" cy="571.25" r="2.5" fill="#d7a426"/>
+<circle cx="486.66" cy="601.25" r="2.5" fill="#d7a426"/>
+<circle cx="539.11" cy="571.25" r="2.5" fill="#d7a426"/>
+<rect x="668.71" y="589.50" width="40.11" height="6.00" fill="#45a9bb"/>
+<circle cx="688.77" cy="578.75" r="2.5" fill="#d7a426"/>
+<rect x="681.06" y="592.00" width="80.23" height="20.00" fill="#8e6144"/>
+<circle cx="735.06" cy="573.75" r="2.5" fill="#d7a426"/>
+<rect x="725.80" y="584.50" width="46.29" height="6.00" fill="#45a9bb"/>
+<circle cx="769.00" cy="573.75" r="2.5" fill="#d7a426"/>
+<circle cx="878.54" cy="571.25" r="2.5" fill="#d7a426"/>
+<path d="M 941.4285714285714,612 l 5,-14 l 5,14 Z" fill="#514650"/>
+<text x="946.43" y="593.00" font-size="10" fill="#263f3b" text-anchor="middle">5000</text>
+<circle cx="946.43" cy="571.25" r="2.5" fill="#d7a426"/>
+<circle cx="1017.40" cy="571.25" r="2.5" fill="#d7a426"/>
+<line x1="267.57" y1="616.00" x2="267.57" y2="625.00" stroke="#286dc0" stroke-width="2"/>
+<text x="267.57" y="639.00" font-size="10" fill="#286dc0" text-anchor="middle">3</text>
+<line x1="407.97" y1="616.00" x2="407.97" y2="625.00" stroke="#286dc0" stroke-width="2"/>
+<text x="407.97" y="639.00" font-size="10" fill="#286dc0" text-anchor="middle">7.55</text>
+<line x1="525.23" y1="616.00" x2="525.23" y2="625.00" stroke="#286dc0" stroke-width="2"/>
+<text x="525.23" y="639.00" font-size="10" fill="#286dc0" text-anchor="middle">11.35</text>
+<line x1="653.29" y1="616.00" x2="653.29" y2="625.00" stroke="#286dc0" stroke-width="2"/>
+<text x="653.29" y="639.00" font-size="10" fill="#286dc0" text-anchor="middle">15.5</text>
+<line x1="702.66" y1="616.00" x2="702.66" y2="625.00" stroke="#286dc0" stroke-width="2"/>
+<text x="702.66" y="639.00" font-size="10" fill="#286dc0" text-anchor="middle">17.1</text>
+<line x1="864.66" y1="616.00" x2="864.66" y2="625.00" stroke="#286dc0" stroke-width="2"/>
+<text x="864.66" y="639.00" font-size="10" fill="#286dc0" text-anchor="middle">22.35</text>
+<line x1="932.54" y1="616.00" x2="932.54" y2="625.00" stroke="#286dc0" stroke-width="2"/>
+<text x="932.54" y="639.00" font-size="10" fill="#286dc0" text-anchor="middle">24.55</text>
+<line x1="1003.51" y1="616.00" x2="1003.51" y2="625.00" stroke="#286dc0" stroke-width="2"/>
+<text x="1003.51" y="639.00" font-size="10" fill="#286dc0" text-anchor="middle">26.85</text>
+<text x="1460.00" y="587.00" font-size="12" fill="#263f3b" text-anchor="end">6000px</text>
+<text x="1460.00" y="605.00" font-size="12" fill="#263f3b" text-anchor="end">最大入力間隔 5.25秒</text>
+<text x="175.00" y="687.00" font-size="15" fill="#263f3b" text-anchor="start"></text>
+<text x="35.00" y="705.00" font-size="20" fill="#263f3b" text-anchor="start">S04  難所 3→6区間 ／ ジャンプ 6→10回</text>
+<text x="35.00" y="765.00" font-size="14" fill="#263f3b" text-anchor="start">版2（変更前）</text>
+<line x1="175.00" y1="725.00" x2="175.00" y2="813.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="175.00" y="830.00" font-size="11" fill="#263f3b" text-anchor="middle">0</text>
+<line x1="329.29" y1="725.00" x2="329.29" y2="813.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="329.29" y="830.00" font-size="11" fill="#263f3b" text-anchor="middle">1000</text>
+<line x1="483.57" y1="725.00" x2="483.57" y2="813.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="483.57" y="830.00" font-size="11" fill="#263f3b" text-anchor="middle">2000</text>
+<line x1="637.86" y1="725.00" x2="637.86" y2="813.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="637.86" y="830.00" font-size="11" fill="#263f3b" text-anchor="middle">3000</text>
+<line x1="792.14" y1="725.00" x2="792.14" y2="813.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="792.14" y="830.00" font-size="11" fill="#263f3b" text-anchor="middle">4000</text>
+<line x1="946.43" y1="725.00" x2="946.43" y2="813.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="946.43" y="830.00" font-size="11" fill="#263f3b" text-anchor="middle">5000</text>
+<line x1="1100.71" y1="725.00" x2="1100.71" y2="813.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="1100.71" y="830.00" font-size="11" fill="#263f3b" text-anchor="middle">6000</text>
+<line x1="1255.00" y1="725.00" x2="1255.00" y2="813.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="1255.00" y="830.00" font-size="11" fill="#263f3b" text-anchor="middle">7000</text>
+<line x1="175.00" y1="780.00" x2="1255.00" y2="780.00" stroke="#74867d" stroke-width="2"/>
+<circle cx="329.29" cy="769.25" r="2.5" fill="#d7a426"/>
+<path d="M 416.8571428571429,780 l 5,-14 l 5,14 Z" fill="#514650"/>
+<text x="421.86" y="761.00" font-size="10" fill="#263f3b" text-anchor="middle">1600</text>
+<circle cx="421.86" cy="739.25" r="2.5" fill="#d7a426"/>
+<circle cx="491.29" cy="769.25" r="2.5" fill="#d7a426"/>
+<circle cx="573.06" cy="744.25" r="2.5" fill="#d7a426"/>
+<circle cx="619.34" cy="714.25" r="2.5" fill="#d7a426"/>
+<rect x="560.71" y="755.00" width="222.17" height="6.00" fill="#45a9bb"/>
+<rect x="582.31" y="757.50" width="191.31" height="22.50" fill="#8e6144"/>
+<circle cx="677.97" cy="714.25" r="2.5" fill="#d7a426"/>
+<circle cx="736.60" cy="714.25" r="2.5" fill="#d7a426"/>
+<circle cx="861.57" cy="769.25" r="2.5" fill="#d7a426"/>
+<path d="M 941.4285714285714,780 l 5,-14 l 5,14 Z" fill="#514650"/>
+<text x="946.43" y="761.00" font-size="10" fill="#263f3b" text-anchor="middle">5000</text>
+<circle cx="946.43" cy="739.25" r="2.5" fill="#d7a426"/>
+<circle cx="1177.86" cy="769.25" r="2.5" fill="#d7a426"/>
+<circle cx="619.34" cy="744.25" r="5" fill="#e64b65"/>
+<text x="619.34" y="733.25" font-size="10" fill="#263f3b" text-anchor="middle">2880</text>
+<circle cx="677.97" cy="744.25" r="5" fill="#e64b65"/>
+<text x="677.97" y="733.25" font-size="10" fill="#263f3b" text-anchor="middle">3260</text>
+<circle cx="736.60" cy="744.25" r="5" fill="#e64b65"/>
+<text x="736.60" y="733.25" font-size="10" fill="#263f3b" text-anchor="middle">3640</text>
+<line x1="407.97" y1="784.00" x2="407.97" y2="793.00" stroke="#286dc0" stroke-width="2"/>
+<text x="407.97" y="807.00" font-size="10" fill="#286dc0" text-anchor="middle">7.55</text>
+<line x1="545.29" y1="784.00" x2="545.29" y2="793.00" stroke="#286dc0" stroke-width="2"/>
+<text x="545.29" y="807.00" font-size="10" fill="#286dc0" text-anchor="middle">12</text>
+<line x1="605.46" y1="784.00" x2="605.46" y2="793.00" stroke="#286dc0" stroke-width="2"/>
+<text x="605.46" y="807.00" font-size="10" fill="#286dc0" text-anchor="middle">13.95</text>
+<line x1="664.09" y1="784.00" x2="664.09" y2="793.00" stroke="#286dc0" stroke-width="2"/>
+<text x="664.09" y="807.00" font-size="10" fill="#286dc0" text-anchor="middle">15.85</text>
+<line x1="722.71" y1="784.00" x2="722.71" y2="793.00" stroke="#286dc0" stroke-width="2"/>
+<text x="722.71" y="807.00" font-size="10" fill="#286dc0" text-anchor="middle">17.75</text>
+<line x1="932.54" y1="784.00" x2="932.54" y2="793.00" stroke="#286dc0" stroke-width="2"/>
+<text x="932.54" y="807.00" font-size="10" fill="#286dc0" text-anchor="middle">24.55</text>
+<text x="1460.00" y="755.00" font-size="12" fill="#263f3b" text-anchor="end">7000px</text>
+<text x="1460.00" y="773.00" font-size="12" fill="#263f3b" text-anchor="end">最大入力間隔 10.45秒</text>
+<text x="35.00" y="867.00" font-size="14" fill="#263f3b" text-anchor="start">版3（変更後）</text>
+<line x1="175.00" y1="827.00" x2="175.00" y2="915.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="175.00" y="932.00" font-size="11" fill="#263f3b" text-anchor="middle">0</text>
+<line x1="329.29" y1="827.00" x2="329.29" y2="915.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="329.29" y="932.00" font-size="11" fill="#263f3b" text-anchor="middle">1000</text>
+<line x1="483.57" y1="827.00" x2="483.57" y2="915.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="483.57" y="932.00" font-size="11" fill="#263f3b" text-anchor="middle">2000</text>
+<line x1="637.86" y1="827.00" x2="637.86" y2="915.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="637.86" y="932.00" font-size="11" fill="#263f3b" text-anchor="middle">3000</text>
+<line x1="792.14" y1="827.00" x2="792.14" y2="915.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="792.14" y="932.00" font-size="11" fill="#263f3b" text-anchor="middle">4000</text>
+<line x1="946.43" y1="827.00" x2="946.43" y2="915.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="946.43" y="932.00" font-size="11" fill="#263f3b" text-anchor="middle">5000</text>
+<line x1="1100.71" y1="827.00" x2="1100.71" y2="915.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="1100.71" y="932.00" font-size="11" fill="#263f3b" text-anchor="middle">6000</text>
+<line x1="1255.00" y1="827.00" x2="1255.00" y2="915.00" stroke="#dfe6e3" stroke-width="1"/>
+<text x="1255.00" y="932.00" font-size="11" fill="#263f3b" text-anchor="middle">7000</text>
+<line x1="175.00" y1="882.00" x2="1255.00" y2="882.00" stroke="#74867d" stroke-width="2"/>
+<path d="M 308.85714285714283,882 l 5,-14 l 5,14 Z" fill="#514650"/>
+<text x="313.86" y="863.00" font-size="10" fill="#263f3b" text-anchor="middle">900</text>
+<circle cx="313.86" cy="841.25" r="2.5" fill="#d7a426"/>
+<path d="M 416.8571428571429,882 l 5,-14 l 5,14 Z" fill="#514650"/>
+<text x="421.86" y="863.00" font-size="10" fill="#263f3b" text-anchor="middle">1600</text>
+<circle cx="421.86" cy="841.25" r="2.5" fill="#d7a426"/>
+<circle cx="573.06" cy="846.25" r="2.5" fill="#d7a426"/>
+<circle cx="619.34" cy="816.25" r="2.5" fill="#d7a426"/>
+<rect x="560.71" y="857.00" width="222.17" height="6.00" fill="#45a9bb"/>
+<rect x="582.31" y="859.50" width="191.31" height="22.50" fill="#8e6144"/>
+<circle cx="677.97" cy="816.25" r="2.5" fill="#d7a426"/>
+<circle cx="736.60" cy="816.25" r="2.5" fill="#d7a426"/>
+<path d="M 879.7142857142857,882 l 5,-14 l 5,14 Z" fill="#514650"/>
+<text x="884.71" y="863.00" font-size="10" fill="#263f3b" text-anchor="middle">4600</text>
+<circle cx="884.71" cy="841.25" r="2.5" fill="#d7a426"/>
+<circle cx="1020.49" cy="848.75" r="2.5" fill="#d7a426"/>
+<rect x="1042.09" y="862.00" width="49.37" height="20.00" fill="#8e6144"/>
+<rect x="1066.77" y="839.50" width="6.17" height="42.50" fill="#8e6144"/>
+<circle cx="1069.86" cy="818.75" r="2.5" fill="#d7a426"/>
+<rect x="1023.57" y="859.50" width="95.66" height="6.00" fill="#45a9bb"/>
+<path d="M 1188.2857142857142,882 l 5,-14 l 5,14 Z" fill="#514650"/>
+<text x="1193.29" y="863.00" font-size="10" fill="#263f3b" text-anchor="middle">6600</text>
+<circle cx="1193.29" cy="841.25" r="2.5" fill="#d7a426"/>
+<circle cx="619.34" cy="846.25" r="5" fill="#e64b65"/>
+<line x1="631.34" y1="846.25" x2="610.34" y2="846.25" stroke="#ab2446" stroke-width="2"/>
+<path d="M610.3428571428572,846.25 l5,-3 v6 Z" fill="#ab2446"/>
+<text x="619.34" y="835.25" font-size="10" fill="#263f3b" text-anchor="middle">2880</text>
+<circle cx="677.97" cy="846.25" r="5" fill="#e64b65"/>
+<line x1="689.97" y1="846.25" x2="668.97" y2="846.25" stroke="#ab2446" stroke-width="2"/>
+<path d="M668.9714285714285,846.25 l5,-3 v6 Z" fill="#ab2446"/>
+<text x="677.97" y="835.25" font-size="10" fill="#263f3b" text-anchor="middle">3260</text>
+<circle cx="736.60" cy="846.25" r="5" fill="#e64b65"/>
+<line x1="748.60" y1="846.25" x2="727.60" y2="846.25" stroke="#ab2446" stroke-width="2"/>
+<path d="M727.6,846.25 l5,-3 v6 Z" fill="#ab2446"/>
+<text x="736.60" y="835.25" font-size="10" fill="#263f3b" text-anchor="middle">3640</text>
+<line x1="299.97" y1="886.00" x2="299.97" y2="895.00" stroke="#286dc0" stroke-width="2"/>
+<text x="299.97" y="909.00" font-size="10" fill="#286dc0" text-anchor="middle">4.05</text>
+<line x1="407.97" y1="886.00" x2="407.97" y2="895.00" stroke="#286dc0" stroke-width="2"/>
+<text x="407.97" y="909.00" font-size="10" fill="#286dc0" text-anchor="middle">7.55</text>
+<line x1="545.29" y1="886.00" x2="545.29" y2="895.00" stroke="#286dc0" stroke-width="2"/>
+<text x="545.29" y="909.00" font-size="10" fill="#286dc0" text-anchor="middle">12</text>
+<line x1="605.46" y1="886.00" x2="605.46" y2="895.00" stroke="#286dc0" stroke-width="2"/>
+<text x="605.46" y="909.00" font-size="10" fill="#286dc0" text-anchor="middle">13.95</text>
+<line x1="664.09" y1="886.00" x2="664.09" y2="895.00" stroke="#286dc0" stroke-width="2"/>
+<text x="664.09" y="909.00" font-size="10" fill="#286dc0" text-anchor="middle">15.85</text>
+<line x1="722.71" y1="886.00" x2="722.71" y2="895.00" stroke="#286dc0" stroke-width="2"/>
+<text x="722.71" y="909.00" font-size="10" fill="#286dc0" text-anchor="middle">17.75</text>
+<line x1="870.83" y1="886.00" x2="870.83" y2="895.00" stroke="#286dc0" stroke-width="2"/>
+<text x="870.83" y="909.00" font-size="10" fill="#286dc0" text-anchor="middle">22.55</text>
+<line x1="1008.14" y1="886.00" x2="1008.14" y2="895.00" stroke="#286dc0" stroke-width="2"/>
+<text x="1008.14" y="909.00" font-size="10" fill="#286dc0" text-anchor="middle">27</text>
+<line x1="1055.97" y1="886.00" x2="1055.97" y2="895.00" stroke="#286dc0" stroke-width="2"/>
+<text x="1055.97" y="909.00" font-size="10" fill="#286dc0" text-anchor="middle">28.55</text>
+<line x1="1179.40" y1="886.00" x2="1179.40" y2="895.00" stroke="#286dc0" stroke-width="2"/>
+<text x="1179.40" y="909.00" font-size="10" fill="#286dc0" text-anchor="middle">32.55</text>
+<text x="1460.00" y="857.00" font-size="12" fill="#263f3b" text-anchor="end">7000px</text>
+<text x="1460.00" y="875.00" font-size="12" fill="#263f3b" text-anchor="end">最大入力間隔 4.80秒</text>
+<text x="175.00" y="957.00" font-size="15" fill="#263f3b" text-anchor="start"></text>
+<text x="35.00" y="986.00" font-size="14" fill="#263f3b" text-anchor="start">鳥の印＝しば犬との遭遇X。版3初期X＝3456 / 3912 / 4368、左へ40px/秒、接近速度240px/秒。</text>
+<text x="35.00" y="1011.00" font-size="14" fill="#263f3b" text-anchor="start">難所は一連の区間で集計（足場・下の壁・上の鳥等をまとめる）。細部の全座標は設計資料を参照。</text>
+</svg>

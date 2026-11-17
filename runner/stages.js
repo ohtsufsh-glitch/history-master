@@ -144,7 +144,7 @@ const LEGACY_STAGES = Object.freeze([
 // 版1は購入済みプレイの正本。距離・イベント・配列順を編集しない。
 // 版2のXはキャラ中心の通過距離。旧at形式に変換し既存の出現・着地を再利用する。
 const at = (x, type, dimensions = {}) => ({ at: (x - 822) / 200, type, ...dimensions });
-const CURRENT_STAGES = [
+const VERSION2_STAGES = [
   {
     ...LEGACY_STAGES[1], stageVersion: 2, goalDistance: 5000,
     course: [
@@ -199,11 +199,62 @@ const CURRENT_STAGES = [
   course: Object.freeze(stage.course.slice().sort((a, b) => a.at - b.at).map(entry => Object.freeze(entry))),
 }));
 
+// 版1・2は編集しない。版3の定義だけが新しい購入に使われる。
+const VERSION3_STAGES = [
+  {
+    ...LEGACY_STAGES[1], stageVersion: 3, goalDistance: 5000,
+    course: [
+      at(900, "obstacle"), at(900, "star", {height: 120}),
+      at(1320, "star", {height: 0}),
+      at(1600, "obstacle"), at(1600, "star", {height: 120}),
+      at(2050, "star", {height: 0}),
+      at(2800, "platform", {width: 600, height: 90}),
+      at(2540, "star", {height: 90}),
+      at(2810, "wall", {width: 340, height: 80}),
+      at(2840, "wall", {width: 40, height: 170}),
+      at(2840, "star", {height: 210}), at(3040, "star", {height: 90}),
+      at(3500, "star", {height: 0}),
+      at(3800, "obstacle"), at(3800, "star", {height: 120}),
+      at(4600, "obstacle"), at(4600, "star", {height: 120}),
+    ],
+  },
+  {
+    ...VERSION2_STAGES[1], stageVersion: 3, holeFailure: "fatal",
+    holes: [...VERSION2_STAGES[1].holes, {start: 5400, end: 5520}],
+    course: [
+      at(970, "platform", {width: 540, height: 80}),
+      at(1100, "wall", {width: 320, height: 70}), at(1000, "star", {height: 80}),
+      ...VERSION2_STAGES[1].course.filter(e => e.type !== "star" || ![1120, 5500].some(x => Math.abs(e.at * 200 + 822 - x) < 1e-6)),
+      at(5460, "star", {height: 120}),
+    ],
+  },
+  {
+    ...VERSION2_STAGES[2], stageVersion: 3,
+    // 世界速度40px/sで左へ飛ぶ。しば犬との遭遇Xは2880/3260/3640。
+    birds: [3456, 3912, 4368].map(x => ({x, height: 143, speed: 40})),
+    course: [
+      at(900, "obstacle"), at(900, "star", {height: 120}),
+      ...VERSION2_STAGES[2].course
+        .filter(e => e.type !== "star" || ![1000, 2050, 4450, 6500].some(x => Math.abs(e.at * 200 + 822 - x) < 1e-6))
+        .map(e => Math.abs(e.at * 200 + 822 - 5000) < 1e-6 ? {...e, at: at(4600, e.type).at} : e),
+      at(5810, "platform", {width: 620, height: 90}),
+      at(5480, "star", {height: 90}),
+      at(5780, "wall", {width: 320, height: 80}),
+      at(5800, "wall", {width: 40, height: 170}), at(5800, "star", {height: 210}),
+      at(6600, "obstacle"), at(6600, "star", {height: 120}),
+    ],
+  },
+].map(stage => Object.freeze({...stage,
+  ...(stage.birds ? {birds: Object.freeze(stage.birds.map(bird => Object.freeze(bird)))} : {}),
+  holes: Object.freeze((stage.holes ?? []).map(hole => Object.freeze(hole))),
+  course: Object.freeze(stage.course.slice().sort((a, b) => a.at - b.at).map(entry => Object.freeze(entry))),
+}));
+
 // 選択・新規購入は最新版。再開は必ず(ID, 版)で引く。未知版の推測は禁止。
 const STAGES = Object.freeze(LEGACY_STAGES.map(stage =>
-  CURRENT_STAGES.find(current => current.stageId === stage.stageId) ?? stage));
+  VERSION3_STAGES.find(current => current.stageId === stage.stageId) ?? stage));
 function getStage(stageId, stageVersion) {
-  return [...LEGACY_STAGES, ...CURRENT_STAGES].find(stage =>
+  return [...LEGACY_STAGES, ...VERSION2_STAGES, ...VERSION3_STAGES].find(stage =>
     stage.stageId === stageId && (stage.stageVersion ?? 1) === stageVersion);
 }
 export { STAGES, LEGACY_STAGES, getStage };

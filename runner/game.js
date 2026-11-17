@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.44";
-import { STAGES, getStage } from "./stages.js?v=1.7.44";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.44";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.45";
+import { STAGES, getStage } from "./stages.js?v=1.7.45";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.45";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -104,6 +104,7 @@ function createRunnerState(course = COURSE, characterId = course?.characterId ??
   const character = getCharacter(characterId);
   return { stageId: stage.stageId ?? null, stageVersion: stage.stageVersion ?? 1,
     holes: (stage.holes ?? []).map(hole => ({...hole})),
+    holeFailure: stage.holeFailure ?? "recover",
     birds: (stage.birds ?? []).map(bird => ({...bird})), goalDistance: stage.goalDistance,
     characterId: character.characterId, speed: character.speed, jump: character.jump,
     initialLives: character.initialLives, airJumpsRemaining: character.airJumps,
@@ -240,9 +241,9 @@ function characterCenter(state) {
   return { x: CHARACTER_X, y: state.feetY - 43 - characterBob(state) };
 }
 
-// 鳥はコースの固定座標から再生成する。画面サイズ・実時間・snapshotの型に依存しない。
+// 版2は固定座標、版3は世界速度で左へ飛ぶ。既存elapsedだけから再生成する。
 function birdCenter(state, bird) {
-  return {x: CHARACTER_X + bird.x - state.distance, y: GROUND_Y - bird.height};
+  return {x: CHARACTER_X + bird.x - state.distance - (bird.speed ?? 0) * state.elapsed, y: GROUND_Y - bird.height};
 }
 
 function touchesBird(state, bird) {
@@ -343,6 +344,14 @@ function updateRunner(state, seconds) {
     if (state.hitFeedbackRemaining <= PHYSICS_EPSILON) state.hitPoint = null;
     state.objects = state.objects.filter(object => object.x +
       objectHalfWidth(object) >= 0);
+    // 足が地面より下へ落ちると、通常のジャンプ・着地では復帰できない。
+    // 穴の上空を正常に飛び越える間はfeetY<=GROUND_Yなので終了しない。
+    if (state.holeFailure === "fatal" && state.feetY > GROUND_Y + PHYSICS_EPSILON) {
+      state.lives = 0;
+      state.mode = "finished";
+      state.reason = "collision";
+      return; // 終了したサブステップではスターもゴールも処理しない。
+    }
     if (state.feetY >= WORLD.height + 100) {
       recoverFromHole(state);
       if (state.mode === "finished") return;
@@ -621,6 +630,25 @@ function drawBird(context, state, bird) {
   context.arc(x, y, BIRD_RADIUS - 2, 0, Math.PI * 2);
   context.fill(); context.stroke();
   context.clip(); // 羽ばたき中も実体が衝突円の外へはみ出さない。
+  if ((bird.speed ?? 0) > 0) {
+    // 左端のくちばし・左を見る目・後方の羽で進行方向を示す。版2の正面顔は維持。
+    context.fillStyle = "#fff2ce";
+    context.beginPath(); context.ellipse(x - 3, y + 10, 15, 12, 0, 0, Math.PI * 2); context.fill();
+    const wing = Math.sin(state.animationTime * Math.PI * 6) * 4;
+    context.fillStyle = "#9b294f";
+    context.beginPath(); context.ellipse(x + 10, y + wing, 12, 7, -.35, 0, Math.PI * 2); context.fill();
+    context.fillStyle = "#fff";
+    context.beginPath(); context.arc(x - 10, y - 8, 8, 0, Math.PI * 2); context.fill();
+    context.fillStyle = "#302638";
+    context.beginPath(); context.arc(x - 14, y - 8, 4, 0, Math.PI * 2); context.fill();
+    context.strokeStyle = "#652c48"; context.lineWidth = 3;
+    context.beginPath(); context.moveTo(x - 18, y - 20); context.lineTo(x - 4, y - 15); context.stroke();
+    context.fillStyle = "#ffbb38";
+    context.beginPath(); context.moveTo(x - 25, y + 1); context.lineTo(x - 13, y - 3);
+    context.lineTo(x - 13, y + 8); context.closePath(); context.fill();
+    context.restore();
+    return;
+  }
   context.fillStyle = "#fff2ce";
   context.beginPath(); context.ellipse(x - 1, y + 10, 15, 12, 0, 0, Math.PI * 2); context.fill();
   // 羽ばたきはゲーム内時間だけで変化。高度と衝突円は動かない。

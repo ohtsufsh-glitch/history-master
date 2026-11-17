@@ -6,6 +6,8 @@ on:
       - 'runner/**'
       - 'tests/runner_phase1_test.py'
       - 'tests/runner_phase2a_test.py'
+      - 'tests/runner_tuning_test.py'
+      - 'tests/fixtures/runner85-tuning-base.json'
       - 'tests/fixtures/runner85-phase2a-base.json'
       - 'tests/fixtures/runner85-v1.json'
       - 'tests/runner_session_test.py'
@@ -53,7 +55,7 @@ jobs:
       - name: Course physics and paid-play compatibility
         env:
           PYTHONPATH: tests
-        run: python -m unittest -v runner_phase1_test runner_phase2a_test runner_session_test runner_storage_test
+        run: python -m unittest -v runner_phase1_test runner_phase2a_test runner_tuning_test runner_session_test runner_storage_test
       - name: Syntax and version checks
         run: |
           python -c "import re,pathlib; s=pathlib.Path('index.html').read_text(); pathlib.Path('/tmp/runner-parent.js').write_text(re.search(r'<script>([\s\S]*?)</script>',s)[1])"
