@@ -5,6 +5,8 @@ on:
       - 'index.html'
       - 'runner/**'
       - 'tests/runner_phase1_test.py'
+      - 'tests/runner_phase2a_test.py'
+      - 'tests/fixtures/runner85-phase2a-base.json'
       - 'tests/fixtures/runner85-v1.json'
       - 'tests/runner_session_test.py'
       - 'tests/runner_storage_test.py'
@@ -48,10 +50,10 @@ jobs:
             runner_integration_test.RunnerIntegrationTest.test_home_entry_shows_top_then_preserves_user_scroll \
             runner_safari_test.RunnerSafariTest.test_delayed_initial_frame_does_not_override_user_scroll \
             runner_safari_test.RunnerSafariTest.test_history_traversal_does_not_apply_entry_scroll
-      - name: Phase 1 course physics and paid-play compatibility
+      - name: Course physics and paid-play compatibility
         env:
           PYTHONPATH: tests
-        run: python -m unittest -v runner_phase1_test runner_session_test runner_storage_test
+        run: python -m unittest -v runner_phase1_test runner_phase2a_test runner_session_test runner_storage_test
       - name: Syntax and version checks
         run: |
           python -c "import re,pathlib; s=pathlib.Path('index.html').read_text(); pathlib.Path('/tmp/runner-parent.js').write_text(re.search(r'<script>([\s\S]*?)</script>',s)[1])"
