@@ -1,6 +1,6 @@
 // Issue #84 第1段階。座標・攻略入力の設計値は docs/RUNNER_DIFFICULTY_DESIGN.md。
 // atは旧200px/s基準の右端出現秒を維持。中心通過距離X = at * 200 + 822。
-// 足場と壁のwidth/height、スターheightは論理px。S01と旧通常コースは維持。
+// 足場と壁のwidth/height、スターheightは論理px。旧通常コースは全版を維持。
 const LEGACY_STAGES = Object.freeze([
   {
     stageId: "S01", name: "はじめての草原", difficulty: 1,
@@ -199,7 +199,7 @@ const VERSION2_STAGES = [
   course: Object.freeze(stage.course.slice().sort((a, b) => a.at - b.at).map(entry => Object.freeze(entry))),
 }));
 
-// 版1・2は編集しない。版3の定義だけが新しい購入に使われる。
+// 版1・2・3は購入済みプレイの正本。以降も編集しない。
 const VERSION3_STAGES = [
   {
     ...LEGACY_STAGES[1], stageVersion: 3, goalDistance: 5000,
@@ -250,11 +250,77 @@ const VERSION3_STAGES = [
   course: Object.freeze(stage.course.slice().sort((a, b) => a.at - b.at).map(entry => Object.freeze(entry))),
 }));
 
+// Issue #85 高密度版。以前の定義は購入済みプレイのため上で固定する。
+// しば犬の通常ジャンプ(200px/s, 高さ120, 0.9秒)で測定。設計・入力幅は
+// docs/RUNNER_DENSITY_85.md。補助関数はこの版の静的な定義生成だけに使う。
+const rocks = xs => xs.map(x => at(x, "obstacle"));
+const platform = (x, width, height) => at(x, "platform", {width, height});
+const wall = (start, end, height) => at((start + end) / 2, "wall", {width: end - start, height});
+const stars = points => points.map(([x, height]) => at(x, "star", {height}));
+const incoming = (encounter, height) => ({x: encounter * 1.6, height, speed: 120});
+// 地上壁→足場への着地→上の壁へ再ジャンプ。壁同士の実体は重ねない。
+const wallDeck = start => [platform(start + 280, 560, 90),
+  wall(start + 100, start + 300, 80), wall(start + 320, start + 360, 170)];
+// 長い地上壁は鳥の下を走る抜け道を防ぐ。鳥同士は1.2秒ずつ離す。
+const birdDeck = start => [platform(start + 500, 1000, 100), wall(start + 100, start + 950, 90)];
+const DENSE_STAGES = [
+  {
+    ...LEGACY_STAGES[0], stageVersion: 2,
+    course: [...rocks([800, 1200, 1600, 2100, 2700, 3300]),
+      ...stars([[340,0],[580,0],[800,120],[1200,120],[1600,120],[2100,120],
+        [2450,0],[2700,120],[3300,120],[3700,0]])],
+  },
+  {
+    ...LEGACY_STAGES[1], stageVersion: 4, goalDistance: 5000,
+    course: [...rocks([420,640,860,1080,1300,1520,2540,2760,2980,3200,4220,4440,4660,4880]),
+      ...wallDeck(1760), ...wallDeck(3440),
+      ...stars([[420,120],[860,120],[1300,120],[1820,90],[2100,210],
+        [2760,120],[3200,120],[3500,90],[3780,210],[4660,120]])],
+  },
+  {
+    ...LEGACY_STAGES[2], stageVersion: 4, goalDistance: 6000, holeFailure: "fatal",
+    holes: [420,640,860,1080,1300,1520,2800,3020,3240,3460,3680,3900].map(start => ({start,end:start+100})),
+    course: [...rocks([1800,4160,5140,5380,5620,5860]),
+      platform(2200,160,90), platform(2470,160,110), wall(2180,2550,80),
+      platform(4500,160,90), platform(4770,160,110), wall(4480,4850,80),
+      ...stars([[470,120],[910,120],[1350,120],[1800,120],[2200,90],
+        [2470,110],[3070,120],[3730,120],[4770,110],[5620,120]])],
+  },
+  {
+    ...LEGACY_STAGES[3], stageVersion: 4, goalDistance: 7000,
+    birds: [2180,2420,2660,4940,5180,5420].map(x => incoming(x,143)),
+    course: [...rocks([420,630,840,1050,1260,1470,1680,3180,3390,3600,3810,4020,4230,4440,5880,6090,6300,6510,6720,6930]),
+      ...birdDeck(1900), ...birdDeck(4660),
+      ...stars([[420,120],[1260,120],[2180,220],[2420,220],[2660,220],
+        [3810,120],[4940,220],[5180,220],[5420,220],[6510,120]])],
+  },
+  {
+    ...LEGACY_STAGES[4], stageVersion: 2,
+    birds: [incoming(1400,133)],
+    course: [...rocks([420,680,940,2200,2550,2900,3250,3600,3950,4300,4650,5000,5350,5700,6050,6400]),
+      platform(1300,90,90), platform(1500,90,110), platform(1730,90,90), wall(1280,1860,80),
+      ...stars([[420,120],[940,120],[1300,90],[1500,110],[1730,90],
+        [2550,120],[3600,120],[4650,120],[5700,120],[6400,120]])],
+  },
+  {
+    ...LEGACY_STAGES[5], stageVersion: 2,
+    birds: [incoming(1400,133),incoming(1840,123)],
+    course: [...rocks([420,660,900,2360,2620,2880,3140,3400,3660,3920,4180,4440,4700,4960,5220,5480,5740,6000,6260,6520,6780]),
+      platform(1300,90,90), platform(1500,90,110), platform(1740,90,80), platform(1950,90,105), wall(1280,2080,70),
+      ...stars([[420,120],[900,120],[1300,90],[1500,110],[1740,80],[1950,105],
+        [3140,120],[4440,120],[5740,120],[6780,120]])],
+  },
+].map(stage => Object.freeze({...stage,
+  holes: Object.freeze((stage.holes ?? []).map(hole => Object.freeze(hole))),
+  birds: Object.freeze((stage.birds ?? []).map(bird => Object.freeze(bird))),
+  course: Object.freeze(stage.course.slice().sort((a,b) => a.at-b.at).map(entry => Object.freeze(entry))),
+}));
+
 // 選択・新規購入は最新版。再開は必ず(ID, 版)で引く。未知版の推測は禁止。
 const STAGES = Object.freeze(LEGACY_STAGES.map(stage =>
-  VERSION3_STAGES.find(current => current.stageId === stage.stageId) ?? stage));
+  DENSE_STAGES.find(current => current.stageId === stage.stageId) ?? stage));
 function getStage(stageId, stageVersion) {
-  return [...LEGACY_STAGES, ...VERSION2_STAGES, ...VERSION3_STAGES].find(stage =>
+  return [...LEGACY_STAGES, ...VERSION2_STAGES, ...VERSION3_STAGES, ...DENSE_STAGES].find(stage =>
     stage.stageId === stageId && (stage.stageVersion ?? 1) === stageVersion);
 }
 export { STAGES, LEGACY_STAGES, getStage };

@@ -345,7 +345,7 @@ class RunnerPhase1CompatibilityTest(unittest.TestCase):
 
     def test_unknown_stage_version_preserves_purchase_and_blocks_repurchase(self):
         self.assertTrue(self.page.evaluate("""async()=>{
-          for(const [stageId,version] of [['S02',99],['S01',2],['S04',99]]){
+          for(const [stageId,version] of [['S02',99],['S01',99],['S04',99]]){
             await installPhase();const p=await buy({stageId});p.stageVersion=version;
             await runnerTransaction(['runnerPlays'],tx=>tx.objectStore('runnerPlays').put(p));
             const before=await snapshotAllStores();

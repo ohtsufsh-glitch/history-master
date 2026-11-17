@@ -5,7 +5,7 @@ from pathlib import Path
 import unittest
 
 import runner_results_test as results
-from runner_difficulty_cases import SOLUTIONS
+from runner_density_test import INPUTS
 
 
 SIZES = [(1180,820),(1024,768),(1366,1024),(1180,700),
@@ -194,7 +194,7 @@ class RunnerLayoutTest(unittest.TestCase):
                       await formalRunner.bridge.advance(1/60);
                     }
                   })();
-                }""", SOLUTIONS['S01']['perfect'])
+                }""", INPUTS['S01'])
                 self.page.wait_for_function('typeof releaseLayoutSave === "function"')
                 self.page.evaluate("document.querySelector('iframe').contentWindow.refreshFormalRunner()")
                 frame.locator('#runner-result-title').filter(has_text='保存中').wait_for()
