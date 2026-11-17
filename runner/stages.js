@@ -409,13 +409,43 @@ const VARIED_STAGES = [
   course: Object.freeze(stage.course.sort((a,b) => a.at-b.at).map(e => Object.freeze(e))),
 }));
 
+// Issue #85: 高所登りと最終連続足場。購入済み版1〜4は変更しない。
+const ASCENT_STAGES = [
+  {
+    ...VARIED_STAGES[0], stageVersion: 5, holeFailure: "fatal",
+    holes: [{start:2500,end:3600}],
+    spikes: [...VARIED_STAGES[0].spikes, spike(2590,115,35,2.7,0), spike(3080,230,35,2.3,0)],
+  },
+  {
+    ...VARIED_STAGES[1], stageVersion: 5, holeFailure: "fatal",
+    holes: [{start:2640,end:3960},{start:5480,end:7780}],
+    birds: [...VARIED_STAGES[1].birds.slice(0,7),
+      ...[[5500,340],[5700,143],[5840,320],[6040,193],[6180,240],[6380,113],
+        [6520,310],[6720,183],[6860,250],[7060,123],[7200,300],[7400,173],[7540,240],[7740,113]]
+        .map(([x,h])=>incoming(x,h))],
+    spikes: [...VARIED_STAGES[1].spikes.slice(0,4), spike(2740,115,35,2.5,0), spike(3140,220,35,2.9,0),
+      spike(5660,135,25,2.4,.6), spike(6000,150,25,2.5,.3), spike(6340,105,30,2.7,1.2),
+      spike(6720,175,25,2.9,1.7), spike(7400,165,25,3.1,2)],
+    course: [...VARIED_STAGES[1].course.filter(e=>e.at*200+822<5400),
+      ...[[5500,100],[5840,150],[6180,70],[6520,140],[6860,80],[7200,130],[7540,70]]
+        .map(([x,h])=>platform(x,220,h)),
+      ...stars([[6180,70],[7540,70]])],
+  },
+].map(stage=>Object.freeze({...stage,
+  holes:Object.freeze(stage.holes.map(h=>Object.freeze(h))),
+  birds:Object.freeze(stage.birds.map(b=>Object.freeze(b))),
+  spikes:Object.freeze(stage.spikes.map(s=>Object.freeze(s))),
+  course:Object.freeze(stage.course.slice().sort((a,b)=>a.at-b.at).map(e=>Object.freeze(e))),
+}));
+
 // 選択・新規購入は最新版。再開は必ず(ID, 版)で引く。未知版の推測は禁止。
 const STAGES = Object.freeze(LEGACY_STAGES.map(stage =>
+  ASCENT_STAGES.find(current => current.stageId === stage.stageId) ??
   VARIED_STAGES.find(current => current.stageId === stage.stageId) ??
   VERTICAL_STAGES.find(current => current.stageId === stage.stageId) ??
   DENSE_STAGES.find(current => current.stageId === stage.stageId) ?? stage));
 function getStage(stageId, stageVersion) {
-  return [...LEGACY_STAGES, ...VERSION2_STAGES, ...VERSION3_STAGES, ...DENSE_STAGES, ...VERTICAL_STAGES, ...VARIED_STAGES].find(stage =>
+  return [...LEGACY_STAGES, ...VERSION2_STAGES, ...VERSION3_STAGES, ...DENSE_STAGES, ...VERTICAL_STAGES, ...VARIED_STAGES, ...ASCENT_STAGES].find(stage =>
     stage.stageId === stageId && (stage.stageVersion ?? 1) === stageVersion);
 }
 export { STAGES, LEGACY_STAGES, getStage };
