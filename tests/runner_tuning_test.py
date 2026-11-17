@@ -28,6 +28,7 @@ class RunnerTuningPhysicsTest(unittest.TestCase):
     def model(self):
         p,errors,requests=self.model_runner()
         p.evaluate('()=>{window.trial=('+phase1.TRIAL+');}')
+        p.evaluate("()=>{window.runnerModel={...runnerModel,STAGES:runnerModel.STAGES.map(s=>runnerModel.getStage(s.stageId,['S02','S03','S04'].includes(s.stageId)?3:1))};}")
         self.addCleanup(lambda:self.assert_isolated(p,errors,requests))
         return p
 
@@ -166,14 +167,26 @@ class RunnerTuningPhysicsTest(unittest.TestCase):
 class RunnerTuningCompatibilityTest(unittest.TestCase):
     setUpClass = classmethod(phase1.RunnerPhase1CompatibilityTest.setUpClass.__func__)
     tearDownClass = classmethod(phase1.RunnerPhase1CompatibilityTest.tearDownClass.__func__)
-    setUp = phase1.RunnerPhase1CompatibilityTest.setUp
+    def setUp(self):
+        phase1.RunnerPhase1CompatibilityTest.setUp(self)
+        self.page.evaluate("""()=>{
+          window.buyV3=async({stageId='S01',profile='student',characterId='shiba'}={})=>{
+            const active=(await readAll('runnerPlays')).find(p=>p.profile===profile&&p.status==='active');if(active)return active;
+            const stage=m.getStage(stageId,3),at=new Date().toISOString();
+            const p={id:crypto.randomUUID(),profile,game:'runner',schemaVersion:1,stageId,stageVersion:3,characterId,
+              startedAt:at,updatedAt:at,status:'active',score:0,snapshot:m.snapshotRunner(m.createRunnerState(stage,characterId))};
+            await runnerTransaction(['runnerPlays','coinSpends'],tx=>{
+              tx.objectStore('runnerPlays').add(p);tx.objectStore('coinSpends').add({id:p.id,profile,game:'runner',amount:profile==='test'?0:30,at});
+            });return p;
+          };
+        }""")
     tearDown = phase1.RunnerPhase1CompatibilityTest.tearDown
 
     def test_frozen_v2_paid_states_resume_on_original_trajectories(self):
         self.assertTrue(self.page.evaluate("""async base=>{
           for(const {play,next} of base.states){
             await installPhase([play]);const before=await snapshotAllStores();
-            if(!runnerCanResume(play)||(await buy({stageId:'S02'})).id!==play.id)throw Error('legacy purchase');
+            if(!runnerCanResume(play)||(await buyV3({stageId:'S02'})).id!==play.id)throw Error('legacy purchase');
             let c=await openRunnerSession('student',play.id,{lifecycle:false});await c.resume();await c.advance(.1);await c.pause();
             if(JSON.stringify(m.snapshotRunner(c.view.state))!==JSON.stringify(next))throw Error('old trajectory '+play.id);
             c=await openRunnerSession('student',play.id,{lifecycle:false});
@@ -186,10 +199,10 @@ class RunnerTuningCompatibilityTest(unittest.TestCase):
         self.page.reload();self.page.wait_for_function('appReady')
         self.assertEqual(self.page.evaluate("""async()=>{const p=(await readAll('runnerPlays')).find(p=>p.status==='active'),c=await openRunnerSession(p.profile,p.id,{lifecycle:false});return [c.view.state.stageVersion,c.view.state.goalDistance,c.view.state.birds[0].speed??0];}"""),[2,7000,0])
 
-    def test_v3_purchases_save_reload_and_official_clear_all_three_stages(self):
+    def test_historical_v3_purchases_save_reload_and_official_clear_all_three_stages(self):
         for id,inputs in INPUTS.items():
             self.page.evaluate("""async id=>{
-              await installPhase();window.paid=await buy({stageId:id});
+              await installPhase();window.paid=await buyV3({stageId:id});
               if(paid.stageVersion!==3||!runnerCanResume(paid)||paid.snapshot.version!==2||DB_VERSION!==10||BACKUP_VERSION!==10)throw Error('versions');
               let c=await openRunnerSession('student',paid.id,{lifecycle:false});await c.resume();await c.advance(.1);await c.pause();
             }""",id)
@@ -223,7 +236,7 @@ class RunnerTuningCompatibilityTest(unittest.TestCase):
 
     def test_fatal_hole_formal_gameover_keeps_history_and_stops_progress(self):
         self.assertTrue(self.page.evaluate("""async inputs=>{
-          await installPhase();const paid=await buy({stageId:'S03'}),c=await openRunnerSession('student',paid.id,{lifecycle:false});
+          await installPhase();const paid=await buyV3({stageId:'S03'}),c=await openRunnerSession('student',paid.id,{lifecycle:false});
           const before=await snapshotAllStores();await c.resume();let n=0;const plan=inputs.filter((_,i)=>i!==2);
           while(c.view.state.mode==='running'){
             if(n<plan.length&&c.view.state.elapsed+1e-8>=plan[n]){await c.jump();n++;}await c.advance(1/60);
@@ -239,7 +252,7 @@ class RunnerTuningCompatibilityTest(unittest.TestCase):
         self.assertTrue(self.page.evaluate("""async ({base,inputs})=>{
           for(const id of ['S02','S03','S04']){
             const old=base.states.find(r=>r.play.stageId===id&&r.phase==='platform').play;
-            await installPhase([old]);const fresh=await purchaseRunnerPlay({profile:'test',stageId:id,characterId:'shiba'});
+            await installPhase([old]);const fresh=await buyV3({profile:'test',stageId:id,characterId:'shiba'});
             const c=await openRunnerSession('test',fresh.id,{lifecycle:false});await c.resume();let n=0;
             while(c.view.state.elapsed<13.5){
               if(n<inputs[id].length&&c.view.state.elapsed+1e-8>=inputs[id][n]){await c.jump();n++;}await c.advance(1/60);

@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.45";
-import { STAGES, getStage } from "./stages.js?v=1.7.45";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.45";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.46";
+import { STAGES, getStage } from "./stages.js?v=1.7.46";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.46";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -102,7 +102,7 @@ function createRunnerState(course = COURSE, characterId = course?.characterId ??
     throw new TypeError("コース配列と正のゴール距離が必要です。");
   }
   const character = getCharacter(characterId);
-  return { stageId: stage.stageId ?? null, stageVersion: stage.stageVersion ?? 1,
+  const state = { stageId: stage.stageId ?? null, stageVersion: stage.stageVersion ?? 1,
     holes: (stage.holes ?? []).map(hole => ({...hole})),
     holeFailure: stage.holeFailure ?? "recover",
     birds: (stage.birds ?? []).map(bird => ({...bird})), goalDistance: stage.goalDistance,
@@ -114,6 +114,11 @@ function createRunnerState(course = COURSE, characterId = course?.characterId ??
     landingUntil: 0,
     collectedStarIds: [], elapsed: 0, score: 0, reason: null, objects: [], nextSpawn: 0,
     course: stage.course.map(entry => ({ ...entry })).sort((a, b) => a.at - b.at) };
+  // 開始画面内にある早期イベントも、購入直後から通常のsnapshot v2として保存する。
+  // 旧コースには負のatがなく、旧版の初期snapshotは変化しない。
+  state.nextSpawn = state.course.filter(entry => entry.at * SCROLL_SPEED <= 0).length;
+  state.objects = courseObjectsAt(state, 0, state.nextSpawn);
+  return state;
 }
 
 function platformBounds(object) {
@@ -241,7 +246,7 @@ function characterCenter(state) {
   return { x: CHARACTER_X, y: state.feetY - 43 - characterBob(state) };
 }
 
-// 版2は固定座標、版3は世界速度で左へ飛ぶ。既存elapsedだけから再生成する。
+// speed欠損は旧静止鳥。定義ごとの世界速度(40/120)と既存elapsedだけから再生成する。
 function birdCenter(state, bird) {
   return {x: CHARACTER_X + bird.x - state.distance - (bird.speed ?? 0) * state.elapsed, y: GROUND_Y - bird.height};
 }

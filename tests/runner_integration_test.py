@@ -1,7 +1,9 @@
 """Issue #98: 正式画面・入力・保存の統合。合成データのみ。"""
 import unittest
 from runner_session_test import RunnerSessionTest
-from runner_difficulty_cases import SOLUTIONS
+from runner_difficulty_cases import SOLUTIONS as LEGACY_SOLUTIONS
+from runner_density_test import INPUTS
+SOLUTIONS = {**LEGACY_SOLUTIONS, 'S01':{'perfect':INPUTS['S01']}}
 
 
 class RunnerIntegrationTest(unittest.TestCase):
