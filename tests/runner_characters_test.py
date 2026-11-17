@@ -57,12 +57,14 @@ class RunnerCharactersTest(unittest.TestCase):
     assert_geometry = canvas.RunnerCanvasTest.assert_geometry
     manual_runner = canvas.RunnerCanvasTest.manual_runner
     model_runner = canvas.RunnerCanvasTest.model_runner
-    preview_runner = preview.RunnerPreviewTest.preview_runner
+    # The original 48-way suite is retained for frozen v1; phase1 has representative routes.
+    def preview_runner(self, *args, **kwargs):
+        return preview.RunnerPreviewTest.preview_runner(self, *args, legacy_catalog=True, **kwargs)
     settle = preview.RunnerPreviewTest.settle
 
     def character_runner(self):
         page, errors, requests = self.model_runner()
-        page.evaluate("async()=>{window.runnerStages=(await import('./stages.js')).STAGES;}")
+        page.evaluate("async()=>{window.runnerStages=(await import('./stages.js')).LEGACY_STAGES;}")
         return page, errors, requests
 
     def assert_isolated(self, page, errors, requests):

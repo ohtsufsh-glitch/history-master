@@ -1,7 +1,7 @@
 // Issue #84 第1段階。座標・攻略入力の設計値は docs/RUNNER_DIFFICULTY_DESIGN.md。
 // atは旧200px/s基準の右端出現秒を維持。中心通過距離X = at * 200 + 822。
 // 足場と壁のwidth/height、スターheightは論理px。S01と旧通常コースは維持。
-const STAGES = Object.freeze([
+const LEGACY_STAGES = Object.freeze([
   {
     stageId: "S01", name: "はじめての草原", difficulty: 1,
     goalDistance: 4000,
@@ -141,4 +141,51 @@ const STAGES = Object.freeze([
   course: Object.freeze(stage.course.map(entry => Object.freeze(entry))),
 })));
 
-export { STAGES };
+// 版1は購入済みプレイの正本。距離・イベント・配列順を編集しない。
+// 版2のXはキャラ中心の通過距離。旧at形式に変換し既存の出現・着地を再利用する。
+const at = (x, type, dimensions = {}) => ({ at: (x - 822) / 200, type, ...dimensions });
+const PHASE1_STAGES = [
+  {
+    ...LEGACY_STAGES[1], stageVersion: 2, goalDistance: 5000,
+    course: [
+      at(1080, "star", {height: 0}), at(1320, "star", {height: 0}),
+      at(1600, "obstacle"), at(1600, "star", {height: 120}),
+      at(2050, "star", {height: 0}),
+      at(2800, "platform", {width: 600, height: 90}),
+      at(2540, "star", {height: 90}), at(2800, "star", {height: 90}),
+      at(2810, "wall", {width: 340, height: 80}),
+      at(3040, "star", {height: 90}), at(3400, "star", {height: 0}),
+      at(3800, "obstacle"), at(3800, "star", {height: 120}),
+      at(4500, "star", {height: 0}),
+    ],
+  },
+  {
+    ...LEGACY_STAGES[2], stageVersion: 2, goalDistance: 6000,
+    holes: [{start: 2300, end: 2420}, {start: 4500, end: 4630}],
+    course: [
+      at(1120, "star", {height: 0}),
+      at(1600, "obstacle"), at(1600, "star", {height: 120}),
+      at(2020, "star", {height: 0}), at(2360, "star", {height: 120}),
+      at(3330, "platform", {width: 260, height: 90}),
+      at(3330, "star", {height: 90}),
+      at(3540, "wall", {width: 520, height: 80}),
+      at(3720, "platform", {width: 300, height: 110}),
+      at(3630, "star", {height: 110}), at(3850, "star", {height: 110}),
+      at(4560, "star", {height: 120}),
+      at(5000, "obstacle"), at(5000, "star", {height: 120}),
+      at(5500, "star", {height: 0}),
+    ],
+  },
+].map(stage => Object.freeze({...stage,
+  holes: Object.freeze((stage.holes ?? []).map(hole => Object.freeze(hole))),
+  course: Object.freeze(stage.course.slice().sort((a, b) => a.at - b.at).map(entry => Object.freeze(entry))),
+}));
+
+// 選択・新規購入は最新版。再開は必ず(ID, 版)で引く。未知版の推測は禁止。
+const STAGES = Object.freeze(LEGACY_STAGES.map(stage =>
+  PHASE1_STAGES.find(current => current.stageId === stage.stageId) ?? stage));
+function getStage(stageId, stageVersion) {
+  return [...LEGACY_STAGES, ...PHASE1_STAGES].find(stage =>
+    stage.stageId === stageId && (stage.stageVersion ?? 1) === stageVersion);
+}
+export { STAGES, LEGACY_STAGES, getStage };

@@ -76,7 +76,7 @@ class RunnerYunikoTest(unittest.TestCase):
         page.evaluate('() => { window.yunikoTrial = (' + TRIAL + '); }')
         plans = {key: character_inputs(key) for key in DESIGN}
         rows = page.evaluate("""async plans=>{
-          const stages=(await import('./stages.js')).STAGES, rows=[];
+          const stages=(await import('./stages.js')).LEGACY_STAGES, rows=[];
           for(const stage of stages)for(const hz of [60,120])for(const air of [false,true]){
             // コース通過後の空き区間で通常→空中ジャンプを追加。位置等の補正なし。
             const inputs=[...plans[stage.stageId]];

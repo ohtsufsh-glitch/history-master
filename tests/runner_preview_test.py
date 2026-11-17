@@ -7,7 +7,14 @@ HISTORY_MASTER_ENGINE=webkit でも実行できる。実機Safariの確認は別
 import unittest
 
 import runner_canvas_test as canvas
-from runner_difficulty_cases import DESIGN, EXPECTED, EXPECTED_NAMES, SOLUTIONS
+from runner_difficulty_cases import DESIGN as V1_DESIGN, EXPECTED as V1_EXPECTED, EXPECTED_NAMES, SOLUTIONS
+SOLUTIONS = {**SOLUTIONS,
+    'S02':{p:[7.55,12,18.55] for p in ('clear','perfect')},
+    'S03':{p:[7.55,11.35,15.5,17.1,22.35,24.55] for p in ('clear','perfect')}}
+DESIGN = {**V1_DESIGN, 'S02':dict(walls=[1]), 'S03':dict(walls=[1])}
+EXPECTED = {**V1_EXPECTED,
+    'S02':dict(length=5000,rocks=[1600,3800],platforms=[2800]),
+    'S03':dict(length=6000,rocks=[1600,5000],platforms=[3330,3720])}
 
 
 class RunnerPreviewTest(unittest.TestCase):
@@ -19,7 +26,7 @@ class RunnerPreviewTest(unittest.TestCase):
     tap = canvas.RunnerCanvasTest.tap
 
     def preview_runner(self, suffix='?stagePreview=1', width=390, height=844,
-                       preview_disabled=False):
+                       preview_disabled=False, legacy_catalog=False):
         context = self.browser.new_context(viewport={'width': width, 'height': height},
             device_scale_factor=2, has_touch=True, is_mobile=True)
         self.addCleanup(context.close)
@@ -36,6 +43,8 @@ class RunnerPreviewTest(unittest.TestCase):
         self.assertIn(signature, script)
         script = script.replace(signature,
             signature + ' window.runnerPreviewState = state;', 1)
+        if legacy_catalog:
+            script = script.replace('{ STAGES, getStage }', '{ LEGACY_STAGES as STAGES, getStage }', 1)
         if preview_disabled:
             flag = 'const STAGE_PREVIEW_ENABLED = true;'
             self.assertIn(flag, script)

@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.42";
-import { STAGES } from "./stages.js?v=1.7.42";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.42";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.43";
+import { STAGES, getStage } from "./stages.js?v=1.7.43";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.43";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -101,7 +101,8 @@ function createRunnerState(course = COURSE, characterId = course?.characterId ??
     throw new TypeError("コース配列と正のゴール距離が必要です。");
   }
   const character = getCharacter(characterId);
-  return { stageId: stage.stageId ?? null, goalDistance: stage.goalDistance,
+  return { stageId: stage.stageId ?? null, stageVersion: stage.stageVersion ?? 1,
+    holes: (stage.holes ?? []).map(hole => ({...hole})), goalDistance: stage.goalDistance,
     characterId: character.characterId, speed: character.speed, jump: character.jump,
     initialLives: character.initialLives, airJumpsRemaining: character.airJumps,
     hitFeedbackRemaining: 0, hitPoint: null,
@@ -139,6 +140,12 @@ function objectHalfWidth(object) {
   return object.type === "star" ? COLLISION.starRadius : OBSTACLE_IMAGE.width / 2;
 }
 
+// 穴はキャラの足元中心（通過距離）で判定。描画にも同じ開始・終了座標を使う。
+function groundHoleAt(state, distance = state.distance) {
+  return state.holes.find(hole => distance >= hole.start - PHYSICS_EPSILON &&
+    distance < hole.end - PHYSICS_EPSILON);
+}
+
 function advanceMotion(state, seconds) {
   let remaining = seconds;
   // objectsはサブステップ終了位置。途中の接地・端離脱時刻へXを戻して判定する。
@@ -146,7 +153,15 @@ function advanceMotion(state, seconds) {
     if (state.supportId === "ground") {
       state.feetY = GROUND_Y;
       state.velocityY = 0;
-      return;
+      const startDistance = state.distance - state.speed * remaining;
+      const hole = groundHoleAt(state, startDistance) ?? state.holes.find(hole =>
+        hole.start > startDistance && hole.start <= state.distance + PHYSICS_EPSILON);
+      if (!hole) return;
+      const untilEdge = Math.max(0, (hole.start - startDistance) / state.speed);
+      remaining = Math.max(0, remaining - untilEdge);
+      state.supportId = null;
+      state.airAction = "fall";
+      state.jumpOriginY = GROUND_Y;
     }
     if (state.supportId !== null) {
       const platform = state.objects.find(object => object.type === "platform" && object.id === state.supportId);
@@ -175,8 +190,9 @@ function advanceMotion(state, seconds) {
       const crossing = (-velocity + Math.sqrt(Math.max(0, discriminant))) / state.jump.gravity;
       if (crossing < -PHYSICS_EPSILON || crossing > remaining + PHYSICS_EPSILON) return;
       const time = Math.max(0, Math.min(remaining, crossing));
+      const distance = state.distance - state.speed * (remaining - time);
+      if (id === "ground" && groundHoleAt(state, distance)) return;
       if (platform) {
-        const distance = state.distance - state.speed * (remaining - time);
         const spawnDistance = platform.spawnDistance ??
           (platform.at === undefined ? -Infinity : platform.at * SCROLL_SPEED);
         if (spawnDistance > distance + PHYSICS_EPSILON ||
@@ -255,6 +271,40 @@ function goalX(state) {
   return CHARACTER_X + state.goalDistance - state.distance;
 }
 
+function courseObjectsAt(state, distance, nextSpawn, collectedStarIds = state.collectedStarIds) {
+  return state.course.slice(0, nextSpawn).map((entry, id) => ({...entry,
+    spawnDistance: entry.at * SCROLL_SPEED, id,
+    x: SPAWN_X - Math.max(0, distance - entry.at * SCROLL_SPEED),
+  })).filter(object => object.x + objectHalfWidth(object) >= 0 && !collectedStarIds.includes(object.id));
+}
+
+function recoverFromHole(state) {
+  // 無敵でも落下は防げない。画面外まで落ちたら1機だけ消費する。
+  state.lives = Math.max(0, state.lives - 1);
+  if (state.lives === 0) {
+    state.mode = "finished";
+    state.reason = "collision"; // 保存済みの終了形式（gameover）を維持。
+    return;
+  }
+  // 後方への巻き戻しはしない。穴の直後へ移し、次の入力まで安全な地面を確保。
+  let safeDistance = state.distance;
+  for (const hole of state.holes) {
+    if (safeDistance >= hole.start && safeDistance < hole.end + 60) safeDistance = hole.end + 60;
+  }
+  state.distance = safeDistance;
+  state.nextSpawn = state.course.filter(entry => entry.at * SCROLL_SPEED <= safeDistance + 1e-9).length;
+  state.objects = courseObjectsAt(state, safeDistance, state.nextSpawn);
+  state.feetY = GROUND_Y;
+  state.velocityY = 0;
+  state.supportId = "ground";
+  state.jumpOriginY = GROUND_Y;
+  state.airAction = null;
+  state.airJumpsRemaining = getCharacter(state.characterId).airJumps;
+  state.invincibleRemaining = RESPAWN_INVINCIBLE_SECONDS;
+  state.hitFeedbackRemaining = HIT_FEEDBACK_SECONDS;
+  state.hitPoint = {...characterCenter(state), distance: state.distance};
+}
+
 function updateRunner(state, seconds) {
   if (state.mode !== "running" || !Number.isFinite(seconds) || seconds < 0) return;
   let remaining = seconds;
@@ -274,12 +324,17 @@ function updateRunner(state, seconds) {
     }
     advanceMotion(state, step);
     // 実時間ではなく、走行した時間だけ保護を消費する。再開入力だけでは減らない。
-    const invincible = state.invincibleRemaining > PHYSICS_EPSILON;
+    let invincible = state.invincibleRemaining > PHYSICS_EPSILON;
     state.invincibleRemaining = Math.max(0, state.invincibleRemaining - step);
     state.hitFeedbackRemaining = Math.max(0, state.hitFeedbackRemaining - step);
     if (state.hitFeedbackRemaining <= PHYSICS_EPSILON) state.hitPoint = null;
     state.objects = state.objects.filter(object => object.x +
       objectHalfWidth(object) >= 0);
+    if (state.feetY >= WORLD.height + 100) {
+      recoverFromHole(state);
+      if (state.mode === "finished") return;
+      invincible = true;
+    }
     if (!invincible && state.objects.some(object =>
       (object.type === "obstacle" || object.type === "wall") && touchesObject(state, object))) {
       state.lives = Math.max(0, state.lives - 1);
@@ -387,6 +442,17 @@ function drawBackground(context, state) {
 }
 
 function drawGround(context, state) {
+  context.save();
+  context.beginPath();
+  let left = 0;
+  for (const hole of state.holes) {
+    const start = Math.max(0, Math.min(WORLD.width, CHARACTER_X + hole.start - state.distance));
+    const end = Math.max(0, Math.min(WORLD.width, CHARACTER_X + hole.end - state.distance));
+    context.rect(left, GROUND_Y, start - left, WORLD.height - GROUND_Y);
+    left = end;
+  }
+  context.rect(left, GROUND_Y, WORLD.width - left, WORLD.height - GROUND_Y);
+  context.clip();
   context.fillStyle = "#edd4a5";
   context.fillRect(0, GROUND_Y, WORLD.width, WORLD.height - GROUND_Y);
   context.fillStyle = "#fae7bd";
@@ -396,6 +462,28 @@ function drawGround(context, state) {
   context.fillStyle = "#d5b987";
   for (let x = 36 - state.distance % 108; x < WORLD.width; x += 108) {
     context.fillRect(x, GROUND_Y + 35, 30, 5);
+  }
+  context.restore();
+  for (const hole of state.holes) {
+    const start = CHARACTER_X + hole.start - state.distance;
+    const end = CHARACTER_X + hole.end - state.distance;
+    if (end < 0 || start > WORLD.width) continue;
+    context.fillStyle = "#354c62";
+    context.fillRect(start, GROUND_Y, end - start, WORLD.height - GROUND_Y);
+    context.fillStyle = "#213245";
+    context.fillRect(start + 6, GROUND_Y + 20, end - start - 12, WORLD.height - GROUND_Y - 20);
+    // 明るい崖の縁と手前の注意模様。穴の内側を足場に見せない。
+    context.fillStyle = "#936247";
+    context.fillRect(start - 6, GROUND_Y, 6, WORLD.height - GROUND_Y);
+    context.fillRect(end, GROUND_Y, 6, WORLD.height - GROUND_Y);
+    context.fillStyle = "#e7aa3c";
+    for (const edge of [start - 36, end + 8]) {
+      context.fillRect(edge, GROUND_Y - 6, 28, 6);
+      context.fillStyle = "#694e35";
+      context.fillRect(edge + 6, GROUND_Y - 6, 5, 6);
+      context.fillRect(edge + 18, GROUND_Y - 6, 5, 6);
+      context.fillStyle = "#e7aa3c";
+    }
   }
 }
 
@@ -998,8 +1086,8 @@ function snapshotRunner(state) {
 }
 function restoreRunner(play) {
   const s=play.snapshot;
-  if(play.stageVersion!==1 || s?.version!==2) throw new Error('この途中記録は現在の版では正確に再開できません。購入記録は保持されています。');
-  const stage=STAGES.find(s=>s.stageId===play.stageId);
+  const stage=getStage(play.stageId,play.stageVersion);
+  if(!stage || s?.version!==2) throw new Error('この途中記録は現在の版では正確に再開できません。購入記録は保持されています。');
   const state=createRunnerState(stage,play.characterId);
   if(!s || Object.keys(s).length!==SNAPSHOT_KEYS.length+1 || !SNAPSHOT_KEYS.every(k=>Object.hasOwn(s,k)))throw new Error('途中状態の項目が不正です。');
   const finite=['distance','elapsed','lives','score','invincibleRemaining','feetY','velocityY',
@@ -1015,19 +1103,18 @@ function restoreRunner(play) {
   if(s.nextSpawn!==next||!Array.isArray(s.collectedStarIds)||new Set(s.collectedStarIds).size!==s.collectedStarIds.length||
     !s.collectedStarIds.every(id=>Number.isInteger(id)&&id>=0&&id<next&&state.course[id].type==='star')||
     s.score!==s.collectedStarIds.length*10||s.score!==play.score||s.score>100)throw new Error('スター記録が不正です。');
-  const expected=state.course.slice(0,next).map((e,id)=>({...e,spawnDistance:e.at*SCROLL_SPEED,id,
-    x:SPAWN_X-Math.max(0,s.distance-e.at*SCROLL_SPEED)})).filter(o=>o.x+objectHalfWidth(o)>=0&&!s.collectedStarIds.includes(o.id));
+  const expected=courseObjectsAt(state,s.distance,next,s.collectedStarIds);
   if(!Array.isArray(s.objects)||s.objects.length!==expected.length||!s.objects.every((o,i)=>{
     const e=expected[i];return Object.keys(o).length===Object.keys(e).length&&Object.keys(e).every(k=>k==='x'?Math.abs(o.x-e.x)<1e-6:o[k]===e[k]);
   }))throw new Error('コース状態が不正です。');
   if(s.hitPoint!==null && (!s.hitPoint||Object.keys(s.hitPoint).sort().join(',')!=='distance,x,y'||!Object.values(s.hitPoint).every(Number.isFinite)))throw new Error('衝撃状態が不正です。');
   if(s.supportId!==null && s.supportId!=='ground' && !s.objects.some(o=>o.id===s.supportId&&o.type==='platform'&&overlapsPlatform(o)&&Math.abs(platformBounds(o).top-s.feetY)<1e-6))throw new Error('足場状態が不正です。');
-  if(s.supportId==='ground'&&(s.feetY!==GROUND_Y||s.velocityY!==0))throw new Error('接地状態が不正です。');
+  if(s.supportId==='ground'&&(s.feetY!==GROUND_Y||s.velocityY!==0||groundHoleAt(state,s.distance)))throw new Error('接地状態が不正です。');
   Object.assign(state,structuredClone(s));delete state.version;
   if(state.mode!=='finished')state.mode='paused';
   return state;
 }
-export {snapshotRunner,restoreRunner,STAGES};
+export {snapshotRunner,restoreRunner,STAGES,getStage};
 
 // コースとゲーム状態はDOMから独立。配置の差し替えや決定的なルール検証に使う。
 export { ANIMATION_SETS, loadCharacterImages, drawCharacter, describeCharacter, selectionItems, renderSelectionCards, CHARACTERS, getCharacter, COURSE, COLLISION, CHARACTER_X, SPAWN_X, CHARACTER_IMAGE, CHARACTER_SET, OBSTACLE_IMAGE, PLATFORM, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
