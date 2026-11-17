@@ -1,4 +1,4 @@
-"""Issue #110 / #113: 操作前の実寸・全結果状態・親スクロール。独立context/合成DBのみ。"""
+"""Issue #110 / #113 / #117: 操作前の実寸・全結果状態・親スクロール。独立context/合成DBのみ。"""
 import json
 import os
 from pathlib import Path
@@ -9,7 +9,7 @@ from runner_difficulty_cases import SOLUTIONS
 
 
 SIZES = [(1180,820),(1024,768),(1366,1024),(1180,700),
-         (820,1180),(390,844),(390,700),(844,390)]
+         (820,1180),(390,844),(390,700),(844,390),(402,874),(375,667)]
 # 描画は通常どおり行い、ゲーム時間だけbridge.advanceで進める。
 # 実時間のrAFと合成ステップによる二重進行で攻略入力がずれることを防ぐ。
 MANUAL_FRAME_TIME = """const nativeFrame=window.requestAnimationFrame.bind(window);
@@ -21,10 +21,12 @@ MEASURE = """()=>{
     return {x:b.x,y:b.y,width:b.width,height:b.height,bottom:b.bottom,right:b.right,
       clientHeight:e.clientHeight,scrollHeight:e.scrollHeight};
   };
+  const app=d.querySelector('.runner-app-formal'), style=w.getComputedStyle(app);
+  const end=Math.max(...[...app.children].filter(e=>w.getComputedStyle(e).display!=='none'&&w.getComputedStyle(e).position!=='absolute').map(e=>e.getBoundingClientRect().bottom));
   const header=document.querySelector('main > header');
   return {parent:{width:innerWidth,height:innerHeight,scrollY,host:box(f.parentElement),iframe:box(f),
       headerBottom:getComputedStyle(header).position==='sticky'?box(header).bottom:0},
-    child:{bottomBlank:w.innerHeight-Math.max(...['#runner-canvas','#runner-jump','#runner-toggle'].map(s=>d.querySelector(s).getBoundingClientRect().bottom)),width:w.innerWidth,height:w.innerHeight,scrollHeight:d.scrollingElement.scrollHeight,
+    child:{contentEnd:end,app:box(app),appHeight:style.height,appMinHeight:style.minHeight,paddingBottom:style.paddingBottom,visualHeight:w.visualViewport.height,parentVisualHeight:visualViewport.height,bottomBlank:w.innerHeight-Math.max(...['#runner-canvas','#runner-jump','#runner-toggle'].map(s=>d.querySelector(s).getBoundingClientRect().bottom)),width:w.innerWidth,height:w.innerHeight,scrollHeight:d.scrollingElement.scrollHeight,
       scrollWidth:d.scrollingElement.scrollWidth,scrollTop:d.scrollingElement.scrollTop,
       boxes:Object.fromEntries(['#runner-canvas','#runner-jump','#runner-toggle','#runner-result',
         '.runner-hud','#runner-status'].map(s=>[s,box(d.querySelector(s))]))}};
@@ -66,10 +68,10 @@ class RunnerLayoutTest(unittest.TestCase):
         self.settle()
         m = self.page.evaluate(MEASURE)
         self.reports.append(dict(state=state, **m))
-        if self._testMethodName == 'test_all_sizes_all_states_without_inner_scroll' and (m['parent']['width'],m['parent']['height']) == (1180,700) and state in ['ready','clear']:
+        if self._testMethodName == 'test_all_sizes_all_states_without_inner_scroll' and (m['parent']['width'],m['parent']['height']) in [(390,844),(390,700)] and state in ['running','clear']:
             if directory := os.environ.get('RUNNER_LAYOUT_REPORT_DIR'):
                 Path(directory).mkdir(parents=True, exist_ok=True)
-                self.page.screenshot(path=str(Path(directory) / (state+'.png')))
+                self.page.screenshot(path=str(Path(directory) / (f'{m["parent"]["width"]}x{m["parent"]["height"]}-{state}.png')))
         c, p = m['child'], m['parent']
         self.assertEqual(c['scrollTop'], 0, state)
         self.assertLessEqual(c['scrollHeight'], c['height'] + 1, state)
@@ -103,7 +105,10 @@ class RunnerLayoutTest(unittest.TestCase):
             self.assertGreaterEqual(jump['y'], canvas['bottom'])
             self.assertGreaterEqual(jump['height'], 64)
             self.assertGreaterEqual(toggle['y'], jump['bottom']+16)
-        if p['width'] == 390:
+        if p['width'] in [375,390,402]:
+            # #117: 状態通知・下paddingを収め、親の余剰高を戻さない。
+            self.assertLessEqual(c['height'], 520)
+            self.assertLessEqual(c['contentEnd'] + float(c['paddingBottom'].removesuffix('px')), c['height'] + 1)
             self.assertAlmostEqual(jump['y']-canvas['bottom'], 12, delta=1)
         if result:
             panel = c['boxes']['#runner-result']
@@ -278,7 +283,7 @@ class RunnerLayoutTest(unittest.TestCase):
             page.close()
 
     def test_enlarged_text_and_tiny_viewport_do_not_clip_results(self):
-        for width,height in [(1180,700),(844,390),(390,300)]:
+        for width,height in [(1180,700),(844,390),(390,300),(390,844),(390,700),(402,874),(375,667)]:
             with self.subTest(width=width,height=height):
                 self.page.evaluate('async()=>{await navigateHome();await install();}')
                 self.page.set_viewport_size(dict(width=width,height=height))
