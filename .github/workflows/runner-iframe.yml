@@ -9,6 +9,7 @@ on:
       - 'tests/runner_animation_test.py'
       - 'tests/runner_layout_test.py'
       - 'tests/runner_header_test.py'
+      - 'tests/home_arcade_test.py'
       - '.github/workflows/runner-iframe.yml'
 permissions:
   contents: read
@@ -32,6 +33,7 @@ jobs:
           python -m unittest -v \
             runner_layout_test \
             runner_header_test \
+            home_arcade_test.HomeArcadeTest \
             runner_animation_test \
             runner_integration_test.RunnerIntegrationTest.test_representative_touch_layout_and_single_engine \
             runner_integration_test.RunnerIntegrationTest.test_home_formal_purchase_reload_resume_return \
