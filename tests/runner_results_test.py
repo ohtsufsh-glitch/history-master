@@ -12,7 +12,7 @@ class RunnerResultsTest(unittest.TestCase):
     start = RunnerIntegrationTest.start
 
     def finish(self, clear=False):
-        from runner_difficulty_cases import SOLUTIONS
+        from runner_density_test import INPUTS
         self.page.evaluate("""async times=>{
           const c=formalRunner.session;let n=0;
           while(c.view.state.mode==='running'){
@@ -20,7 +20,7 @@ class RunnerResultsTest(unittest.TestCase):
             await formalRunner.bridge.advance(1/60);
           }
           document.querySelector('iframe').contentWindow.refreshFormalRunner();
-        }""",SOLUTIONS['S01']['perfect'] if clear else [])
+        }""",INPUTS['S01'] if clear else [])
 
     def test_stage_character_records_and_strict_improvements(self):
         self.assertTrue(self.page.evaluate("""async()=>{
