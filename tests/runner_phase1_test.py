@@ -50,12 +50,12 @@ class RunnerPhase1PhysicsTest(unittest.TestCase):
     def test_frozen_v1_and_unchanged_stages_match_original_definitions_exactly(self):
         page = self.model()
         self.assertEqual(page.evaluate('stageModule.LEGACY_STAGES'), GOLDEN['stages'])
-        self.assertEqual(page.evaluate("runnerModel.STAGES.filter(s=>!['S02','S03'].includes(s.stageId))"),
-                         [s for s in GOLDEN['stages'] if s['stageId'] not in ('S02', 'S03')])
+        self.assertEqual(page.evaluate("runnerModel.STAGES.filter(s=>!['S02','S03','S04'].includes(s.stageId))"),
+                         [s for s in GOLDEN['stages'] if s['stageId'] not in ('S02', 'S03', 'S04')])
         self.assertEqual(page.evaluate("""()=>runnerModel.STAGES.map(s=>[
           s.stageId,s.stageVersion??1,s.goalDistance,s.course.filter(e=>e.type==='star').length])"""),
             [['S01',1,4000,10],['S02',2,5000,10],['S03',2,6000,10],
-             ['S04',1,6400,10],['S05',1,7200,10],['S06',1,8000,10]])
+             ['S04',2,7000,10],['S05',1,7200,10],['S06',1,8000,10]])
 
     def test_shiba_routes_no_input_and_required_platform_landings(self):
         page = self.model()
@@ -278,8 +278,8 @@ class RunnerPhase1CompatibilityTest(unittest.TestCase):
           for(const stage of m.STAGES){
             await installPhase();const before=await snapshotAllStores();
             const p=await buy({stageId:stage.stageId});
-            const version=['S02','S03'].includes(stage.stageId)?2:1;
-            if(p.stageVersion!==version||!runnerCanResume(p)||p.snapshot.version!==2)throw Error('new version wrong');
+            const version=['S02','S03','S04'].includes(stage.stageId)?2:1;
+            if(p.stageVersion!==version||!runnerCanResume(p)||p.snapshot.version!==2)throw Error('new version wrong '+stage.stageId+' expected '+version+' got '+p.stageVersion+' resumable '+runnerCanResume(p));
             let c=await openRunnerSession('student',p.id,{lifecycle:false});
             if(c.view.state.goalDistance!==stage.goalDistance)throw Error('wrong course');
             await c.resume();await c.advance(.1);await c.pause();
@@ -334,7 +334,7 @@ class RunnerPhase1CompatibilityTest(unittest.TestCase):
 
     def test_unknown_stage_version_preserves_purchase_and_blocks_repurchase(self):
         self.assertTrue(self.page.evaluate("""async()=>{
-          for(const [stageId,version] of [['S02',99],['S01',2],['S04',2]]){
+          for(const [stageId,version] of [['S02',99],['S01',2],['S04',99]]){
             await installPhase();const p=await buy({stageId});p.stageVersion=version;
             await runnerTransaction(['runnerPlays'],tx=>tx.objectStore('runnerPlays').put(p));
             const before=await snapshotAllStores();

@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.43";
-import { STAGES, getStage } from "./stages.js?v=1.7.43";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.43";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.44";
+import { STAGES, getStage } from "./stages.js?v=1.7.44";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.44";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -69,6 +69,7 @@ const OBSTACLE_WIDTH = 80;
 const OBSTACLE_IMAGE = Object.freeze({ src: "./assets/spike-rock.webp", width: OBSTACLE_WIDTH,
   height: OBSTACLE_WIDTH * 466 / 640, feetRatio: 464 / 466 });
 const PLATFORM = Object.freeze({ width: 190, thickness: 32, height: 80, footHalfWidth: 20 });
+const BIRD_RADIUS = 28; // 輪郭を含む円。描画と当たり判定で共有。
 const PHYSICS_EPSILON = 1e-9;
 const SPAWN_X = WORLD.width + 48;
 // 幅80pxの岩本体と3本のトゲの内側。座標は障害物中心X・地面Yからの論理px。
@@ -102,7 +103,8 @@ function createRunnerState(course = COURSE, characterId = course?.characterId ??
   }
   const character = getCharacter(characterId);
   return { stageId: stage.stageId ?? null, stageVersion: stage.stageVersion ?? 1,
-    holes: (stage.holes ?? []).map(hole => ({...hole})), goalDistance: stage.goalDistance,
+    holes: (stage.holes ?? []).map(hole => ({...hole})),
+    birds: (stage.birds ?? []).map(bird => ({...bird})), goalDistance: stage.goalDistance,
     characterId: character.characterId, speed: character.speed, jump: character.jump,
     initialLives: character.initialLives, airJumpsRemaining: character.airJumps,
     hitFeedbackRemaining: 0, hitPoint: null,
@@ -238,6 +240,17 @@ function characterCenter(state) {
   return { x: CHARACTER_X, y: state.feetY - 43 - characterBob(state) };
 }
 
+// 鳥はコースの固定座標から再生成する。画面サイズ・実時間・snapshotの型に依存しない。
+function birdCenter(state, bird) {
+  return {x: CHARACTER_X + bird.x - state.distance, y: GROUND_Y - bird.height};
+}
+
+function touchesBird(state, bird) {
+  const center = birdCenter(state, bird), character = characterCenter(state);
+  return Math.hypot(character.x - center.x, character.y - center.y) <=
+    COLLISION.characterRadius + BIRD_RADIUS;
+}
+
 function touchesObject(state, object) {
   const character = characterCenter(state);
   const ground = GROUND_Y;
@@ -335,8 +348,9 @@ function updateRunner(state, seconds) {
       if (state.mode === "finished") return;
       invincible = true;
     }
-    if (!invincible && state.objects.some(object =>
-      (object.type === "obstacle" || object.type === "wall") && touchesObject(state, object))) {
+    if (!invincible && (state.objects.some(object =>
+      (object.type === "obstacle" || object.type === "wall") && touchesObject(state, object)) ||
+      state.birds.some(bird => touchesBird(state, bird)))) {
       state.lives = Math.max(0, state.lives - 1);
       if (state.lives === 0) {
         state.mode = "finished";
@@ -595,6 +609,45 @@ function drawObstacle(context, object, obstacleImage) {
   context.stroke();
 }
 
+function drawBird(context, state, bird) {
+  const {x, y} = birdCenter(state, bird);
+  if (x + BIRD_RADIUS < 0 || x - BIRD_RADIUS > WORLD.width) return;
+  context.save();
+  // 丸い赤い小鳥。輪郭の外端までが衝突円、羽・くちばしもその内側に描く。
+  context.fillStyle = "#e64b65";
+  context.strokeStyle = "#652c48";
+  context.lineWidth = 4;
+  context.beginPath();
+  context.arc(x, y, BIRD_RADIUS - 2, 0, Math.PI * 2);
+  context.fill(); context.stroke();
+  context.clip(); // 羽ばたき中も実体が衝突円の外へはみ出さない。
+  context.fillStyle = "#fff2ce";
+  context.beginPath(); context.ellipse(x - 1, y + 10, 15, 12, 0, 0, Math.PI * 2); context.fill();
+  // 羽ばたきはゲーム内時間だけで変化。高度と衝突円は動かない。
+  const wing = Math.sin(state.animationTime * Math.PI * 6) * 4;
+  context.fillStyle = "#9b294f";
+  for (const side of [-1, 1]) {
+    context.beginPath(); context.ellipse(x + side * 19, y + wing, 5, 11, side * .4, 0, Math.PI * 2); context.fill();
+  }
+  context.fillStyle = "#fff";
+  for (const side of [-1, 1]) {
+    context.beginPath(); context.arc(x + side * 8, y - 8, 6, 0, Math.PI * 2); context.fill();
+  }
+  context.fillStyle = "#302638";
+  for (const side of [-1, 1]) {
+    context.beginPath(); context.arc(x + side * 8 - 1, y - 7, 3, 0, Math.PI * 2); context.fill();
+  }
+  context.strokeStyle = "#652c48";
+  context.lineWidth = 3;
+  context.beginPath();
+  context.moveTo(x - 14, y - 18); context.lineTo(x - 4, y - 14);
+  context.moveTo(x + 14, y - 18); context.lineTo(x + 4, y - 14); context.stroke();
+  context.fillStyle = "#ffbb38";
+  context.beginPath(); context.moveTo(x - 6, y); context.lineTo(x + 6, y);
+  context.lineTo(x, y + 7); context.closePath(); context.fill();
+  context.restore();
+}
+
 function drawPlatform(context, object) {
   const { left, top, width, thickness } = platformBounds(object);
   context.fillStyle = "#79c9d4";
@@ -677,6 +730,7 @@ function renderScene(context, canvas, state, characterImages, obstacleImage) {
   drawBackground(context, state);
   drawGround(context, state);
   drawObjects(context, state, obstacleImage);
+  for (const bird of state.birds) drawBird(context, state, bird);
   drawGoal(context, state);
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const hitProgress = 1 - state.hitFeedbackRemaining / HIT_FEEDBACK_SECONDS;
@@ -1119,4 +1173,4 @@ export {snapshotRunner,restoreRunner,STAGES,getStage};
 // コースとゲーム状態はDOMから独立。配置の差し替えや決定的なルール検証に使う。
 export { ANIMATION_SETS, loadCharacterImages, drawCharacter, describeCharacter, selectionItems, renderSelectionCards, CHARACTERS, getCharacter, COURSE, COLLISION, CHARACTER_X, SPAWN_X, CHARACTER_IMAGE, CHARACTER_SET, OBSTACLE_IMAGE, PLATFORM, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
   createRunnerState, updateRunner, resumeRunner, startJump, progressPercent, goalX, characterCenter, characterPose,
-  platformBounds, wallBounds, characterBob, shadowY };
+  platformBounds, wallBounds, birdCenter, touchesBird, BIRD_RADIUS, characterBob, shadowY };

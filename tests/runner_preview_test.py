@@ -10,11 +10,13 @@ import runner_canvas_test as canvas
 from runner_difficulty_cases import DESIGN as V1_DESIGN, EXPECTED as V1_EXPECTED, EXPECTED_NAMES, SOLUTIONS
 SOLUTIONS = {**SOLUTIONS,
     'S02':{p:[7.55,12,18.55] for p in ('clear','perfect')},
-    'S03':{p:[7.55,11.35,15.5,17.1,22.35,24.55] for p in ('clear','perfect')}}
-DESIGN = {**V1_DESIGN, 'S02':dict(walls=[1]), 'S03':dict(walls=[1])}
+    'S03':{p:[7.55,11.35,15.5,17.1,22.35,24.55] for p in ('clear','perfect')},
+    'S04':{p:[7.55,12,13.95,15.85,17.75,24.55] for p in ('clear','perfect')}}
+DESIGN = {**V1_DESIGN, 'S02':dict(walls=[1]), 'S03':dict(walls=[1]), 'S04':dict(walls=[1])}
 EXPECTED = {**V1_EXPECTED,
     'S02':dict(length=5000,rocks=[1600,3800],platforms=[2800]),
-    'S03':dict(length=6000,rocks=[1600,5000],platforms=[3330,3720])}
+    'S03':dict(length=6000,rocks=[1600,5000],platforms=[3330,3720]),
+    'S04':dict(length=7000,rocks=[1600,5000],platforms=[3220])}
 
 
 class RunnerPreviewTest(unittest.TestCase):

@@ -144,7 +144,7 @@ const LEGACY_STAGES = Object.freeze([
 // 版1は購入済みプレイの正本。距離・イベント・配列順を編集しない。
 // 版2のXはキャラ中心の通過距離。旧at形式に変換し既存の出現・着地を再利用する。
 const at = (x, type, dimensions = {}) => ({ at: (x - 822) / 200, type, ...dimensions });
-const PHASE1_STAGES = [
+const CURRENT_STAGES = [
   {
     ...LEGACY_STAGES[1], stageVersion: 2, goalDistance: 5000,
     course: [
@@ -176,16 +176,34 @@ const PHASE1_STAGES = [
       at(5500, "star", {height: 0}),
     ],
   },
+  {
+    ...LEGACY_STAGES[3], stageVersion: 2, goalDistance: 7000,
+    // 鳥は固定高度。可変状態を持たず、旧snapshotのobjectsへ型を追加しない。
+    birds: [2880, 3260, 3640].map(x => ({x, height: 143})),
+    course: [
+      at(1000, "star", {height: 0}),
+      at(1600, "obstacle"), at(1600, "star", {height: 120}),
+      at(2050, "star", {height: 0}),
+      at(3220, "platform", {width: 1440, height: 100}),
+      at(2580, "star", {height: 100}),
+      at(3260, "wall", {width: 1240, height: 90}),
+      at(2880, "star", {height: 220}), at(3260, "star", {height: 220}),
+      at(3640, "star", {height: 220}), at(4450, "star", {height: 0}),
+      at(5000, "obstacle"), at(5000, "star", {height: 120}),
+      at(6500, "star", {height: 0}),
+    ],
+  },
 ].map(stage => Object.freeze({...stage,
+  ...(stage.birds ? {birds: Object.freeze(stage.birds.map(bird => Object.freeze(bird)))} : {}),
   holes: Object.freeze((stage.holes ?? []).map(hole => Object.freeze(hole))),
   course: Object.freeze(stage.course.slice().sort((a, b) => a.at - b.at).map(entry => Object.freeze(entry))),
 }));
 
 // 選択・新規購入は最新版。再開は必ず(ID, 版)で引く。未知版の推測は禁止。
 const STAGES = Object.freeze(LEGACY_STAGES.map(stage =>
-  PHASE1_STAGES.find(current => current.stageId === stage.stageId) ?? stage));
+  CURRENT_STAGES.find(current => current.stageId === stage.stageId) ?? stage));
 function getStage(stageId, stageVersion) {
-  return [...LEGACY_STAGES, ...PHASE1_STAGES].find(stage =>
+  return [...LEGACY_STAGES, ...CURRENT_STAGES].find(stage =>
     stage.stageId === stageId && (stage.stageVersion ?? 1) === stageVersion);
 }
 export { STAGES, LEGACY_STAGES, getStage };
