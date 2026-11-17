@@ -599,6 +599,16 @@
     #feedback-list select, #feedback-panel button { min-height:44px; max-width:100%; }
     #feedback-list input[type=checkbox] { min-width:24px; min-height:24px; }
     .feedback-select { display:flex; align-items:center; gap:10px; min-height:44px; }
+    /* 幅・高さが十分な横画面のみ。スマホ横とSplit Viewは縦積み。 */
+    @media (min-width:1000px) and (min-height:600px) and (orientation:landscape) {
+      main:has(> #home:not(.hidden)) { max-width:1120px; }
+      .arcade-home-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:18px; }
+      .arcade-home-grid > .home-panel { margin-top:0; min-width:0; display:flex; flex-direction:column; padding:16px; }
+      .arcade-home-grid .panel-head { column-gap:8px; }
+      .arcade-home-grid .arcade-home-copy { min-width:0; overflow-wrap:anywhere; }
+      .arcade-home-grid .arcade-entry { margin-top:auto; min-height:44px; }
+      .arcade-home-grid .arcade-home-body { margin-bottom:24px; }
+    }
     /* 高さ判定は子のviewportに作用する。横画面に固定の最低高さを強制しない。 */
     .runner-home-panel { background:linear-gradient(145deg,#edf7ee,#fffdf6); }
     #runner-choices { margin:16px 0; padding:16px; border:1px solid #d4e3d8; border-radius:16px; background:#fffdf6; }
@@ -615,8 +625,8 @@
       #runner-frame-host { height:90vh; height:90dvh; }
     }
   </style>
-  <link rel="stylesheet" href="./runner/balance.css?v=1.7.39">
-  <link rel="stylesheet" href="./runner/selection.css?v=1.7.39">
+  <link rel="stylesheet" href="./runner/balance.css?v=1.7.40">
+  <link rel="stylesheet" href="./runner/selection.css?v=1.7.40">
 </head>
 <body>
 <!-- 立体的な金貨イラスト：ホーム・正解時に共用 -->
@@ -678,6 +688,7 @@
       <p class="muted small">間違えた問題を最大10問ずつ復習。未挑戦の問題は時代別・ジャンル別で学ぼう。</p>
     </section>
 
+    <div class="arcade-home-grid">
     <div id="game-center-home" class="home-panel arcade-home-panel">
       <div class="panel-head"><div><span class="section-kicker">ARCADE</span><h3>🧸 ぬいぐるみキャッチャー</h3></div><div class="arcade-home-cost"><img src="assets/coins/crown-gold.webp" width="30" height="30" alt=""><span id="arcade-home-cost-text">コイン100枚 / 1プレイ</span></div></div>
       <div class="arcade-home-body">
@@ -690,10 +701,12 @@
       <div class="panel-head"><div><span class="section-kicker">ARCADE</span><h3 id="runner-home-title">🐕 わくわくランナー</h3></div><div class="arcade-home-cost"><img src="assets/coins/crown-gold.webp" width="30" height="30" alt=""><span>コイン30枚 / 1プレイ</span></div></div>
       <div class="arcade-home-body">
         <div class="arcade-home-preview" aria-hidden="true">🐕 <span>⭐</span> 🏁</div>
-        <div class="arcade-home-copy"><p>ジャンプでトゲ岩を飛びこえて、ゴールを目指そう！</p><p id="runner-home-info" class="small muted">残高を確認中…</p></div>
+        <div class="arcade-home-copy"><p>ジャンプでトゲ岩を飛びこえて、ゴールを目指そう！</p><p id="runner-home-info" class="small muted">実績を確認中…</p></div>
       </div>
       <button id="open-runner" class="primary arcade-entry" type="button">ランナーで遊ぶ →</button>
     </section>
+
+    </div>
 
     <div id="collection" class="home-panel collection-panel">
       <div class="panel-head"><div><span class="section-kicker">COLLECTION</span><h3>🏆 時代制覇カード</h3></div><span id="card-total" class="rank-pill"></span></div>
@@ -974,7 +987,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.39";
+const APP_VERSION = "v1.7.40";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3210,7 +3223,7 @@ function summarizeRunnerPlays(records, who) {
 // C3-B 内部API。無料試遊のURL/選択UIからは呼ばない。
 let runnerModelPromise;
 function loadRunnerModel() {
-  return runnerModelPromise ||= import('./runner/game.js?v=1.7.39');
+  return runnerModelPromise ||= import('./runner/game.js?v=1.7.40');
 }
 function runnerTransaction(names, action, {mode='readwrite', keys={}}={}) {
   return new Promise((resolve,reject)=>{
@@ -3377,7 +3390,9 @@ function runnerResultData(d,play) {
 function runnerPrice(who,d) {return `${who==='test'?'テスト用：無料':'1プレイ30コイン'} ／ コイン ${d.balance}枚`;}
 async function refreshRunnerHome(ctx) {
   const d=await runnerLobbyData(ctx.who);
-  if(viewCurrent(ctx))$('runner-home-info').textContent=runnerPrice(ctx.who,d);
+  if(!viewCurrent(ctx))return;
+  const cleared=new Set(d.records.filter(p=>p.result.reason==='clear').map(p=>p.stageId)).size;
+  $('runner-home-info').textContent=`クリア：${cleared}/${RUNNER_STAGE_IDS.length}ステージ ／ プレイ：${d.records.length}回${d.active?' ／ 続きから遊べます':''}`;
 }
 // selectは既存IDの選択状態だけを保持し、操作はボタンへ集約する。
 function renderFormalRunnerChoices(d,m) {
@@ -3569,7 +3584,7 @@ async function startFormalRunner(ctx,d,m) {
   const frame=current.frame;
   frame.title='わくわくランナー';frame.className='runner-formal-frame';
   frame.onload=()=>{if(formalRunner===current){frame.contentWindow.mountFormalRunner(current.bridge);choices();}};
-  frame.src='./runner/?embedded=1&v=1.7.39';
+  frame.src='./runner/?embedded=1&v=1.7.40';
   $('runner-frame-host').replaceChildren(frame);choices();
 }
 $('open-runner').addEventListener('click',()=>navigate('runner').catch(err));
