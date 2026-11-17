@@ -5,6 +5,7 @@ import unittest
 import runner_canvas_test as canvas
 import runner_phase1_test as phase1
 from runner_vertical_cases import INPUTS, UPPER
+VARIETY_BASE = json.loads((Path(__file__).parent/'fixtures/runner85-variety-base.json').read_text())
 BASE = json.loads((Path(__file__).parent/'fixtures/runner85-vertical-base.json').read_text())
 
 class RunnerVerticalCompatibilityTest(unittest.TestCase):
@@ -34,7 +35,7 @@ class RunnerVerticalCompatibilityTest(unittest.TestCase):
         for id,inputs in INPUTS.items():
             self.page.evaluate("""async id=>{
               await installPhase();window.paid=await buy({stageId:id});
-              if(paid.stageVersion!==(id==='S04'?5:3)||!runnerCanResume(paid)||paid.snapshot.version!==2||DB_VERSION!==10||BACKUP_VERSION!==10)throw Error('versions');
+              if(paid.stageVersion!==(id==='S04'?5:4)||!runnerCanResume(paid)||paid.snapshot.version!==2||DB_VERSION!==10||BACKUP_VERSION!==10)throw Error('versions');
               let c=await openRunnerSession('student',paid.id,{lifecycle:false});await c.resume();await c.advance(.1);await c.pause();
             }""",id)
             self.page.reload();self.page.wait_for_function('appReady')
@@ -42,7 +43,7 @@ class RunnerVerticalCompatibilityTest(unittest.TestCase):
               const m=await loadRunnerModel(),paid=(await readAll('runnerPlays')).find(p=>p.status==='active');
               if(!runnerCanResume(paid))throw Error('reload not resumable');
               let c=await openRunnerSession('student',paid.id,{lifecycle:false});
-              if(c.view.state.stageVersion!==(id==='S04'?5:3)||c.view.state.mode!=='paused')throw Error('reload version');
+              if(c.view.state.stageVersion!==(id==='S04'?5:4)||c.view.state.mode!=='paused')throw Error('reload version');
               await c.resume();let n=0;const seen=new Set();
               while(c.view.state.mode==='running'){
                 const s=c.view.state;if(n<inputs.length&&s.elapsed+1e-8>=inputs[n]){await c.jump();n++;}await c.advance(1/60);
@@ -55,7 +56,7 @@ class RunnerVerticalCompatibilityTest(unittest.TestCase):
                 }
               }await c.flush();
               const result=c.view.savedPlay,d=await snapshotAllStores();validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:10,data:d});
-              if(result.status!=='finished'||result.result.reason!=='clear'||result.score!==100||result.result.livesRemaining!==2||result.stageVersion!==(id==='S04'?5:3)||(id!=='S01'&&(!seen.has('platform')||!seen.has('topJump'))))throw Error('official clear '+JSON.stringify({id,result,seen:[...seen]}));
+              if(result.status!=='finished'||result.result.reason!=='clear'||result.score!==100||result.result.livesRemaining!==2||result.stageVersion!==(id==='S04'?5:4)||(id!=='S01'&&(!seen.has('platform')||!seen.has('topJump'))))throw Error('official clear '+JSON.stringify({id,result,seen:[...seen]}));
               if(d.coinSpends.filter(s=>s.id===paid.id).length!==1||d.coinSpends.find(s=>s.id===paid.id).amount!==30)throw Error('charge');
               const summary=summarizeRunnerPlays(d.runnerPlays,'student');
               if(summary.bestByStage[id].score!==100||summary.bestByStageCharacter[id+':shiba'].score!==100)throw Error('score');
@@ -86,12 +87,42 @@ class RunnerVerticalCompatibilityTest(unittest.TestCase):
         probe="""async()=>{
           const m=await loadRunnerModel(),p=(await readAll('runnerPlays')).find(p=>p.profile==='test'&&p.status==='active');
           const c=await openRunnerSession('test',p.id,{lifecycle:false}),s=c.view.state;
-          if(s.stageVersion!==3||!s.birds.every(b=>b.speed===120)||s.mode!=='paused')throw Error('reload state');
+          if(s.stageVersion!==4||!s.birds.every(b=>b.speed===120)||s.mode!=='paused')throw Error('reload state');
           return {snapshot:m.snapshotRunner(s),birds:s.birds.map(b=>m.birdCenter(s,b)),spikes:s.spikes.map(b=>m.spikeCenter(s,b))};
         }"""
         saved=self.page.evaluate(probe)
         self.page.reload();self.page.wait_for_function('appReady')
         self.assertEqual(self.page.evaluate(probe),saved)
+
+    def test_public_v3_paid_states_and_v3_v4_mixed_backups(self):
+        self.assertTrue(self.page.evaluate("""async base=>{
+          for(const stage of base.stages){
+            if(JSON.stringify(m.getStage(stage.stageId,stage.stageVersion))!==JSON.stringify(stage))throw Error('published definition changed');
+          }
+          for(const {play,next} of base.states){
+            await installPhase([play]);const before=await snapshotAllStores();
+            if((await buy({stageId:play.stageId})).id!==play.id)throw Error('repurchase');
+            const c=await openRunnerSession('student',play.id,{lifecycle:false});
+            await c.resume();await c.advance(.1);await c.pause();
+            if(JSON.stringify(m.snapshotRunner(c.view.state))!==JSON.stringify(next))throw Error('v3 trajectory '+play.id);
+            const after=await snapshotAllStores();
+            for(const name of BACKUP_STORES.filter(n=>n!=='runnerPlays'))
+              if(JSON.stringify(before[name])!==JSON.stringify(after[name]))throw Error('changed store');
+          }
+          const old=base.states.find(r=>r.play.stageId==='S06'&&r.play.snapshot.elapsed>30).play;
+          await installPhase([old]);const fresh=await purchaseRunnerPlay({profile:'test',stageId:'S06',characterId:'shiba'});
+          if(fresh.stageVersion!==4)throw Error('new purchase version');
+          const data=await snapshotAllStores(),backup=JSON.parse(JSON.stringify({backupFormat:BACKUP_FORMAT,backupVersion:10,data}));
+          validateBackup(backup);await plushInstall(backup.data);
+          if(JSON.stringify(data)!==JSON.stringify(await snapshotAllStores()))throw Error('mixed backup changed');
+          for(const [profile,id,version] of [['student',old.id,3],['test',fresh.id,4]]){
+            const c=await openRunnerSession(profile,id,{lifecycle:false});
+            if(c.view.state.stageVersion!==version)throw Error('mixed version');
+          }return true;
+        }""",VARIETY_BASE))
+        self.page.reload();self.page.wait_for_function('appReady')
+        self.assertEqual(self.page.evaluate("""async()=>{const m=await loadRunnerModel(),p=(await readAll('runnerPlays')).find(p=>p.profile==='student'&&p.status==='active');
+          const c=await openRunnerSession('student',p.id,{lifecycle:false});return c.view.state.stageVersion;}"""),3)
 
 
 TRIAL = """(stage,inputs,hz=60)=>{
@@ -122,12 +153,12 @@ class RunnerVerticalPhysicsTest(unittest.TestCase):
 
     def test_frozen_definitions_latest_counts_and_late_bird_distribution(self):
         p=self.model()
-        self.assertEqual(p.evaluate("""()=>runnerModel.STAGES.flatMap(s=>[1,2,3,4].map(v=>runnerModel.getStage(s.stageId,v)).filter(Boolean)).filter(s=>!['S05','S06'].includes(s.stageId)||s.stageVersion!==3)"""),BASE['stages'])
+        self.assertEqual(p.evaluate("""()=>runnerModel.STAGES.flatMap(s=>[1,2,3,4].map(v=>runnerModel.getStage(s.stageId,v)).filter(Boolean)).filter(s=>!['S05','S06'].includes(s.stageId)||(s.stageVersion??1)<3)"""),BASE['stages'])
         rows=p.evaluate("""()=>runnerModel.STAGES.slice(3).map(s=>({id:s.stageId,v:s.stageVersion,length:s.goalDistance,
           stars:s.course.filter(e=>e.type==='star').length,birds:s.birds.length,spikes:s.spikes.length,
           half:s.birds.filter(b=>b.x/1.6>=s.goalDistance/2).length,third:s.birds.filter(b=>b.x/1.6>=s.goalDistance*2/3).length,
           speeds:s.birds.map(b=>b.speed)}))""")
-        for r,expected in zip(rows,[(5,7000,8,2),(3,7200,12,4),(3,8000,16,5)]):
+        for r,expected in zip(rows,[(5,7000,8,2),(4,7200,12,4),(4,8000,16,6)]):
             self.assertEqual((r['v'],r['length'],r['birds'],r['spikes']),expected)
             self.assertEqual(r['stars'],10);self.assertEqual(set(r['speeds']),{120})
         self.assertGreaterEqual(rows[1]['half'],7);self.assertGreaterEqual(rows[1]['third'],5)
@@ -169,7 +200,7 @@ class RunnerVerticalPhysicsTest(unittest.TestCase):
     def test_trap_multiple_entry_and_rejump_patterns(self):
         p=self.model()
         r=p.evaluate("""plans=>{
-          const stage=runnerModel.getStage('S06',3);let total=0,entered=0,minimum=9;
+          const stage=runnerModel.getStage('S06',4);let total=0,entered=0,minimum=9;
           for(let ai=0;ai<8;ai++)for(let bi=0;bi<9;bi++){
             const a=20.2+ai/10,b=21.2+bi/10;
             const variants=[[],...Array.from({length:16},(_,i)=>[21.9+i*.1]),
@@ -184,6 +215,27 @@ class RunnerVerticalPhysicsTest(unittest.TestCase):
         }""",INPUTS['S06'])
         self.assertEqual(r['total'],1728);self.assertGreater(r['entered'],700);self.assertGreaterEqual(r['minimum'],1)
         print('Trap sampling (not a proof of impossibility):',r)
+
+    def test_late_birds_change_required_actions_and_spike_followup(self):
+        p=self.model()
+        rows=p.evaluate("""plans=>['S05','S06'].map(id=>{
+          const stage=runnerModel.STAGES.find(s=>s.stageId===id),birds=stage.birds.slice(id==='S05'?5:7);
+          const avoid=id==='S05'?26.55:29.9,required=id==='S05'?31.8:34.9;
+          return {id,heights:birds.map(b=>b.height),intervals:birds.slice(1).map((b,i)=>(b.x-birds[i].x)/1.6),
+            good:trial(stage,plans[id]),unwanted:trial(stage,[...plans[id],avoid].sort((a,b)=>a-b)),
+            omitted:trial(stage,plans[id].filter(t=>t!==required))};
+        })""",INPUTS)
+        for r in rows:
+            self.assertGreaterEqual(len(set(round(i) for i in r['intervals'])),4,r)
+            self.assertGreaterEqual(max(r['heights'])-min(r['heights']),150,r)
+            self.assertEqual((r['good']['reason'],r['good']['score'],r['good']['lives']),('clear',100,2),r)
+            self.assertTrue(any((5400 if r['id']=='S05' else 6070) in h['birds'] for h in r['unwanted']['hits']),r)
+            self.assertLess(r['omitted']['lives'],2,r)
+            late=[l['height'] for l in r['good']['landings'] if l['x']>4800]
+            for height in ([100,160,80,120] if r['id']=='S05' else [100,150,70,110]):self.assertIn(height,late,r)
+            action=31.8 if r['id']=='S05' else 34.9
+            landing=max(l['t'] for l in r['good']['landings'] if l['t']<action)
+            self.assertLessEqual(action-landing,.21,r)
 
     def test_major_jump_windows(self):
         p=self.model()
@@ -203,7 +255,7 @@ class RunnerVerticalPhysicsTest(unittest.TestCase):
     def test_motion_collision_and_canvas_share_positions(self):
         p=self.model()
         self.assertTrue(p.evaluate("""()=>{
-          const m=runnerModel,s=m.createRunnerState(m.getStage('S06',3));s.mode='running';
+          const m=runnerModel,s=m.createRunnerState(m.getStage('S06',4));s.mode='running';
           for(const spike of s.spikes){
             const initial=m.spikeCenter(s,spike);s.elapsed=spike.period;
             const loop=m.spikeCenter(s,spike);if(Math.hypot(initial.x-loop.x,initial.y-loop.y)>1e-8)throw Error('period');
@@ -273,6 +325,8 @@ class RunnerVerticalFormalInputTest(unittest.TestCase):
                 frame.locator('body').evaluate('()=>runnerClock.step(0)')
                 captures=[(dict(S04=18.1,S05=15.5,S06=17)[id],'high')]
                 if id=='S06':captures += [(20.5,'choice'),(22.45 if upper else 22.7,'trap' if upper else 'lower')]
+                if id in ('S05','S06') and not upper:
+                    captures += [(26.9 if id=='S05' else 30.35,'late-wait'),(32.2 if id=='S05' else 35.3,'late-climb')]
                 events=sorted([(t,'jump') for t in inputs]+captures)
                 for t,event in events:
                     self.page.evaluate("""async t=>{const c=formalRunner.session;
@@ -282,6 +336,24 @@ class RunnerVerticalFormalInputTest(unittest.TestCase):
                         frame.locator('#runner-jump').dispatch_event('pointerdown',dict(pointerType='touch',isPrimary=True,button=0))
                         self.assertIsNone(self.page.evaluate('formalRunner.session.view.state.supportId'))
                     else:
+                        # Selecting a low stage card can scroll the parent page. Align the
+                        # game as a user would; do not change application scroll policy.
+                        geometry=self.page.evaluate("""()=>{
+                          const host=document.querySelector('#runner-frame-host'), f=host.querySelector('iframe');
+                          const header=document.querySelector('main > header');
+                          const inset=getComputedStyle(header).position==='sticky'?header.getBoundingClientRect().height+8:0;
+                          const before=scrollY;scrollTo(0,scrollY+host.getBoundingClientRect().top-inset);
+                          const frame=f.getBoundingClientRect(),d=f.contentDocument;
+                          return {before,after:scrollY,boxes:['#runner-canvas','#runner-jump'].map(selector=>{
+                            const b=d.querySelector(selector).getBoundingClientRect();
+                            return {selector,top:frame.top+b.top,bottom:frame.top+b.bottom,width:b.width};
+                          })};
+                        }""")
+                        for box in geometry['boxes']:
+                            self.assertGreater(box['width'],0,geometry)
+                            self.assertGreaterEqual(box['top'],-1,geometry)
+                            self.assertLessEqual(box['bottom'],height+1,geometry)
+                        if id=='S04' and width==390:print('S04 capture geometry:',geometry)
                         frame.locator('body').evaluate('()=>runnerClock.step(0)')
                         if event=='high':
                             self.assertTrue(self.page.evaluate("formalRunner.session.view.state.feetY-91>=0"))

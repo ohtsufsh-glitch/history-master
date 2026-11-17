@@ -3188,7 +3188,7 @@ function validIndexList(values, max) {
 const RUNNER_STAGE_IDS = Object.freeze(['S01','S02','S03','S04','S05','S06']);
 const RUNNER_CHARACTER_IDS = Object.freeze(['shiba','sloth','goldfish','salamander','secret_yuniko']);
 // 対応する(ID, 版)。コース実体との最終照合はgetStage/restoreRunnerが行う。
-const RUNNER_STAGE_VERSIONS = Object.freeze({S01:[1,2],S02:[1,2,3,4],S03:[1,2,3,4],S04:[1,2,3,4,5],S05:[1,2,3],S06:[1,2,3]});
+const RUNNER_STAGE_VERSIONS = Object.freeze({S01:[1,2],S02:[1,2,3,4],S03:[1,2,3,4],S04:[1,2,3,4,5],S05:[1,2,3,4],S06:[1,2,3,4]});
 function runnerInitialLives(id) { return ['salamander','secret_yuniko'].includes(id)?3:2; }
 function runnerCanResume(play) { return play.status==='active' && RUNNER_STAGE_VERSIONS[play.stageId]?.includes(play.stageVersion) && play.snapshot?.version===2; }
 function exactRunnerFields(value, fields) {

@@ -378,12 +378,44 @@ const VERTICAL_STAGES = [
   course: Object.freeze(stage.course.sort((a,b) => a.at-b.at).map(e => Object.freeze(e))),
 }));
 
+// PR #132後の改良案。公開済み版3を保持し、新規プレイだけ新版へ。
+const VARIED_STAGES = [
+  {
+    ...VERTICAL_STAGES[1], stageVersion: 4,
+    birds: [...VERTICAL_STAGES[1].birds.slice(0,5),
+      ...[[5100,143],[5400,280],[5770,203],[6020,300],[6250,123],[6760,163],[6950,310]]
+        .map(([x,height]) => incoming(x,height))],
+    spikes: [...VERTICAL_STAGES[1].spikes.slice(0,3),spike(6440,80,35,2.6,.5)],
+    course: [...VERTICAL_STAGES[1].course.filter(e => e.at*200+822 < 4800),
+      platform(5130,660,100), platform(5670,420,160), platform(6150,500,80), platform(6700,600,120),
+      wall(4900,5460,90), wall(5530,5880,150), wall(5880,6400,70), wall(6470,6950,110),
+      ...rocks([7120]),...stars([[5580,220],[6760,240]])],
+  },
+  {
+    ...VERTICAL_STAGES[2], stageVersion: 4,
+    birds: [...VERTICAL_STAGES[2].birds.slice(0,7),
+      ...[[5780,143],[6070,290],[6500,193],[6680,310],[6850,113],[7160,270],[7420,153],[7650,300],[7830,153]]
+        .map(([x,height]) => incoming(x,height))],
+    spikes: [...VERTICAL_STAGES[2].spikes.slice(0,4),spike(7100,80,35,2.8,.4),spike(7900,50,25,2.6,.5)],
+    course: [...VERTICAL_STAGES[2].course.filter(e => e.at*200+822 < 5400),
+      platform(5800,800,100), platform(6385,430,150), platform(6830,380,70),
+      platform(7270,460,110),platform(7700,400,110),
+      wall(5500,6200,90),wall(6200,6600,140),wall(6600,7040,60),wall(7040,7850,100),
+      ...stars([[6500,270],[7420,230]])],
+  },
+].map(stage => Object.freeze({...stage,
+  birds: Object.freeze(stage.birds.map(b => Object.freeze(b))),
+  spikes: Object.freeze(stage.spikes.map(b => Object.freeze(b))),
+  course: Object.freeze(stage.course.sort((a,b) => a.at-b.at).map(e => Object.freeze(e))),
+}));
+
 // 選択・新規購入は最新版。再開は必ず(ID, 版)で引く。未知版の推測は禁止。
 const STAGES = Object.freeze(LEGACY_STAGES.map(stage =>
+  VARIED_STAGES.find(current => current.stageId === stage.stageId) ??
   VERTICAL_STAGES.find(current => current.stageId === stage.stageId) ??
   DENSE_STAGES.find(current => current.stageId === stage.stageId) ?? stage));
 function getStage(stageId, stageVersion) {
-  return [...LEGACY_STAGES, ...VERSION2_STAGES, ...VERSION3_STAGES, ...DENSE_STAGES, ...VERTICAL_STAGES].find(stage =>
+  return [...LEGACY_STAGES, ...VERSION2_STAGES, ...VERSION3_STAGES, ...DENSE_STAGES, ...VERTICAL_STAGES, ...VARIED_STAGES].find(stage =>
     stage.stageId === stageId && (stage.stageVersion ?? 1) === stageVersion);
 }
 export { STAGES, LEGACY_STAGES, getStage };
