@@ -643,8 +643,8 @@
       #runner-frame-host { height:90vh; height:90dvh; }
     }
   </style>
-  <link rel="stylesheet" href="./runner/balance.css?v=1.7.49">
-  <link rel="stylesheet" href="./runner/selection.css?v=1.7.49">
+  <link rel="stylesheet" href="./runner/balance.css?v=1.7.50">
+  <link rel="stylesheet" href="./runner/selection.css?v=1.7.50">
 </head>
 <body>
 <!-- 立体的な金貨イラスト：ホーム・正解時に共用 -->
@@ -1006,7 +1006,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.49";
+const APP_VERSION = "v1.7.50";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3188,7 +3188,7 @@ function validIndexList(values, max) {
 const RUNNER_STAGE_IDS = Object.freeze(['S01','S02','S03','S04','S05','S06']);
 const RUNNER_CHARACTER_IDS = Object.freeze(['shiba','sloth','goldfish','salamander','secret_yuniko']);
 // 対応する(ID, 版)。コース実体との最終照合はgetStage/restoreRunnerが行う。
-const RUNNER_STAGE_VERSIONS = Object.freeze({S01:[1,2],S02:[1,2,3,4],S03:[1,2,3,4],S04:[1,2,3,4,5],S05:[1,2,3,4,5],S06:[1,2,3,4,5]});
+const RUNNER_STAGE_VERSIONS = Object.freeze({S01:[1,2],S02:[1,2,3,4],S03:[1,2,3,4],S04:[1,2,3,4,5],S05:[1,2,3,4,5,6],S06:[1,2,3,4,5,6]});
 function runnerInitialLives(id) { return ['salamander','secret_yuniko'].includes(id)?3:2; }
 function runnerCanResume(play) { return play.status==='active' && RUNNER_STAGE_VERSIONS[play.stageId]?.includes(play.stageVersion) && play.snapshot?.version===2; }
 function exactRunnerFields(value, fields) {
@@ -3243,7 +3243,7 @@ function summarizeRunnerPlays(records, who) {
 // C3-B 内部API。無料試遊のURL/選択UIからは呼ばない。
 let runnerModelPromise;
 function loadRunnerModel() {
-  return runnerModelPromise ||= import('./runner/game.js?v=1.7.49');
+  return runnerModelPromise ||= import('./runner/game.js?v=1.7.50');
 }
 function runnerTransaction(names, action, {mode='readwrite', keys={}}={}) {
   return new Promise((resolve,reject)=>{
@@ -3488,11 +3488,11 @@ async function closeFormalRunner() {
 // このbridgeのreadyは表示専用。正式sessionがない間はadvance/jumpを実行しない。
 async function startFormalRunner(ctx,d,m) {
   let waiting=m.createRunnerState(m.STAGES.find(s=>s.stageId===$('formal-stage').value),$('formal-character').value);
-  let localError=null, closed=false, latestData=d, resultData=null, selectionBlocked=false;
+  let localError=null, closed=false, latestData=d, resultData=null, selectionBlocked=false, presentationBusy=false;
   const current={session:null,frame:document.createElement('iframe')};
   const choices=()=>{
     const state=current.bridge.view.state;
-    const locked=selectionBlocked||(!current.session&&!!latestData.active)||!!current.session&&(state.mode!=='finished'||current.session.view.dirty||!!current.session.view.error||!resultData);
+    const locked=presentationBusy||selectionBlocked||(!current.session&&!!latestData.active)||!!current.session&&(state.mode!=='finished'||current.session.view.dirty||!!current.session.view.error||!resultData);
     $('formal-stage').disabled=locked||runnerStarting;
     $('formal-character').disabled=locked||runnerStarting;
     if(locked){$('formal-stage').value=state.stageId;$('formal-character').value=state.characterId;}
@@ -3548,8 +3548,9 @@ async function startFormalRunner(ctx,d,m) {
   }
   current.bridge={
     get view(){return {...(current.session?.view||{state:structuredClone(waiting),dirty:false,error:null}),message:localError,result:resultData};},
+    setPresentationBusy(busy){presentationBusy=busy;choices();},
     async resume(){
-      if(closed||runnerStarting||!viewCurrent(ctx))return;
+      if(presentationBusy||closed||runnerStarting||!viewCurrent(ctx))return;
       if(current.session?.view.state.mode==='finished'&&!current.session.view.error&&(current.session.view.dirty||!resultData))return;
       ++refreshGeneration;
       runnerStarting=true;localError=null;choices();
@@ -3596,7 +3597,7 @@ async function startFormalRunner(ctx,d,m) {
     async pause(){if(current.session)await current.session.pause();}
   };
   current.select=(stageId,characterId)=>{
-    if(closed||!viewCurrent(ctx)||selectionBlocked||!current.session&&latestData.active||runnerStarting||!latestData.unlocked.includes(stageId)||!m.STAGES.some(s=>s.stageId===stageId)||![...m.CHARACTERS,...(latestData.secret?[m.getCharacter('secret_yuniko')]:[])].some(c=>c.characterId===characterId)||current.session&&(current.session.view.state.mode!=='finished'||current.session.view.dirty||current.session.view.error||!resultData))return false;
+    if(presentationBusy||closed||!viewCurrent(ctx)||selectionBlocked||!current.session&&latestData.active||runnerStarting||!latestData.unlocked.includes(stageId)||!m.STAGES.some(s=>s.stageId===stageId)||![...m.CHARACTERS,...(latestData.secret?[m.getCharacter('secret_yuniko')]:[])].some(c=>c.characterId===characterId)||current.session&&(current.session.view.state.mode!=='finished'||current.session.view.dirty||current.session.view.error||!resultData))return false;
     waiting=m.createRunnerState(m.STAGES.find(s=>s.stageId===stageId),characterId);
     // 終了記録は確定済み。新しい選択は未購入の待機状態へ戻す。
     if(current.session){current.session.close().catch(e=>{$('runner-info').textContent=e.message;});current.session=null;}
@@ -3612,7 +3613,7 @@ async function startFormalRunner(ctx,d,m) {
   const frame=current.frame;
   frame.title='わくわくランナー';frame.className='runner-formal-frame';
   frame.onload=()=>{if(formalRunner===current){frame.contentWindow.mountFormalRunner(current.bridge);choices();}};
-  frame.src='./runner/?embedded=1&v=1.7.49';
+  frame.src='./runner/?embedded=1&v=1.7.50';
   $('runner-frame-host').replaceChildren(frame);choices();
 }
 $('open-runner').addEventListener('click',()=>navigate('runner').catch(err));

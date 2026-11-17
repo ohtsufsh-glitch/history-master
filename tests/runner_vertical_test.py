@@ -5,7 +5,7 @@ import unittest
 import runner_canvas_test as canvas
 import runner_phase1_test as phase1
 from runner_vertical_cases import INPUTS, UPPER
-from runner_ascent_cases import INPUTS as CURRENT_INPUTS, UPPER as CURRENT_UPPER
+from runner_balance_cases import INPUTS as CURRENT_INPUTS
 VARIETY_BASE = json.loads((Path(__file__).parent/'fixtures/runner85-variety-base.json').read_text())
 BASE = json.loads((Path(__file__).parent/'fixtures/runner85-vertical-base.json').read_text())
 
@@ -36,7 +36,7 @@ class RunnerVerticalCompatibilityTest(unittest.TestCase):
         for id,inputs in CURRENT_INPUTS.items():
             self.page.evaluate("""async id=>{
               await installPhase();window.paid=await buy({stageId:id});
-              if(paid.stageVersion!==5||!runnerCanResume(paid)||paid.snapshot.version!==2||DB_VERSION!==10||BACKUP_VERSION!==10)throw Error('versions');
+              if(paid.stageVersion!==(id==='S04'?5:6)||!runnerCanResume(paid)||paid.snapshot.version!==2||DB_VERSION!==10||BACKUP_VERSION!==10)throw Error('versions');
               let c=await openRunnerSession('student',paid.id,{lifecycle:false});await c.resume();await c.advance(.1);await c.pause();
             }""",id)
             self.page.reload();self.page.wait_for_function('appReady')
@@ -44,7 +44,7 @@ class RunnerVerticalCompatibilityTest(unittest.TestCase):
               const m=await loadRunnerModel(),paid=(await readAll('runnerPlays')).find(p=>p.status==='active');
               if(!runnerCanResume(paid))throw Error('reload not resumable');
               let c=await openRunnerSession('student',paid.id,{lifecycle:false});
-              if(c.view.state.stageVersion!==5||c.view.state.mode!=='paused')throw Error('reload version');
+              if(c.view.state.stageVersion!==(id==='S04'?5:6)||c.view.state.mode!=='paused')throw Error('reload version');
               await c.resume();let n=0;const seen=new Set();
               while(c.view.state.mode==='running'){
                 const s=c.view.state;if(n<inputs.length&&s.elapsed+1e-8>=inputs[n]){await c.jump();n++;}await c.advance(1/60);
@@ -57,7 +57,7 @@ class RunnerVerticalCompatibilityTest(unittest.TestCase):
                 }
               }await c.flush();
               const result=c.view.savedPlay,d=await snapshotAllStores();validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:10,data:d});
-              if(result.status!=='finished'||result.result.reason!=='clear'||result.score!==100||result.result.livesRemaining!==2||result.stageVersion!==5||(id!=='S01'&&(!seen.has('platform')||!seen.has('topJump'))))throw Error('official clear '+JSON.stringify({id,result,seen:[...seen]}));
+              if(result.status!=='finished'||result.result.reason!=='clear'||result.score!==100||result.result.livesRemaining!==2||result.stageVersion!==(id==='S04'?5:6)||(id!=='S01'&&(!seen.has('platform')||!seen.has('topJump'))))throw Error('official clear '+JSON.stringify({id,result,seen:[...seen]}));
               if(d.coinSpends.filter(s=>s.id===paid.id).length!==1||d.coinSpends.find(s=>s.id===paid.id).amount!==30)throw Error('charge');
               const summary=summarizeRunnerPlays(d.runnerPlays,'student');
               if(summary.bestByStage[id].score!==100||summary.bestByStageCharacter[id+':shiba'].score!==100)throw Error('score');
@@ -88,7 +88,7 @@ class RunnerVerticalCompatibilityTest(unittest.TestCase):
         probe="""async()=>{
           const m=await loadRunnerModel(),p=(await readAll('runnerPlays')).find(p=>p.profile==='test'&&p.status==='active');
           const c=await openRunnerSession('test',p.id,{lifecycle:false}),s=c.view.state;
-          if(s.stageVersion!==5||!s.birds.every(b=>b.speed===120)||s.mode!=='paused')throw Error('reload state');
+          if(s.stageVersion!==6||!s.birds.every(b=>b.speed===120)||s.mode!=='paused')throw Error('reload state');
           return {snapshot:m.snapshotRunner(s),birds:s.birds.map(b=>m.birdCenter(s,b)),spikes:s.spikes.map(b=>m.spikeCenter(s,b))};
         }"""
         saved=self.page.evaluate(probe)
@@ -112,11 +112,11 @@ class RunnerVerticalCompatibilityTest(unittest.TestCase):
           }
           const old=base.states.find(r=>r.play.stageId==='S06'&&r.play.snapshot.elapsed>30).play;
           await installPhase([old]);const fresh=await purchaseRunnerPlay({profile:'test',stageId:'S06',characterId:'shiba'});
-          if(fresh.stageVersion!==5)throw Error('new purchase version');
+          if(fresh.stageVersion!==6)throw Error('new purchase version');
           const data=await snapshotAllStores(),backup=JSON.parse(JSON.stringify({backupFormat:BACKUP_FORMAT,backupVersion:10,data}));
           validateBackup(backup);await plushInstall(backup.data);
           if(JSON.stringify(data)!==JSON.stringify(await snapshotAllStores()))throw Error('mixed backup changed');
-          for(const [profile,id,version] of [['student',old.id,3],['test',fresh.id,5]]){
+          for(const [profile,id,version] of [['student',old.id,3],['test',fresh.id,6]]){
             const c=await openRunnerSession(profile,id,{lifecycle:false});
             if(c.view.state.stageVersion!==version)throw Error('mixed version');
           }return true;
@@ -309,11 +309,11 @@ class RunnerVerticalFormalInputTest(unittest.TestCase):
     setUp = phase1.RunnerPhase1CompatibilityTest.setUp
     tearDown = phase1.RunnerPhase1CompatibilityTest.tearDown
 
-    def test_formal_touch_lower_and_trap_routes_phone_tablet_captures(self):
+    def test_formal_touch_v6_upper_routes_phone_tablet_captures(self):
         import os
         self.context.add_init_script(canvas.MANUAL_FRAMES)
-        folder=Path('docs/screenshots/runner-85-ascent')
-        for id,inputs,upper in [(id,inputs,False) for id,inputs in CURRENT_INPUTS.items() if id!='S04']+[('S06',CURRENT_UPPER['S06'],True)]:
+        folder=Path('docs/screenshots/runner-85-balance')
+        for id,inputs in [(id,inputs) for id,inputs in CURRENT_INPUTS.items() if id!='S04']:
             for width,height in [(390,844),(1024,768)]:
                 self.page.set_viewport_size(dict(width=width,height=height))
                 self.page.evaluate("async()=>{await navigate('home','student');await installPhase();}")
@@ -326,13 +326,14 @@ class RunnerVerticalFormalInputTest(unittest.TestCase):
                 self.page.wait_for_function("formalRunner.session?.view.state.mode==='running'")
                 frame.locator('body').evaluate('()=>runnerClock.step(0)')
                 captures=[(dict(S04=18.1,S05=15.5,S06=17)[id],'high')]
-                if id=='S06':captures += [(20.5,'choice'),(22.45 if upper else 22.7,'trap' if upper else 'lower')]
-                if id in ('S05','S06') and not upper:
+                if id=='S06':captures += [(20.5,'choice'),(23.0,'birds')]
+                if id=='S05':captures += [(20.6,'branch')]
+                if id in ('S05','S06'):
                     captures += [(26.9 if id=='S05' else 30.35,'late-wait'),(32.2 if id=='S05' else 35.3,'late-climb')]
                 events=sorted([(t,'jump') for t in inputs]+captures)
                 for t,event in events:
                     self.page.evaluate("""async t=>{const c=formalRunner.session;
-                      while(c.view.state.elapsed<t-1e-9)await formalRunner.bridge.advance(Math.min(1/60,t-c.view.state.elapsed));
+                      for(let frame=0;c.view.state.elapsed<t-1e-9;frame++){if(frame>3000||c.view.state.mode!=='running')throw Error('capture progression '+JSON.stringify({t,state:c.view.state}));await formalRunner.bridge.advance(Math.min(1/60,t-c.view.state.elapsed));}
                     }""",t)
                     if event=='jump':
                         frame.locator('#runner-jump').dispatch_event('pointerdown',dict(pointerType='touch',isPrimary=True,button=0))
@@ -359,22 +360,12 @@ class RunnerVerticalFormalInputTest(unittest.TestCase):
                         frame.locator('body').evaluate('()=>runnerClock.step(0)')
                         if event=='high':
                             self.assertTrue(self.page.evaluate("formalRunner.session.view.state.feetY-91>=0"))
-                        if os.environ.get('RUNNER_CAPTURE') and event in ('high','late-climb') and not upper:
+                        if os.environ.get('RUNNER_CAPTURE') and event in ('branch','birds','late-climb'):
                             folder.mkdir(parents=True,exist_ok=True)
                             device='iphone' if width==390 else 'ipad'
                             self.page.screenshot(path=str(folder/f'{id.lower()}-{device}-{event}.png'))
-                        if event=='trap':
-                            self.assertEqual(self.page.evaluate('formalRunner.session.view.state.lives'),1)
-                            self.assertGreater(self.page.evaluate('formalRunner.session.view.state.invincibleRemaining'),0)
-                            # Save/reopen while the trap's one-second shield is active.
-                            self.assertTrue(self.page.evaluate("""async()=>{const c=formalRunner.session,m=await loadRunnerModel();
-                              await c.pause();const snap=m.snapshotRunner(c.view.state),p=c.view.savedPlay;
-                              const reopened=await openRunnerSession('student',p.id,{lifecycle:false});
-                              if(JSON.stringify(snap)!==JSON.stringify(m.snapshotRunner(reopened.view.state)))return false;
-                              await c.resume();return true;
-                            }"""))
                 self.page.evaluate("""async()=>{while(formalRunner.session.view.state.mode==='running')await formalRunner.bridge.advance(1/60);await formalRunner.session.flush();}""")
                 frame.locator('body').evaluate('()=>runnerClock.step(0)')
                 self.assertEqual(frame.locator('#runner-result-title').inner_text(),'クリア！')
-                self.assertEqual(self.page.evaluate('[formalRunner.session.view.savedPlay.score,formalRunner.session.view.savedPlay.result.livesRemaining]'),[100,1 if upper else 2])
+                self.assertEqual(self.page.evaluate('[formalRunner.session.view.savedPlay.score,formalRunner.session.view.savedPlay.result.livesRemaining]'),[100,2])
                 self.assertEqual(self.page.evaluate("async()=>(await readAll('coinSpends')).filter(s=>s.id===formalRunner.session.view.savedPlay.id).map(s=>s.amount)"),[30])

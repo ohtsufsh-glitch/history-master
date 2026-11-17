@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.49";
-import { STAGES, getStage } from "./stages.js?v=1.7.49";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.49";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.50";
+import { STAGES, getStage } from "./stages.js?v=1.7.50";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.50";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -868,6 +868,12 @@ function resizeCanvas(canvas, stage, viewport) {
   return true;
 }
 
+// 終了理由は既存のcollisionのまま。表示専用の判別でsnapshot/DBへ追加しない。
+function isFatalHoleFall(state) {
+  return state.mode === "finished" && state.reason === "collision" &&
+    state.holeFailure === "fatal" && state.feetY > GROUND_Y + PHYSICS_EPSILON;
+}
+
 function initializeRunner(session = null) {
   const canvas = document.getElementById("runner-canvas");
   const stage = document.getElementById("runner-stage");
@@ -907,6 +913,21 @@ function initializeRunner(session = null) {
 
   let state = session ? session.view.state : isStagePreview ? createRunnerState(STAGES[0]) : createRunnerState();
   let controlBusy=false, stopped=false;
+  // この画面で観測した終了遷移だけ再生する。保存済み終了状態では再生しない。
+  let observedMode=state.mode, fall=null, fallTimestamp=null;
+  function observeFall() {
+    if(observedMode==='running' && isFatalHoleFall(state)) {
+      fall={feetY:state.feetY,velocityY:Math.max(0,state.velocityY)};
+      fallTimestamp=null;
+      session?.setPresentationBusy?.(true);
+    }
+    if(state.mode!=='finished')fall=null;
+    observedMode=state.mode;
+  }
+  function displayState() {
+    return fall ? {...state,mode:'running',feetY:fall.feetY,velocityY:fall.velocityY,
+      supportId:null,airAction:'fall',hitFeedbackRemaining:0,invincibleRemaining:0} : state;
+  }
   function syncSession(){if(session)state=session.view.state;}
   function saveFailure(){syncSession();updateControls();requestRedraw();}
   function describeStage(definition) {
@@ -969,22 +990,28 @@ function initializeRunner(session = null) {
     }
   }
   function updateControls() {
+    observeFall();
     if (isStagePreview) {
-      stageSelect.disabled = !active || (state.mode !== "ready" && state.mode !== "finished");
+      stageSelect.disabled = !!fall || !active || (state.mode !== "ready" && state.mode !== "finished");
       characterSelect.disabled = stageSelect.disabled;
       stageSelect.value = state.stageId; characterSelect.value = state.characterId;
       updatePreviewCards();
     }
     const text = { ready: "ゲーム開始", running: "一時停止", paused: "再開", finished: "もう一度" }[state.mode];
     if (toggle.textContent !== text) toggle.textContent = text;
+    toggle.disabled=!active||controlBusy;
     if(session) {
       toggle.disabled=controlBusy||(!!session.view.error&&!!session.view.savedPlay)||(state.mode==='finished'&&(session.view.dirty||!session.view.result));
       if(state.mode==='finished')toggle.textContent='再挑戦';
       if(session.view.error&&session.view.savedPlay) {toggle.disabled=controlBusy;toggle.textContent='最後の保存から再開（無料）';}
     }
+    if(fall) {
+      toggle.disabled=true;
+      toggle.textContent='落下中…';
+    }
     const jumpDisabled = !active || state.mode !== "running";
     if (jumpButton && jumpButton.disabled !== jumpDisabled) jumpButton.disabled = jumpDisabled;
-    const mode = { ready: "開始前", running: "走行中", paused: "一時停止中", finished: "終了" }[state.mode];
+    const mode = fall ? "落下中" : { ready: "開始前", running: "走行中", paused: "一時停止中", finished: "終了" }[state.mode];
     if (modeLabel.textContent !== mode) modeLabel.textContent = mode;
     if (scoreLabel.textContent !== String(state.score)) scoreLabel.textContent = state.score;
     const hearts = "♥".repeat(state.lives) + "♡".repeat(state.initialLives - state.lives);
@@ -993,14 +1020,14 @@ function initializeRunner(session = null) {
     if (livesLabel.getAttribute("aria-label") !== livesDescription) livesLabel.setAttribute("aria-label", livesDescription);
     const progress = String(progressPercent(state));
     if (progressLabel.textContent !== progress) progressLabel.textContent = progress;
-    const hideResult = state.mode !== "finished";
+    const hideResult = state.mode !== "finished" || !!fall;
     const resetResult = hideResult && !result.hidden;
     if (result.hidden !== hideResult) result.hidden = hideResult;
     document.getElementById('runner-formal-result').hidden=!session||hideResult;
-    if (state.mode === "finished") {
+    if (!hideResult) {
       document.getElementById("runner-result-title").textContent = state.reason === "clear" ? "クリア！" : "ゲームオーバー";
       document.getElementById("runner-result-message").textContent = state.reason === "clear" ?
-        "ゴールまで走りきったよ！" : "トゲ岩にぶつかったよ。もう一度挑戦しよう！";
+        "ゴールまで走りきったよ！" : isFatalHoleFall(state) ? "穴に落ちてしまった！もう一度挑戦しよう！" : "トゲ岩にぶつかったよ。もう一度挑戦しよう！";
       document.getElementById("runner-result-score").textContent = state.score;
       document.getElementById("runner-result-progress").textContent = progress;
       result.dataset.reason=state.reason;
@@ -1008,7 +1035,7 @@ function initializeRunner(session = null) {
         const view=session.view,r=view.result;
         const confirmed=r&&!view.dirty&&!view.error&&view.savedPlay?.status==='finished';
         document.getElementById('runner-result-title').textContent=confirmed?(r.play.result.reason==='clear'?'クリア！':'ゲームオーバー'):'結果を保存中…';
-        document.getElementById('runner-result-message').textContent=confirmed?'保存しました。下のボタンで再挑戦！':view.error?'保存できませんでした。追加コインなしで最後の保存から再開できます。':'保存が終わるまで待ってね。';
+        document.getElementById('runner-result-message').textContent=confirmed?(isFatalHoleFall(state)?'穴に落ちてしまった！もう一度挑戦しよう！':'保存しました。下のボタンで再挑戦！'):view.error?'保存できませんでした。追加コインなしで最後の保存から再開できます。':'保存が終わるまで待ってね。';
         if(view.error)document.getElementById('runner-result-title').textContent='まだ保存できていません';
         document.getElementById('runner-result-score').textContent=confirmed?r.play.score:state.score;
         document.getElementById('runner-result-record').textContent=confirmed?(r.stageRecord||r.characterRecord||''):'';
@@ -1047,7 +1074,19 @@ function initializeRunner(session = null) {
       updateControls();
     }
     if(session){syncSession();updateControls();}
-    renderScene(context, canvas, state, characterImages, obstacleImage);
+    if(fall) {
+      const dt=fallTimestamp===null?0:Math.min(Math.max((timestamp-fallTimestamp)/1000,0),MAX_FRAME_SECONDS);
+      fall.feetY+=fall.velocityY*dt+state.jump.gravity*dt*dt/2;
+      fall.velocityY+=state.jump.gravity*dt;
+      fallTimestamp=timestamp;
+      // 画像は最大100px。透明余白・画像失敗時の文字を含め上端が消えるまで待つ。
+      if(fall.feetY-ANIMATION_SETS[state.characterId].maxSize>=WORLD.height) {
+        fall=null;fallTimestamp=null;session?.setPresentationBusy?.(false);updateControls();
+      }
+    }
+    // 消失後も物理モデルの足元へ戻して描かない。
+    const painted=displayState();
+    renderScene(context, canvas, isFatalHoleFall(state)&&!fall ? {...painted,feetY:WORLD.height+100} : painted, characterImages, obstacleImage);
     if(session) {
       const view=session.view;
       status.hidden=false;
@@ -1055,7 +1094,7 @@ function initializeRunner(session = null) {
       status.hidden=!status.textContent;
       status.style.position='static';
     } else status.hidden = true;
-    if (state.mode === "running") requestRedraw();
+    if (state.mode === "running" || fall) requestRedraw();
   }
 
   // 通常描画・リサイズ・走行が共通の1枠を使い、ループを二重起動しない。
@@ -1067,6 +1106,7 @@ function initializeRunner(session = null) {
     if(session&&!stopped){session.pause().catch(saveFailure);syncSession();}
     if (state.mode === "running") state.mode = "paused";
     previousTimestamp = null;
+    fallTimestamp = null;
     if (pendingFrame !== null) cancelAnimationFrame(pendingFrame);
     pendingFrame = null;
     updateControls();
@@ -1098,7 +1138,7 @@ function initializeRunner(session = null) {
 
   stageSelect?.addEventListener("change", () => {
     const selected = STAGES.find(definition => definition.stageId === stageSelect.value);
-    if (!isStagePreview || !active || document.hidden ||
+    if (!isStagePreview || !active || document.hidden || fall ||
         (state.mode !== "ready" && state.mode !== "finished") || !selected) {
       stageSelect.value = state.stageId ?? "";
       return;
@@ -1114,7 +1154,7 @@ function initializeRunner(session = null) {
 
   characterSelect?.addEventListener("change", () => {
     const selected = CHARACTERS.find(definition => definition.characterId === characterSelect.value);
-    if (!isStagePreview || !active || document.hidden ||
+    if (!isStagePreview || !active || document.hidden || fall ||
         (state.mode !== "ready" && state.mode !== "finished") || !selected) {
       characterSelect.value = state.characterId;
       return;
@@ -1129,7 +1169,7 @@ function initializeRunner(session = null) {
   });
 
   toggle.addEventListener("click", async () => {
-    if (!active || document.hidden || controlBusy) return;
+    if (!active || document.hidden || controlBusy || fall) return;
     if(session) {
       controlBusy=true;
       try {

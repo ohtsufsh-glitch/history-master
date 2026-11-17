@@ -438,14 +438,50 @@ const ASCENT_STAGES = [
   course:Object.freeze(stage.course.slice().sort((a,b)=>a.at-b.at).map(e=>Object.freeze(e))),
 }));
 
+// Issue #85 版6。版1〜5の定義・保存済みプレイをそのまま保持する。
+const BALANCED_STAGES = [
+  {
+    ...ASCENT_STAGES[0], stageVersion: 6,
+    holes: [...ASCENT_STAGES[0].holes,
+      {start:3980,end:4210},{start:4250,end:4510},{start:4550,end:4790},
+      {start:4860,end:7010}],
+    course: [...ASCENT_STAGES[0].course.filter(e=>e.at*200+822<4800 &&
+      !(e.type==='obstacle' && Math.abs(e.at*200+822-4660)<1)),
+      ...[[4930,100],[5270,150],[5610,70],[5950,140],[6290,80],[6630,130],[6970,70]]
+        .map(([x,h])=>platform(x,220,h)),
+      ...stars([[5610,70],[6970,70]])],
+    birds: [...ASCENT_STAGES[0].birds.slice(0,5),
+      ...[[4930,330],[5130,143],[5470,193],[5810,113],[6150,183],[6490,123],[6830,173]]
+        .map(([x,h])=>incoming(x,h))],
+    spikes: ASCENT_STAGES[0].spikes.map(s=>s.x===6440?spike(6440,70,25,2.6,.5):s),
+  },
+  {
+    ...ASCENT_STAGES[1], stageVersion: 6,
+    birds: [...ASCENT_STAGES[1].birds.slice(0,3),
+      ...[[4560,233],[4780,233],[5000,233],[5220,233]].map(([x,h])=>incoming(x,h)),
+      ...ASCENT_STAGES[1].birds.slice(7)],
+    spikes: [...ASCENT_STAGES[1].spikes,
+      spike(4420,48,12,2.1,.2), spike(4600,46,14,2.3,1), spike(4780,48,12,2.5,2),
+      spike(4960,46,14,2.7,3), spike(5100,32,8,2.9,4)],
+    course: ASCENT_STAGES[1].course.map(e=>e.type==='platform' && Math.abs(e.at*200+822-4840)<1?platform(4920,800,150):e),
+    routeWarnings: [],
+  },
+].map(stage=>Object.freeze({...stage,
+  holes:Object.freeze(stage.holes.map(h=>Object.freeze(h))),
+  birds:Object.freeze(stage.birds.map(b=>Object.freeze(b))),
+  spikes:Object.freeze(stage.spikes.map(s=>Object.freeze(s))),
+  course:Object.freeze(stage.course.slice().sort((a,b)=>a.at-b.at).map(e=>Object.freeze(e))),
+}));
+
 // 選択・新規購入は最新版。再開は必ず(ID, 版)で引く。未知版の推測は禁止。
 const STAGES = Object.freeze(LEGACY_STAGES.map(stage =>
+  BALANCED_STAGES.find(current => current.stageId === stage.stageId) ??
   ASCENT_STAGES.find(current => current.stageId === stage.stageId) ??
   VARIED_STAGES.find(current => current.stageId === stage.stageId) ??
   VERTICAL_STAGES.find(current => current.stageId === stage.stageId) ??
   DENSE_STAGES.find(current => current.stageId === stage.stageId) ?? stage));
 function getStage(stageId, stageVersion) {
-  return [...LEGACY_STAGES, ...VERSION2_STAGES, ...VERSION3_STAGES, ...DENSE_STAGES, ...VERTICAL_STAGES, ...VARIED_STAGES, ...ASCENT_STAGES].find(stage =>
+  return [...LEGACY_STAGES, ...VERSION2_STAGES, ...VERSION3_STAGES, ...DENSE_STAGES, ...VERTICAL_STAGES, ...VARIED_STAGES, ...ASCENT_STAGES, ...BALANCED_STAGES].find(stage =>
     stage.stageId === stageId && (stage.stageVersion ?? 1) === stageVersion);
 }
 export { STAGES, LEGACY_STAGES, getStage };

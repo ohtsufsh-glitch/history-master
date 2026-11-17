@@ -150,7 +150,7 @@ class RunnerAscentCompatibilityTest(unittest.TestCase):
           }
           const old=base.states.find(r=>r.play.stageId==='S06'&&r.play.snapshot.elapsed>28).play;
           await installPhase([old]);const fresh=await purchaseRunnerPlay({profile:'test',stageId:'S06',characterId:'shiba'});
-          if(fresh.stageVersion!==5)throw Error('new version');
+          if(fresh.stageVersion!==6)throw Error('new version');
           const data=await snapshotAllStores(),backup=JSON.parse(JSON.stringify({backupFormat:BACKUP_FORMAT,backupVersion:10,data}));
           validateBackup(backup);await plushInstall(backup.data);
           if(JSON.stringify(data)!==JSON.stringify(await snapshotAllStores()))throw Error('backup stores');
