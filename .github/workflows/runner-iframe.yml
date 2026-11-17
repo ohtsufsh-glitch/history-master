@@ -11,6 +11,7 @@ on:
       - 'tests/runner_vertical_test.py'
       - 'tests/runner_vertical_cases.py'
       - 'tests/fixtures/runner85-vertical-base.json'
+      - 'tests/fixtures/runner85-variety-base.json'
       - 'tests/fixtures/runner85-density-base.json'
       - 'tests/fixtures/runner85-tuning-base.json'
       - 'tests/fixtures/runner85-phase2a-base.json'

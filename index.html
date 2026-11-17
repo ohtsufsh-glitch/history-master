@@ -643,8 +643,8 @@
       #runner-frame-host { height:90vh; height:90dvh; }
     }
   </style>
-  <link rel="stylesheet" href="./runner/balance.css?v=1.7.47">
-  <link rel="stylesheet" href="./runner/selection.css?v=1.7.47">
+  <link rel="stylesheet" href="./runner/balance.css?v=1.7.48">
+  <link rel="stylesheet" href="./runner/selection.css?v=1.7.48">
 </head>
 <body>
 <!-- 立体的な金貨イラスト：ホーム・正解時に共用 -->
@@ -1006,7 +1006,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.47";
+const APP_VERSION = "v1.7.48";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3188,7 +3188,7 @@ function validIndexList(values, max) {
 const RUNNER_STAGE_IDS = Object.freeze(['S01','S02','S03','S04','S05','S06']);
 const RUNNER_CHARACTER_IDS = Object.freeze(['shiba','sloth','goldfish','salamander','secret_yuniko']);
 // 対応する(ID, 版)。コース実体との最終照合はgetStage/restoreRunnerが行う。
-const RUNNER_STAGE_VERSIONS = Object.freeze({S01:[1,2],S02:[1,2,3,4],S03:[1,2,3,4],S04:[1,2,3,4,5],S05:[1,2,3],S06:[1,2,3]});
+const RUNNER_STAGE_VERSIONS = Object.freeze({S01:[1,2],S02:[1,2,3,4],S03:[1,2,3,4],S04:[1,2,3,4,5],S05:[1,2,3,4],S06:[1,2,3,4]});
 function runnerInitialLives(id) { return ['salamander','secret_yuniko'].includes(id)?3:2; }
 function runnerCanResume(play) { return play.status==='active' && RUNNER_STAGE_VERSIONS[play.stageId]?.includes(play.stageVersion) && play.snapshot?.version===2; }
 function exactRunnerFields(value, fields) {
@@ -3243,7 +3243,7 @@ function summarizeRunnerPlays(records, who) {
 // C3-B 内部API。無料試遊のURL/選択UIからは呼ばない。
 let runnerModelPromise;
 function loadRunnerModel() {
-  return runnerModelPromise ||= import('./runner/game.js?v=1.7.47');
+  return runnerModelPromise ||= import('./runner/game.js?v=1.7.48');
 }
 function runnerTransaction(names, action, {mode='readwrite', keys={}}={}) {
   return new Promise((resolve,reject)=>{
@@ -3612,7 +3612,7 @@ async function startFormalRunner(ctx,d,m) {
   const frame=current.frame;
   frame.title='わくわくランナー';frame.className='runner-formal-frame';
   frame.onload=()=>{if(formalRunner===current){frame.contentWindow.mountFormalRunner(current.bridge);choices();}};
-  frame.src='./runner/?embedded=1&v=1.7.47';
+  frame.src='./runner/?embedded=1&v=1.7.48';
   $('runner-frame-host').replaceChildren(frame);choices();
 }
 $('open-runner').addEventListener('click',()=>navigate('runner').catch(err));
