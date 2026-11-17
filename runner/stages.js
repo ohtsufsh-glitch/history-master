@@ -378,7 +378,7 @@ const VERTICAL_STAGES = [
   course: Object.freeze(stage.course.sort((a,b) => a.at-b.at).map(e => Object.freeze(e))),
 }));
 
-// PR #132後の改良案。公開済み版3を保持し、新規プレイだけ新版へ。
+// Issue #85 後半の配置改善。公開済み版3を保持し、新規購入だけ版4へ。
 const VARIED_STAGES = [
   {
     ...VERTICAL_STAGES[1], stageVersion: 4,
