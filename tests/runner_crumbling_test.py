@@ -172,7 +172,7 @@ class RunnerCrumblingFormalUITest(unittest.TestCase):
                 f.locator('#runner-toggle').click();self.page.wait_for_function("formalRunner.session.view.state.mode==='running'")
                 f.locator('body').evaluate('()=>runnerClock.step(0)')
                 name=f'{id.lower()}-{width}'
-                video=Path('/tmp/runner85')/name;video.mkdir(exist_ok=True)
+                video=Path('/tmp/runner85-captures')/name;video.mkdir(parents=True,exist_ok=True)
                 for index in range(34):
                     if index:
                         if self.page.evaluate("formalRunner.session.view.state.mode==='running'"):
