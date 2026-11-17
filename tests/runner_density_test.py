@@ -5,6 +5,7 @@ import unittest
 
 import runner_canvas_test as canvas
 import runner_phase1_test as phase1
+from runner_vertical_cases import INPUTS as VERTICAL_INPUTS
 
 BASE = json.loads((Path(__file__).parent/'fixtures/runner85-density-base.json').read_text())
 INPUTS = {
@@ -142,6 +143,8 @@ INPUTS = {
     ]
 }
 
+LATEST_INPUTS = {**INPUTS, **VERTICAL_INPUTS}
+
 
 TRIAL = """(stage,inputs,hz=60)=>{
  const s=runnerModel.createRunnerState(stage);s.mode='running';let n=0;const hits=[],jumps=[],landings=[];
@@ -167,7 +170,7 @@ class RunnerDensityPhysicsTest(unittest.TestCase):
 
     def model(self):
         p,errors,requests=self.model_runner()
-        p.evaluate('()=>{window.trial=('+TRIAL+');}')
+        p.evaluate('()=>{window.runnerModel={...runnerModel,STAGES:runnerModel.STAGES.map(s=>runnerModel.getStage(s.stageId,["S02","S03","S04"].includes(s.stageId)?4:2))};window.trial=('+TRIAL+');}')
         self.addCleanup(lambda:self.assert_isolated(p,errors,requests))
         return p
 
@@ -328,7 +331,16 @@ class RunnerDensityPhysicsTest(unittest.TestCase):
 class RunnerDensityCompatibilityTest(unittest.TestCase):
     setUpClass = classmethod(phase1.RunnerPhase1CompatibilityTest.setUpClass.__func__)
     tearDownClass = classmethod(phase1.RunnerPhase1CompatibilityTest.tearDownClass.__func__)
-    setUp = phase1.RunnerPhase1CompatibilityTest.setUp
+    # Historical purchased records must continue on the density versions.
+    def setUp(self):
+        phase1.RunnerPhase1CompatibilityTest.setUp(self)
+        self.page.evaluate("""()=>{window.buy=async({stageId='S01'}={})=>{
+          const active=(await readAll('runnerPlays')).find(p=>p.profile==='student'&&p.status==='active');if(active)return active;
+          const stage=m.getStage(stageId,['S02','S03','S04'].includes(stageId)?4:2),at=new Date().toISOString();
+          const p={id:crypto.randomUUID(),profile:'student',game:'runner',schemaVersion:1,stageId,stageVersion:stage.stageVersion,characterId:'shiba',
+            startedAt:at,updatedAt:at,status:'active',score:0,snapshot:m.snapshotRunner(m.createRunnerState(stage))};
+          await runnerTransaction(['runnerPlays','coinSpends'],tx=>{tx.objectStore('runnerPlays').add(p);tx.objectStore('coinSpends').add({id:p.id,profile:'student',game:'runner',amount:30,at});});return p;
+        };}""")
     tearDown = phase1.RunnerPhase1CompatibilityTest.tearDown
 
     def test_frozen_previous_paid_states_resume_on_original_trajectories(self):
@@ -348,7 +360,7 @@ class RunnerDensityCompatibilityTest(unittest.TestCase):
         self.page.reload();self.page.wait_for_function('appReady')
         self.assertEqual(self.page.evaluate("""async()=>{const p=(await readAll('runnerPlays')).find(p=>p.status==='active'),c=await openRunnerSession(p.profile,p.id,{lifecycle:false});return [c.view.state.stageVersion,c.view.state.goalDistance,c.view.state.birds[0]?.speed??0];}"""),[1,8000,0])
 
-    def test_latest_purchases_save_reload_and_official_clear_all_six_stages(self):
+    def test_density_paid_records_save_reload_and_official_clear_all_six_stages(self):
         for id,inputs in INPUTS.items():
             self.page.evaluate("""async id=>{
               await installPhase();window.paid=await buy({stageId:id});
@@ -414,11 +426,11 @@ class RunnerDensityCompatibilityTest(unittest.TestCase):
               if(session.view.state.stageVersion!==version||session.view.state.goalDistance!==m.getStage(id,version).goalDistance)throw Error('backup version');
             }
           }return true;
-        }""",dict(base=BASE,inputs=INPUTS)))
+        }""",dict(base=BASE,inputs=LATEST_INPUTS)))
         probe="""async()=>{
           const m=await loadRunnerModel(),p=(await readAll('runnerPlays')).find(p=>p.profile==='test'&&p.status==='active');
           const c=await openRunnerSession('test',p.id,{lifecycle:false}),s=c.view.state;
-          if(s.stageVersion!==2||!s.birds.every(b=>b.speed===120)||s.mode!=='paused')throw Error('reload state');
+          if(s.stageVersion!==3||!s.birds.every(b=>b.speed===120)||s.mode!=='paused')throw Error('reload state');
           return {snapshot:m.snapshotRunner(s),birds:s.birds.map(b=>m.birdCenter(s,b))};
         }"""
         saved=self.page.evaluate(probe)
@@ -434,7 +446,7 @@ class RunnerDensityFormalInputTest(unittest.TestCase):
     def test_formal_buttons_all_six_and_representative_captures(self):
         import os
         self.context.add_init_script(canvas.MANUAL_FRAMES)
-        for id,inputs in INPUTS.items():
+        for id,inputs in LATEST_INPUTS.items():
             width,height=(390,844) if id in ('S01','S03','S05') else (1024,768)
             self.page.set_viewport_size(dict(width=width,height=height))
             self.page.evaluate("async()=>{await navigate('home','student');await installPhase();}")
@@ -443,7 +455,6 @@ class RunnerDensityFormalInputTest(unittest.TestCase):
             frame=self.page.frame_locator('iframe')
             frame.locator('#runner-toggle').filter(has_text='ゲーム開始').wait_for()
             frame.locator('body').evaluate('()=>runnerClock.step(0)')
-            self.page.once('dialog',lambda d:d.accept())
             frame.locator('#runner-toggle').click()
             self.page.wait_for_function("formalRunner.session?.view.state.mode==='running'")
             frame.locator('body').evaluate('()=>runnerClock.step(0)')

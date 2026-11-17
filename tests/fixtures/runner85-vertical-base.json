@@ -1,0 +1,4526 @@
+{
+  "source": "c2c580eb450c9badf943dd2bf01a24960099dcdc / v1.7.46; synthetic public states",
+  "stages": [
+    {
+      "stageId": "S01",
+      "name": "はじめての草原",
+      "difficulty": 1,
+      "goalDistance": 4000,
+      "course": [
+        {
+          "at": 1.09,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 2.29,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 2.99,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 4.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 4.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 6.29,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 7.19,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 8.09,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 10.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 10.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 12.29,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 13.39,
+          "type": "star",
+          "height": 0
+        }
+      ]
+    },
+    {
+      "stageId": "S01",
+      "name": "はじめての草原",
+      "difficulty": 1,
+      "goalDistance": 4000,
+      "course": [
+        {
+          "at": -2.41,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": -1.21,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": -0.11,
+          "type": "obstacle"
+        },
+        {
+          "at": -0.11,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 1.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 1.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 3.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 3.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 6.39,
+          "type": "obstacle"
+        },
+        {
+          "at": 6.39,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 8.14,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 9.39,
+          "type": "obstacle"
+        },
+        {
+          "at": 9.39,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 12.39,
+          "type": "obstacle"
+        },
+        {
+          "at": 12.39,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 14.39,
+          "type": "star",
+          "height": 0
+        }
+      ],
+      "stageVersion": 2,
+      "holes": [],
+      "birds": []
+    },
+    {
+      "stageId": "S02",
+      "name": "トゲ岩の道",
+      "difficulty": 2,
+      "goalDistance": 4800,
+      "course": [
+        {
+          "at": 1.29,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 2.49,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 3.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 3.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 5.89,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 6.99,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 8.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 8.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 10.19,
+          "type": "obstacle"
+        },
+        {
+          "at": 10.19,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 11.89,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 13.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 13.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 17.39,
+          "type": "star",
+          "height": 0
+        }
+      ]
+    },
+    {
+      "stageId": "S02",
+      "name": "トゲ岩の道",
+      "difficulty": 2,
+      "goalDistance": 5000,
+      "course": [
+        {
+          "at": 1.29,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 2.49,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 3.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 3.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 6.14,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 8.59,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 9.89,
+          "type": "platform",
+          "width": 600,
+          "height": 90
+        },
+        {
+          "at": 9.89,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 9.94,
+          "type": "wall",
+          "width": 340,
+          "height": 80
+        },
+        {
+          "at": 11.09,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 12.89,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 14.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 14.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 18.39,
+          "type": "star",
+          "height": 0
+        }
+      ],
+      "stageVersion": 2,
+      "holes": []
+    },
+    {
+      "stageId": "S02",
+      "name": "トゲ岩の道",
+      "difficulty": 2,
+      "goalDistance": 5000,
+      "course": [
+        {
+          "at": 0.39,
+          "type": "obstacle"
+        },
+        {
+          "at": 0.39,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 2.49,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 3.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 3.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 6.14,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 8.59,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 9.89,
+          "type": "platform",
+          "width": 600,
+          "height": 90
+        },
+        {
+          "at": 9.94,
+          "type": "wall",
+          "width": 340,
+          "height": 80
+        },
+        {
+          "at": 10.09,
+          "type": "wall",
+          "width": 40,
+          "height": 170
+        },
+        {
+          "at": 10.09,
+          "type": "star",
+          "height": 210
+        },
+        {
+          "at": 11.09,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 13.39,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 14.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 14.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 18.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 18.89,
+          "type": "star",
+          "height": 120
+        }
+      ],
+      "stageVersion": 3,
+      "holes": []
+    },
+    {
+      "stageId": "S02",
+      "name": "トゲ岩の道",
+      "difficulty": 2,
+      "goalDistance": 5000,
+      "course": [
+        {
+          "at": -2.01,
+          "type": "obstacle"
+        },
+        {
+          "at": -2.01,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": -0.91,
+          "type": "obstacle"
+        },
+        {
+          "at": 0.19,
+          "type": "obstacle"
+        },
+        {
+          "at": 0.19,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 1.29,
+          "type": "obstacle"
+        },
+        {
+          "at": 2.39,
+          "type": "obstacle"
+        },
+        {
+          "at": 2.39,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 3.49,
+          "type": "obstacle"
+        },
+        {
+          "at": 4.99,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 5.69,
+          "type": "wall",
+          "width": 200,
+          "height": 80
+        },
+        {
+          "at": 6.09,
+          "type": "platform",
+          "width": 560,
+          "height": 90
+        },
+        {
+          "at": 6.39,
+          "type": "wall",
+          "width": 40,
+          "height": 170
+        },
+        {
+          "at": 6.39,
+          "type": "star",
+          "height": 210
+        },
+        {
+          "at": 8.59,
+          "type": "obstacle"
+        },
+        {
+          "at": 9.69,
+          "type": "obstacle"
+        },
+        {
+          "at": 9.69,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 10.79,
+          "type": "obstacle"
+        },
+        {
+          "at": 11.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 11.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 13.39,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 14.09,
+          "type": "wall",
+          "width": 200,
+          "height": 80
+        },
+        {
+          "at": 14.49,
+          "type": "platform",
+          "width": 560,
+          "height": 90
+        },
+        {
+          "at": 14.79,
+          "type": "wall",
+          "width": 40,
+          "height": 170
+        },
+        {
+          "at": 14.79,
+          "type": "star",
+          "height": 210
+        },
+        {
+          "at": 16.99,
+          "type": "obstacle"
+        },
+        {
+          "at": 18.09,
+          "type": "obstacle"
+        },
+        {
+          "at": 19.19,
+          "type": "obstacle"
+        },
+        {
+          "at": 19.19,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 20.29,
+          "type": "obstacle"
+        }
+      ],
+      "stageVersion": 4,
+      "holes": [],
+      "birds": []
+    },
+    {
+      "stageId": "S03",
+      "name": "スターへの挑戦",
+      "difficulty": 3,
+      "goalDistance": 5600,
+      "course": [
+        {
+          "at": 1.49,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 3.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 3.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 5.99,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 8.89,
+          "type": "platform",
+          "width": 360,
+          "height": 90
+        },
+        {
+          "at": 8.89,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 9.94,
+          "type": "obstacle"
+        },
+        {
+          "at": 10.19,
+          "type": "star",
+          "height": 200
+        },
+        {
+          "at": 10.44,
+          "type": "obstacle"
+        },
+        {
+          "at": 12.39,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 15.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 15.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 18.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 18.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 20.49,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 21.99,
+          "type": "star",
+          "height": 0
+        }
+      ]
+    },
+    {
+      "stageId": "S03",
+      "name": "スターへの挑戦",
+      "difficulty": 3,
+      "goalDistance": 6000,
+      "course": [
+        {
+          "at": 1.49,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 3.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 3.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 5.99,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 7.69,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 12.54,
+          "type": "platform",
+          "width": 260,
+          "height": 90
+        },
+        {
+          "at": 12.54,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 13.59,
+          "type": "wall",
+          "width": 520,
+          "height": 80
+        },
+        {
+          "at": 14.04,
+          "type": "star",
+          "height": 110
+        },
+        {
+          "at": 14.49,
+          "type": "platform",
+          "width": 300,
+          "height": 110
+        },
+        {
+          "at": 15.14,
+          "type": "star",
+          "height": 110
+        },
+        {
+          "at": 18.69,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 20.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 20.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 23.39,
+          "type": "star",
+          "height": 0
+        }
+      ],
+      "stageVersion": 2,
+      "holes": [
+        {
+          "start": 2300,
+          "end": 2420
+        },
+        {
+          "start": 4500,
+          "end": 4630
+        }
+      ]
+    },
+    {
+      "stageId": "S03",
+      "name": "スターへの挑戦",
+      "difficulty": 3,
+      "goalDistance": 6000,
+      "course": [
+        {
+          "at": 0.74,
+          "type": "platform",
+          "width": 540,
+          "height": 80
+        },
+        {
+          "at": 0.89,
+          "type": "star",
+          "height": 80
+        },
+        {
+          "at": 1.39,
+          "type": "wall",
+          "width": 320,
+          "height": 70
+        },
+        {
+          "at": 3.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 3.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 5.99,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 7.69,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 12.54,
+          "type": "platform",
+          "width": 260,
+          "height": 90
+        },
+        {
+          "at": 12.54,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 13.59,
+          "type": "wall",
+          "width": 520,
+          "height": 80
+        },
+        {
+          "at": 14.04,
+          "type": "star",
+          "height": 110
+        },
+        {
+          "at": 14.49,
+          "type": "platform",
+          "width": 300,
+          "height": 110
+        },
+        {
+          "at": 15.14,
+          "type": "star",
+          "height": 110
+        },
+        {
+          "at": 18.69,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 20.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 20.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 23.19,
+          "type": "star",
+          "height": 120
+        }
+      ],
+      "stageVersion": 3,
+      "holes": [
+        {
+          "start": 2300,
+          "end": 2420
+        },
+        {
+          "start": 4500,
+          "end": 4630
+        },
+        {
+          "start": 5400,
+          "end": 5520
+        }
+      ],
+      "holeFailure": "fatal"
+    },
+    {
+      "stageId": "S03",
+      "name": "スターへの挑戦",
+      "difficulty": 3,
+      "goalDistance": 6000,
+      "course": [
+        {
+          "at": -1.76,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 0.44,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 2.64,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 4.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 4.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 6.89,
+          "type": "platform",
+          "width": 160,
+          "height": 90
+        },
+        {
+          "at": 6.89,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 7.715,
+          "type": "wall",
+          "width": 370,
+          "height": 80
+        },
+        {
+          "at": 8.24,
+          "type": "platform",
+          "width": 160,
+          "height": 110
+        },
+        {
+          "at": 8.24,
+          "type": "star",
+          "height": 110
+        },
+        {
+          "at": 11.24,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 14.54,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 16.69,
+          "type": "obstacle"
+        },
+        {
+          "at": 18.39,
+          "type": "platform",
+          "width": 160,
+          "height": 90
+        },
+        {
+          "at": 19.215,
+          "type": "wall",
+          "width": 370,
+          "height": 80
+        },
+        {
+          "at": 19.74,
+          "type": "platform",
+          "width": 160,
+          "height": 110
+        },
+        {
+          "at": 19.74,
+          "type": "star",
+          "height": 110
+        },
+        {
+          "at": 21.59,
+          "type": "obstacle"
+        },
+        {
+          "at": 22.79,
+          "type": "obstacle"
+        },
+        {
+          "at": 23.99,
+          "type": "obstacle"
+        },
+        {
+          "at": 23.99,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 25.19,
+          "type": "obstacle"
+        }
+      ],
+      "stageVersion": 4,
+      "holeFailure": "fatal",
+      "holes": [
+        {
+          "start": 420,
+          "end": 520
+        },
+        {
+          "start": 640,
+          "end": 740
+        },
+        {
+          "start": 860,
+          "end": 960
+        },
+        {
+          "start": 1080,
+          "end": 1180
+        },
+        {
+          "start": 1300,
+          "end": 1400
+        },
+        {
+          "start": 1520,
+          "end": 1620
+        },
+        {
+          "start": 2800,
+          "end": 2900
+        },
+        {
+          "start": 3020,
+          "end": 3120
+        },
+        {
+          "start": 3240,
+          "end": 3340
+        },
+        {
+          "start": 3460,
+          "end": 3560
+        },
+        {
+          "start": 3680,
+          "end": 3780
+        },
+        {
+          "start": 3900,
+          "end": 4000
+        }
+      ],
+      "birds": []
+    },
+    {
+      "stageId": "S04",
+      "name": "空中の足場",
+      "difficulty": 4,
+      "goalDistance": 6400,
+      "course": [
+        {
+          "at": 1.39,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 3.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 3.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 5.89,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 9.89,
+          "type": "platform",
+          "width": 360,
+          "height": 100
+        },
+        {
+          "at": 9.89,
+          "type": "star",
+          "height": 100
+        },
+        {
+          "at": 11.09,
+          "type": "wall",
+          "width": 40,
+          "height": 180
+        },
+        {
+          "at": 11.09,
+          "type": "star",
+          "height": 210
+        },
+        {
+          "at": 13.89,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 17.39,
+          "type": "platform",
+          "width": 190,
+          "height": 90
+        },
+        {
+          "at": 17.39,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 20.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 20.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 23.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 23.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 26.19,
+          "type": "star",
+          "height": 0
+        }
+      ]
+    },
+    {
+      "stageId": "S04",
+      "name": "空中の足場",
+      "difficulty": 4,
+      "goalDistance": 7000,
+      "course": [
+        {
+          "at": 0.89,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 3.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 3.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 6.14,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 8.79,
+          "type": "star",
+          "height": 100
+        },
+        {
+          "at": 10.29,
+          "type": "star",
+          "height": 220
+        },
+        {
+          "at": 11.99,
+          "type": "platform",
+          "width": 1440,
+          "height": 100
+        },
+        {
+          "at": 12.19,
+          "type": "wall",
+          "width": 1240,
+          "height": 90
+        },
+        {
+          "at": 12.19,
+          "type": "star",
+          "height": 220
+        },
+        {
+          "at": 14.09,
+          "type": "star",
+          "height": 220
+        },
+        {
+          "at": 18.14,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 20.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 20.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 28.39,
+          "type": "star",
+          "height": 0
+        }
+      ],
+      "stageVersion": 2,
+      "birds": [
+        {
+          "x": 2880,
+          "height": 143
+        },
+        {
+          "x": 3260,
+          "height": 143
+        },
+        {
+          "x": 3640,
+          "height": 143
+        }
+      ],
+      "holes": []
+    },
+    {
+      "stageId": "S04",
+      "name": "空中の足場",
+      "difficulty": 4,
+      "goalDistance": 7000,
+      "course": [
+        {
+          "at": 0.39,
+          "type": "obstacle"
+        },
+        {
+          "at": 0.39,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 3.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 3.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 8.79,
+          "type": "star",
+          "height": 100
+        },
+        {
+          "at": 10.29,
+          "type": "star",
+          "height": 220
+        },
+        {
+          "at": 11.99,
+          "type": "platform",
+          "width": 1440,
+          "height": 100
+        },
+        {
+          "at": 12.19,
+          "type": "wall",
+          "width": 1240,
+          "height": 90
+        },
+        {
+          "at": 12.19,
+          "type": "star",
+          "height": 220
+        },
+        {
+          "at": 14.09,
+          "type": "star",
+          "height": 220
+        },
+        {
+          "at": 18.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 18.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 23.29,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 24.79,
+          "type": "wall",
+          "width": 320,
+          "height": 80
+        },
+        {
+          "at": 24.89,
+          "type": "wall",
+          "width": 40,
+          "height": 170
+        },
+        {
+          "at": 24.89,
+          "type": "star",
+          "height": 210
+        },
+        {
+          "at": 24.94,
+          "type": "platform",
+          "width": 620,
+          "height": 90
+        },
+        {
+          "at": 28.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 28.89,
+          "type": "star",
+          "height": 120
+        }
+      ],
+      "stageVersion": 3,
+      "birds": [
+        {
+          "x": 3456,
+          "height": 143,
+          "speed": 40
+        },
+        {
+          "x": 3912,
+          "height": 143,
+          "speed": 40
+        },
+        {
+          "x": 4368,
+          "height": 143,
+          "speed": 40
+        }
+      ],
+      "holes": []
+    },
+    {
+      "stageId": "S04",
+      "name": "空中の足場",
+      "difficulty": 4,
+      "goalDistance": 7000,
+      "course": [
+        {
+          "at": -2.01,
+          "type": "obstacle"
+        },
+        {
+          "at": -2.01,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": -0.96,
+          "type": "obstacle"
+        },
+        {
+          "at": 0.09,
+          "type": "obstacle"
+        },
+        {
+          "at": 1.14,
+          "type": "obstacle"
+        },
+        {
+          "at": 2.19,
+          "type": "obstacle"
+        },
+        {
+          "at": 2.19,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 3.24,
+          "type": "obstacle"
+        },
+        {
+          "at": 4.29,
+          "type": "obstacle"
+        },
+        {
+          "at": 6.79,
+          "type": "star",
+          "height": 220
+        },
+        {
+          "at": 7.89,
+          "type": "platform",
+          "width": 1000,
+          "height": 100
+        },
+        {
+          "at": 7.99,
+          "type": "star",
+          "height": 220
+        },
+        {
+          "at": 8.015,
+          "type": "wall",
+          "width": 850,
+          "height": 90
+        },
+        {
+          "at": 9.19,
+          "type": "star",
+          "height": 220
+        },
+        {
+          "at": 11.79,
+          "type": "obstacle"
+        },
+        {
+          "at": 12.84,
+          "type": "obstacle"
+        },
+        {
+          "at": 13.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 14.94,
+          "type": "obstacle"
+        },
+        {
+          "at": 14.94,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 15.99,
+          "type": "obstacle"
+        },
+        {
+          "at": 17.04,
+          "type": "obstacle"
+        },
+        {
+          "at": 18.09,
+          "type": "obstacle"
+        },
+        {
+          "at": 20.59,
+          "type": "star",
+          "height": 220
+        },
+        {
+          "at": 21.69,
+          "type": "platform",
+          "width": 1000,
+          "height": 100
+        },
+        {
+          "at": 21.79,
+          "type": "star",
+          "height": 220
+        },
+        {
+          "at": 21.815,
+          "type": "wall",
+          "width": 850,
+          "height": 90
+        },
+        {
+          "at": 22.99,
+          "type": "star",
+          "height": 220
+        },
+        {
+          "at": 25.29,
+          "type": "obstacle"
+        },
+        {
+          "at": 26.34,
+          "type": "obstacle"
+        },
+        {
+          "at": 27.39,
+          "type": "obstacle"
+        },
+        {
+          "at": 28.44,
+          "type": "obstacle"
+        },
+        {
+          "at": 28.44,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 29.49,
+          "type": "obstacle"
+        },
+        {
+          "at": 30.54,
+          "type": "obstacle"
+        }
+      ],
+      "stageVersion": 4,
+      "birds": [
+        {
+          "x": 3488,
+          "height": 143,
+          "speed": 120
+        },
+        {
+          "x": 3872,
+          "height": 143,
+          "speed": 120
+        },
+        {
+          "x": 4256,
+          "height": 143,
+          "speed": 120
+        },
+        {
+          "x": 7904,
+          "height": 143,
+          "speed": 120
+        },
+        {
+          "x": 8288,
+          "height": 143,
+          "speed": 120
+        },
+        {
+          "x": 8672,
+          "height": 143,
+          "speed": 120
+        }
+      ],
+      "holes": []
+    },
+    {
+      "stageId": "S05",
+      "name": "トゲ岩と足場",
+      "difficulty": 5,
+      "goalDistance": 7200,
+      "course": [
+        {
+          "at": 1.39,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 3.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 3.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 5.19,
+          "type": "obstacle"
+        },
+        {
+          "at": 5.19,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 10.89,
+          "type": "platform",
+          "width": 360,
+          "height": 90
+        },
+        {
+          "at": 10.89,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 11.94,
+          "type": "obstacle"
+        },
+        {
+          "at": 12.19,
+          "type": "star",
+          "height": 200
+        },
+        {
+          "at": 12.44,
+          "type": "obstacle"
+        },
+        {
+          "at": 18.89,
+          "type": "platform",
+          "width": 360,
+          "height": 100
+        },
+        {
+          "at": 18.89,
+          "type": "star",
+          "height": 100
+        },
+        {
+          "at": 20.09,
+          "type": "wall",
+          "width": 40,
+          "height": 180
+        },
+        {
+          "at": 20.09,
+          "type": "star",
+          "height": 210
+        },
+        {
+          "at": 22.89,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 25.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 25.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 28.39,
+          "type": "platform",
+          "width": 190,
+          "height": 100
+        },
+        {
+          "at": 28.39,
+          "type": "star",
+          "height": 100
+        }
+      ]
+    },
+    {
+      "stageId": "S05",
+      "name": "トゲ岩と足場",
+      "difficulty": 5,
+      "goalDistance": 7200,
+      "course": [
+        {
+          "at": -2.01,
+          "type": "obstacle"
+        },
+        {
+          "at": -2.01,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": -0.71,
+          "type": "obstacle"
+        },
+        {
+          "at": 0.59,
+          "type": "obstacle"
+        },
+        {
+          "at": 0.59,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 2.39,
+          "type": "platform",
+          "width": 90,
+          "height": 90
+        },
+        {
+          "at": 2.39,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 3.39,
+          "type": "platform",
+          "width": 90,
+          "height": 110
+        },
+        {
+          "at": 3.39,
+          "type": "star",
+          "height": 110
+        },
+        {
+          "at": 3.74,
+          "type": "wall",
+          "width": 580,
+          "height": 80
+        },
+        {
+          "at": 4.54,
+          "type": "platform",
+          "width": 90,
+          "height": 90
+        },
+        {
+          "at": 4.54,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 6.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 8.64,
+          "type": "obstacle"
+        },
+        {
+          "at": 8.64,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 10.39,
+          "type": "obstacle"
+        },
+        {
+          "at": 12.14,
+          "type": "obstacle"
+        },
+        {
+          "at": 13.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 13.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 15.64,
+          "type": "obstacle"
+        },
+        {
+          "at": 17.39,
+          "type": "obstacle"
+        },
+        {
+          "at": 19.14,
+          "type": "obstacle"
+        },
+        {
+          "at": 19.14,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 20.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 22.64,
+          "type": "obstacle"
+        },
+        {
+          "at": 24.39,
+          "type": "obstacle"
+        },
+        {
+          "at": 24.39,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 26.14,
+          "type": "obstacle"
+        },
+        {
+          "at": 27.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 27.89,
+          "type": "star",
+          "height": 120
+        }
+      ],
+      "stageVersion": 2,
+      "birds": [
+        {
+          "x": 2240,
+          "height": 133,
+          "speed": 120
+        }
+      ],
+      "holes": []
+    },
+    {
+      "stageId": "S06",
+      "name": "マスターコース",
+      "difficulty": 6,
+      "goalDistance": 8000,
+      "course": [
+        {
+          "at": 1.39,
+          "type": "star",
+          "height": 0
+        },
+        {
+          "at": 3.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 3.89,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 5.19,
+          "type": "obstacle"
+        },
+        {
+          "at": 5.19,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 9.39,
+          "type": "platform",
+          "width": 360,
+          "height": 90
+        },
+        {
+          "at": 9.39,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 10.44,
+          "type": "obstacle"
+        },
+        {
+          "at": 10.69,
+          "type": "star",
+          "height": 200
+        },
+        {
+          "at": 10.94,
+          "type": "obstacle"
+        },
+        {
+          "at": 15.39,
+          "type": "platform",
+          "width": 360,
+          "height": 100
+        },
+        {
+          "at": 15.39,
+          "type": "star",
+          "height": 100
+        },
+        {
+          "at": 16.59,
+          "type": "wall",
+          "width": 40,
+          "height": 180
+        },
+        {
+          "at": 16.59,
+          "type": "star",
+          "height": 210
+        },
+        {
+          "at": 20.89,
+          "type": "platform",
+          "width": 260,
+          "height": 80
+        },
+        {
+          "at": 22.39,
+          "type": "platform",
+          "width": 320,
+          "height": 140
+        },
+        {
+          "at": 22.39,
+          "type": "star",
+          "height": 140
+        },
+        {
+          "at": 23.59,
+          "type": "wall",
+          "width": 40,
+          "height": 220
+        },
+        {
+          "at": 23.59,
+          "type": "star",
+          "height": 250
+        },
+        {
+          "at": 28.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 30.19,
+          "type": "obstacle"
+        },
+        {
+          "at": 33.39,
+          "type": "star",
+          "height": 0
+        }
+      ]
+    },
+    {
+      "stageId": "S06",
+      "name": "マスターコース",
+      "difficulty": 6,
+      "goalDistance": 8000,
+      "course": [
+        {
+          "at": -2.01,
+          "type": "obstacle"
+        },
+        {
+          "at": -2.01,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": -0.81,
+          "type": "obstacle"
+        },
+        {
+          "at": 0.39,
+          "type": "obstacle"
+        },
+        {
+          "at": 0.39,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 2.39,
+          "type": "platform",
+          "width": 90,
+          "height": 90
+        },
+        {
+          "at": 2.39,
+          "type": "star",
+          "height": 90
+        },
+        {
+          "at": 3.39,
+          "type": "platform",
+          "width": 90,
+          "height": 110
+        },
+        {
+          "at": 3.39,
+          "type": "star",
+          "height": 110
+        },
+        {
+          "at": 4.29,
+          "type": "wall",
+          "width": 800,
+          "height": 70
+        },
+        {
+          "at": 4.59,
+          "type": "platform",
+          "width": 90,
+          "height": 80
+        },
+        {
+          "at": 4.59,
+          "type": "star",
+          "height": 80
+        },
+        {
+          "at": 5.64,
+          "type": "platform",
+          "width": 90,
+          "height": 105
+        },
+        {
+          "at": 5.64,
+          "type": "star",
+          "height": 105
+        },
+        {
+          "at": 7.69,
+          "type": "obstacle"
+        },
+        {
+          "at": 8.99,
+          "type": "obstacle"
+        },
+        {
+          "at": 10.29,
+          "type": "obstacle"
+        },
+        {
+          "at": 11.59,
+          "type": "obstacle"
+        },
+        {
+          "at": 11.59,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 12.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 14.19,
+          "type": "obstacle"
+        },
+        {
+          "at": 15.49,
+          "type": "obstacle"
+        },
+        {
+          "at": 16.79,
+          "type": "obstacle"
+        },
+        {
+          "at": 18.09,
+          "type": "obstacle"
+        },
+        {
+          "at": 18.09,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 19.39,
+          "type": "obstacle"
+        },
+        {
+          "at": 20.69,
+          "type": "obstacle"
+        },
+        {
+          "at": 21.99,
+          "type": "obstacle"
+        },
+        {
+          "at": 23.29,
+          "type": "obstacle"
+        },
+        {
+          "at": 24.59,
+          "type": "obstacle"
+        },
+        {
+          "at": 24.59,
+          "type": "star",
+          "height": 120
+        },
+        {
+          "at": 25.89,
+          "type": "obstacle"
+        },
+        {
+          "at": 27.19,
+          "type": "obstacle"
+        },
+        {
+          "at": 28.49,
+          "type": "obstacle"
+        },
+        {
+          "at": 29.79,
+          "type": "obstacle"
+        },
+        {
+          "at": 29.79,
+          "type": "star",
+          "height": 120
+        }
+      ],
+      "stageVersion": 2,
+      "birds": [
+        {
+          "x": 2240,
+          "height": 133,
+          "speed": 120
+        },
+        {
+          "x": 2944,
+          "height": 123,
+          "speed": 120
+        }
+      ],
+      "holes": []
+    }
+  ],
+  "states": [
+    {
+      "play": {
+        "id": "vertical-base-S04-0",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S04",
+        "stageVersion": 4,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 0,
+        "snapshot": {
+          "version": 2,
+          "distance": 0,
+          "elapsed": 0,
+          "lives": 2,
+          "score": 0,
+          "invincibleRemaining": 0,
+          "feetY": 470,
+          "velocityY": 0,
+          "supportId": "ground",
+          "jumpOriginY": 470,
+          "airAction": null,
+          "airJumpsRemaining": 0,
+          "animationTime": 0,
+          "landingUntil": 0,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 3,
+          "objects": [
+            {
+              "at": -2.01,
+              "type": "obstacle",
+              "spawnDistance": -401.99999999999994,
+              "id": 0,
+              "x": 606
+            },
+            {
+              "at": -2.01,
+              "type": "star",
+              "height": 120,
+              "spawnDistance": -401.99999999999994,
+              "id": 1,
+              "x": 606
+            },
+            {
+              "at": -0.96,
+              "type": "obstacle",
+              "spawnDistance": -192,
+              "id": 2,
+              "x": 816
+            }
+          ],
+          "collectedStarIds": [],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 20,
+        "elapsed": 0.09999999999999999,
+        "lives": 2,
+        "score": 0,
+        "invincibleRemaining": 0,
+        "feetY": 470,
+        "velocityY": 0,
+        "supportId": "ground",
+        "jumpOriginY": 470,
+        "airAction": null,
+        "airJumpsRemaining": 0,
+        "animationTime": 0.09999999999999999,
+        "landingUntil": 0,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 4,
+        "objects": [
+          {
+            "at": -2.01,
+            "type": "obstacle",
+            "spawnDistance": -401.99999999999994,
+            "id": 0,
+            "x": 586.0000000000005
+          },
+          {
+            "at": -2.01,
+            "type": "star",
+            "height": 120,
+            "spawnDistance": -401.99999999999994,
+            "id": 1,
+            "x": 586.0000000000005
+          },
+          {
+            "at": -0.96,
+            "type": "obstacle",
+            "spawnDistance": -192,
+            "id": 2,
+            "x": 796.0000000000005
+          },
+          {
+            "at": 0.09,
+            "type": "obstacle",
+            "spawnDistance": 18,
+            "id": 3,
+            "x": 1006
+          }
+        ],
+        "collectedStarIds": [],
+        "mode": "paused",
+        "reason": null
+      }
+    },
+    {
+      "play": {
+        "id": "vertical-base-S04-7.1",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S04",
+        "stageVersion": 4,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 20,
+        "snapshot": {
+          "version": 2,
+          "distance": 1419.9999999999802,
+          "elapsed": 7.1,
+          "lives": 2,
+          "score": 20,
+          "invincibleRemaining": 0,
+          "feetY": 387.0370370370795,
+          "velocityY": -296.29629629646445,
+          "supportId": null,
+          "jumpOriginY": 470,
+          "airAction": "jump",
+          "airJumpsRemaining": 0,
+          "animationTime": 7.1,
+          "landingUntil": 0,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 10,
+          "objects": [
+            {
+              "at": 2.19,
+              "type": "obstacle",
+              "spawnDistance": 438,
+              "id": 5,
+              "x": 26.000000000035833
+            },
+            {
+              "at": 3.24,
+              "type": "obstacle",
+              "spawnDistance": 648,
+              "id": 7,
+              "x": 236.00000000003763
+            },
+            {
+              "at": 4.29,
+              "type": "obstacle",
+              "spawnDistance": 858,
+              "id": 8,
+              "x": 446.0000000000445
+            },
+            {
+              "at": 6.79,
+              "type": "star",
+              "height": 220,
+              "spawnDistance": 1358,
+              "id": 9,
+              "x": 946.000000000024
+            }
+          ],
+          "collectedStarIds": [
+            1,
+            6
+          ],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 1439.9999999999811,
+        "elapsed": 7.200000000000005,
+        "lives": 2,
+        "score": 20,
+        "invincibleRemaining": 0,
+        "feetY": 363.3333333333591,
+        "velocityY": -177.77777777794597,
+        "supportId": null,
+        "jumpOriginY": 470,
+        "airAction": "jump",
+        "airJumpsRemaining": 0,
+        "animationTime": 7.200000000000005,
+        "landingUntil": 0,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 10,
+        "objects": [
+          {
+            "at": 2.19,
+            "type": "obstacle",
+            "spawnDistance": 438,
+            "id": 5,
+            "x": 6.000000000035827
+          },
+          {
+            "at": 3.24,
+            "type": "obstacle",
+            "spawnDistance": 648,
+            "id": 7,
+            "x": 216.00000000003774
+          },
+          {
+            "at": 4.29,
+            "type": "obstacle",
+            "spawnDistance": 858,
+            "id": 8,
+            "x": 426.0000000000443
+          },
+          {
+            "at": 6.79,
+            "type": "star",
+            "height": 220,
+            "spawnDistance": 1358,
+            "id": 9,
+            "x": 926.0000000000244
+          }
+        ],
+        "collectedStarIds": [
+          1,
+          6
+        ],
+        "mode": "paused",
+        "reason": null
+      }
+    },
+    {
+      "play": {
+        "id": "vertical-base-S04-13",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S04",
+        "stageVersion": 4,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 40,
+        "snapshot": {
+          "version": 2,
+          "distance": 2599.999999999987,
+          "elapsed": 12.999999999999902,
+          "lives": 2,
+          "score": 40,
+          "invincibleRemaining": 0,
+          "feetY": 303.3333333333335,
+          "velocityY": -355.5555555555553,
+          "supportId": null,
+          "jumpOriginY": 370,
+          "airAction": "jump",
+          "airJumpsRemaining": 0,
+          "animationTime": 12.999999999999902,
+          "landingUntil": 0,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 16,
+          "objects": [
+            {
+              "at": 7.89,
+              "type": "platform",
+              "width": 1000,
+              "height": 100,
+              "spawnDistance": 1578,
+              "id": 10,
+              "x": -14.000000000006903
+            },
+            {
+              "at": 8.015,
+              "type": "wall",
+              "width": 850,
+              "height": 90,
+              "spawnDistance": 1603,
+              "id": 12,
+              "x": 10.99999999999196
+            },
+            {
+              "at": 9.19,
+              "type": "star",
+              "height": 220,
+              "spawnDistance": 1838,
+              "id": 13,
+              "x": 245.99999999998076
+            },
+            {
+              "at": 11.79,
+              "type": "obstacle",
+              "spawnDistance": 2358,
+              "id": 14,
+              "x": 765.9999999999967
+            },
+            {
+              "at": 12.84,
+              "type": "obstacle",
+              "spawnDistance": 2568,
+              "id": 15,
+              "x": 976.000000000011
+            }
+          ],
+          "collectedStarIds": [
+            1,
+            6,
+            9,
+            11
+          ],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 2619.999999999985,
+        "elapsed": 13.099999999999897,
+        "lives": 2,
+        "score": 40,
+        "invincibleRemaining": 0,
+        "feetY": 273.70370370370415,
+        "velocityY": -237.03703703703667,
+        "supportId": null,
+        "jumpOriginY": 370,
+        "airAction": "jump",
+        "airJumpsRemaining": 0,
+        "animationTime": 13.099999999999897,
+        "landingUntil": 0,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 16,
+        "objects": [
+          {
+            "at": 7.89,
+            "type": "platform",
+            "width": 1000,
+            "height": 100,
+            "spawnDistance": 1578,
+            "id": 10,
+            "x": -34.00000000000691
+          },
+          {
+            "at": 8.015,
+            "type": "wall",
+            "width": 850,
+            "height": 90,
+            "spawnDistance": 1603,
+            "id": 12,
+            "x": -9.000000000008042
+          },
+          {
+            "at": 9.19,
+            "type": "star",
+            "height": 220,
+            "spawnDistance": 1838,
+            "id": 13,
+            "x": 225.99999999998087
+          },
+          {
+            "at": 11.79,
+            "type": "obstacle",
+            "spawnDistance": 2358,
+            "id": 14,
+            "x": 745.9999999999972
+          },
+          {
+            "at": 12.84,
+            "type": "obstacle",
+            "spawnDistance": 2568,
+            "id": 15,
+            "x": 956.0000000000115
+          }
+        ],
+        "collectedStarIds": [
+          1,
+          6,
+          9,
+          11
+        ],
+        "mode": "paused",
+        "reason": null
+      }
+    },
+    {
+      "play": {
+        "id": "vertical-base-S04-20",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S04",
+        "stageVersion": 4,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 60,
+        "snapshot": {
+          "version": 2,
+          "distance": 3999.9999999998595,
+          "elapsed": 19.999999999999506,
+          "lives": 2,
+          "score": 60,
+          "invincibleRemaining": 0,
+          "feetY": 355.92592592592655,
+          "velocityY": -118.51851851851829,
+          "supportId": null,
+          "jumpOriginY": 470,
+          "airAction": "jump",
+          "airJumpsRemaining": 0,
+          "animationTime": 19.999999999999506,
+          "landingUntil": 0,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 22,
+          "objects": [
+            {
+              "at": 14.94,
+              "type": "obstacle",
+              "spawnDistance": 2988,
+              "id": 17,
+              "x": -3.9999999999425873
+            },
+            {
+              "at": 15.99,
+              "type": "obstacle",
+              "spawnDistance": 3198,
+              "id": 19,
+              "x": 206.00000000007623
+            },
+            {
+              "at": 17.04,
+              "type": "obstacle",
+              "spawnDistance": 3408,
+              "id": 20,
+              "x": 416.00000000009686
+            },
+            {
+              "at": 18.09,
+              "type": "obstacle",
+              "spawnDistance": 3618,
+              "id": 21,
+              "x": 626.0000000001145
+            }
+          ],
+          "collectedStarIds": [
+            1,
+            6,
+            9,
+            11,
+            13,
+            18
+          ],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 4019.9999999998577,
+        "elapsed": 20.0999999999995,
+        "lives": 2,
+        "score": 60,
+        "invincibleRemaining": 0,
+        "feetY": 350.00000000000074,
+        "velocityY": 2.3803181647963356e-13,
+        "supportId": null,
+        "jumpOriginY": 470,
+        "airAction": "jump",
+        "airJumpsRemaining": 0,
+        "animationTime": 20.0999999999995,
+        "landingUntil": 0,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 22,
+        "objects": [
+          {
+            "at": 14.94,
+            "type": "obstacle",
+            "spawnDistance": 2988,
+            "id": 17,
+            "x": -23.99999999994259
+          },
+          {
+            "at": 15.99,
+            "type": "obstacle",
+            "spawnDistance": 3198,
+            "id": 19,
+            "x": 186.00000000007634
+          },
+          {
+            "at": 17.04,
+            "type": "obstacle",
+            "spawnDistance": 3408,
+            "id": 20,
+            "x": 396.00000000009663
+          },
+          {
+            "at": 18.09,
+            "type": "obstacle",
+            "spawnDistance": 3618,
+            "id": 21,
+            "x": 606.0000000001149
+          }
+        ],
+        "collectedStarIds": [
+          1,
+          6,
+          9,
+          11,
+          13,
+          18
+        ],
+        "mode": "paused",
+        "reason": null
+      }
+    },
+    {
+      "play": {
+        "id": "vertical-base-S04-26.4",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S04",
+        "stageVersion": 4,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 80,
+        "snapshot": {
+          "version": 2,
+          "distance": 5280.000000000066,
+          "elapsed": 26.399999999999142,
+          "lives": 2,
+          "score": 80,
+          "invincibleRemaining": 0,
+          "feetY": 370,
+          "velocityY": 0,
+          "supportId": 23,
+          "jumpOriginY": 370,
+          "airAction": null,
+          "airJumpsRemaining": 0,
+          "animationTime": 26.399999999999142,
+          "landingUntil": 26.469999999999143,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 29,
+          "objects": [
+            {
+              "at": 21.69,
+              "type": "platform",
+              "width": 1000,
+              "height": 100,
+              "spawnDistance": 4338,
+              "id": 23,
+              "x": 66.00000000011377
+            },
+            {
+              "at": 21.815,
+              "type": "wall",
+              "width": 850,
+              "height": 90,
+              "spawnDistance": 4363,
+              "id": 25,
+              "x": 91.0000000001093
+            },
+            {
+              "at": 22.99,
+              "type": "star",
+              "height": 220,
+              "spawnDistance": 4598,
+              "id": 26,
+              "x": 326.00000000006673
+            },
+            {
+              "at": 25.29,
+              "type": "obstacle",
+              "spawnDistance": 5058,
+              "id": 27,
+              "x": 785.999999999979
+            },
+            {
+              "at": 26.34,
+              "type": "obstacle",
+              "spawnDistance": 5268,
+              "id": 28,
+              "x": 995.999999999936
+            }
+          ],
+          "collectedStarIds": [
+            1,
+            6,
+            9,
+            11,
+            13,
+            18,
+            22,
+            24
+          ],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 5300.00000000007,
+        "elapsed": 26.499999999999137,
+        "lives": 2,
+        "score": 80,
+        "invincibleRemaining": 0,
+        "feetY": 370,
+        "velocityY": 0,
+        "supportId": 23,
+        "jumpOriginY": 370,
+        "airAction": null,
+        "airJumpsRemaining": 0,
+        "animationTime": 26.499999999999137,
+        "landingUntil": 26.469999999999143,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 29,
+        "objects": [
+          {
+            "at": 21.69,
+            "type": "platform",
+            "width": 1000,
+            "height": 100,
+            "spawnDistance": 4338,
+            "id": 23,
+            "x": 46.00000000011379
+          },
+          {
+            "at": 21.815,
+            "type": "wall",
+            "width": 850,
+            "height": 90,
+            "spawnDistance": 4363,
+            "id": 25,
+            "x": 71.00000000010924
+          },
+          {
+            "at": 22.99,
+            "type": "star",
+            "height": 220,
+            "spawnDistance": 4598,
+            "id": 26,
+            "x": 306.0000000000665
+          },
+          {
+            "at": 25.29,
+            "type": "obstacle",
+            "spawnDistance": 5058,
+            "id": 27,
+            "x": 765.9999999999794
+          },
+          {
+            "at": 26.34,
+            "type": "obstacle",
+            "spawnDistance": 5268,
+            "id": 28,
+            "x": 975.9999999999364
+          }
+        ],
+        "collectedStarIds": [
+          1,
+          6,
+          9,
+          11,
+          13,
+          18,
+          22,
+          24
+        ],
+        "mode": "paused",
+        "reason": null
+      }
+    },
+    {
+      "play": {
+        "id": "vertical-base-S04-34",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S04",
+        "stageVersion": 4,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 100,
+        "snapshot": {
+          "version": 2,
+          "distance": 6800.000000000343,
+          "elapsed": 33.999999999998714,
+          "lives": 2,
+          "score": 100,
+          "invincibleRemaining": 0,
+          "feetY": 444.8148148148164,
+          "velocityY": 474.0740740740745,
+          "supportId": null,
+          "jumpOriginY": 470,
+          "airAction": "jump",
+          "airJumpsRemaining": 0,
+          "animationTime": 33.999999999998714,
+          "landingUntil": 0,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 34,
+          "objects": [
+            {
+              "at": 29.49,
+              "type": "obstacle",
+              "spawnDistance": 5898,
+              "id": 32,
+              "x": 105.99999999983015
+            },
+            {
+              "at": 30.54,
+              "type": "obstacle",
+              "spawnDistance": 6108,
+              "id": 33,
+              "x": 315.99999999979195
+            }
+          ],
+          "collectedStarIds": [
+            1,
+            6,
+            9,
+            11,
+            13,
+            18,
+            22,
+            24,
+            26,
+            31
+          ],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 6820.0000000003465,
+        "elapsed": 34.09999999999871,
+        "lives": 2,
+        "score": 100,
+        "invincibleRemaining": 0,
+        "feetY": 470,
+        "velocityY": 0,
+        "supportId": "ground",
+        "jumpOriginY": 470,
+        "airAction": null,
+        "airJumpsRemaining": 0,
+        "animationTime": 34.09999999999871,
+        "landingUntil": 34.16999999999871,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 34,
+        "objects": [
+          {
+            "at": 29.49,
+            "type": "obstacle",
+            "spawnDistance": 5898,
+            "id": 32,
+            "x": 85.9999999998301
+          },
+          {
+            "at": 30.54,
+            "type": "obstacle",
+            "spawnDistance": 6108,
+            "id": 33,
+            "x": 295.9999999997917
+          }
+        ],
+        "collectedStarIds": [
+          1,
+          6,
+          9,
+          11,
+          13,
+          18,
+          22,
+          24,
+          26,
+          31
+        ],
+        "mode": "paused",
+        "reason": null
+      }
+    },
+    {
+      "play": {
+        "id": "vertical-base-S05-0",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S05",
+        "stageVersion": 2,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 0,
+        "snapshot": {
+          "version": 2,
+          "distance": 0,
+          "elapsed": 0,
+          "lives": 2,
+          "score": 0,
+          "invincibleRemaining": 0,
+          "feetY": 470,
+          "velocityY": 0,
+          "supportId": "ground",
+          "jumpOriginY": 470,
+          "airAction": null,
+          "airJumpsRemaining": 0,
+          "animationTime": 0,
+          "landingUntil": 0,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 3,
+          "objects": [
+            {
+              "at": -2.01,
+              "type": "obstacle",
+              "spawnDistance": -401.99999999999994,
+              "id": 0,
+              "x": 606
+            },
+            {
+              "at": -2.01,
+              "type": "star",
+              "height": 120,
+              "spawnDistance": -401.99999999999994,
+              "id": 1,
+              "x": 606
+            },
+            {
+              "at": -0.71,
+              "type": "obstacle",
+              "spawnDistance": -142,
+              "id": 2,
+              "x": 866
+            }
+          ],
+          "collectedStarIds": [],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 20,
+        "elapsed": 0.09999999999999999,
+        "lives": 2,
+        "score": 0,
+        "invincibleRemaining": 0,
+        "feetY": 470,
+        "velocityY": 0,
+        "supportId": "ground",
+        "jumpOriginY": 470,
+        "airAction": null,
+        "airJumpsRemaining": 0,
+        "animationTime": 0.09999999999999999,
+        "landingUntil": 0,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 3,
+        "objects": [
+          {
+            "at": -2.01,
+            "type": "obstacle",
+            "spawnDistance": -401.99999999999994,
+            "id": 0,
+            "x": 586.0000000000005
+          },
+          {
+            "at": -2.01,
+            "type": "star",
+            "height": 120,
+            "spawnDistance": -401.99999999999994,
+            "id": 1,
+            "x": 586.0000000000005
+          },
+          {
+            "at": -0.71,
+            "type": "obstacle",
+            "spawnDistance": -142,
+            "id": 2,
+            "x": 846.0000000000005
+          }
+        ],
+        "collectedStarIds": [],
+        "mode": "paused",
+        "reason": null
+      }
+    },
+    {
+      "play": {
+        "id": "vertical-base-S05-7.1",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S05",
+        "stageVersion": 2,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 30,
+        "snapshot": {
+          "version": 2,
+          "distance": 1419.9999999999802,
+          "elapsed": 7.1,
+          "lives": 2,
+          "score": 30,
+          "invincibleRemaining": 0,
+          "feetY": 260.0000000000007,
+          "velocityY": -1.6825651982799172e-10,
+          "supportId": null,
+          "jumpOriginY": 380,
+          "airAction": "jump",
+          "airJumpsRemaining": 0,
+          "animationTime": 7.1,
+          "landingUntil": 0,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 13,
+          "objects": [
+            {
+              "at": 2.39,
+              "type": "platform",
+              "width": 90,
+              "height": 90,
+              "spawnDistance": 478,
+              "id": 5,
+              "x": 66.00000000003534
+            },
+            {
+              "at": 3.39,
+              "type": "platform",
+              "width": 90,
+              "height": 110,
+              "spawnDistance": 678,
+              "id": 7,
+              "x": 266.00000000003837
+            },
+            {
+              "at": 3.39,
+              "type": "star",
+              "height": 110,
+              "spawnDistance": 678,
+              "id": 8,
+              "x": 266.00000000003837
+            },
+            {
+              "at": 3.74,
+              "type": "wall",
+              "width": 580,
+              "height": 80,
+              "spawnDistance": 748,
+              "id": 9,
+              "x": 336.00000000004076
+            },
+            {
+              "at": 4.54,
+              "type": "platform",
+              "width": 90,
+              "height": 90,
+              "spawnDistance": 908,
+              "id": 10,
+              "x": 496.0000000000462
+            },
+            {
+              "at": 4.54,
+              "type": "star",
+              "height": 90,
+              "spawnDistance": 908,
+              "id": 11,
+              "x": 496.0000000000462
+            },
+            {
+              "at": 6.89,
+              "type": "obstacle",
+              "spawnDistance": 1378,
+              "id": 12,
+              "x": 966.0000000000226
+            }
+          ],
+          "collectedStarIds": [
+            1,
+            4,
+            6
+          ],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 1439.9999999999811,
+        "elapsed": 7.200000000000005,
+        "lives": 2,
+        "score": 30,
+        "invincibleRemaining": 0,
+        "feetY": 265.92592592590984,
+        "velocityY": 118.51851851835026,
+        "supportId": null,
+        "jumpOriginY": 380,
+        "airAction": "jump",
+        "airJumpsRemaining": 0,
+        "animationTime": 7.200000000000005,
+        "landingUntil": 0,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 13,
+        "objects": [
+          {
+            "at": 2.39,
+            "type": "platform",
+            "width": 90,
+            "height": 90,
+            "spawnDistance": 478,
+            "id": 5,
+            "x": 46.000000000035364
+          },
+          {
+            "at": 3.39,
+            "type": "platform",
+            "width": 90,
+            "height": 110,
+            "spawnDistance": 678,
+            "id": 7,
+            "x": 246.0000000000383
+          },
+          {
+            "at": 3.39,
+            "type": "star",
+            "height": 110,
+            "spawnDistance": 678,
+            "id": 8,
+            "x": 246.0000000000383
+          },
+          {
+            "at": 3.74,
+            "type": "wall",
+            "width": 580,
+            "height": 80,
+            "spawnDistance": 748,
+            "id": 9,
+            "x": 316.00000000004053
+          },
+          {
+            "at": 4.54,
+            "type": "platform",
+            "width": 90,
+            "height": 90,
+            "spawnDistance": 908,
+            "id": 10,
+            "x": 476.000000000046
+          },
+          {
+            "at": 4.54,
+            "type": "star",
+            "height": 90,
+            "spawnDistance": 908,
+            "id": 11,
+            "x": 476.000000000046
+          },
+          {
+            "at": 6.89,
+            "type": "obstacle",
+            "spawnDistance": 1378,
+            "id": 12,
+            "x": 946.0000000000231
+          }
+        ],
+        "collectedStarIds": [
+          1,
+          4,
+          6
+        ],
+        "mode": "paused",
+        "reason": null
+      }
+    },
+    {
+      "play": {
+        "id": "vertical-base-S05-13",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S05",
+        "stageVersion": 2,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 60,
+        "snapshot": {
+          "version": 2,
+          "distance": 2599.999999999987,
+          "elapsed": 12.999999999999902,
+          "lives": 2,
+          "score": 60,
+          "invincibleRemaining": 0,
+          "feetY": 387.03703703703826,
+          "velocityY": 296.2962962962964,
+          "supportId": null,
+          "jumpOriginY": 470,
+          "airAction": "jump",
+          "airJumpsRemaining": 0,
+          "animationTime": 12.999999999999902,
+          "landingUntil": 0,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 17,
+          "objects": [
+            {
+              "at": 8.64,
+              "type": "obstacle",
+              "spawnDistance": 1728,
+              "id": 13,
+              "x": 135.9999999999864
+            },
+            {
+              "at": 10.39,
+              "type": "obstacle",
+              "spawnDistance": 2078,
+              "id": 15,
+              "x": 485.9999999999767
+            },
+            {
+              "at": 12.14,
+              "type": "obstacle",
+              "spawnDistance": 2428,
+              "id": 16,
+              "x": 836.0000000000015
+            }
+          ],
+          "collectedStarIds": [
+            1,
+            4,
+            6,
+            8,
+            11,
+            14
+          ],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 2619.999999999985,
+        "elapsed": 13.099999999999897,
+        "lives": 2,
+        "score": 60,
+        "invincibleRemaining": 0,
+        "feetY": 422.59259259259403,
+        "velocityY": 414.8148148148151,
+        "supportId": null,
+        "jumpOriginY": 470,
+        "airAction": "jump",
+        "airJumpsRemaining": 0,
+        "animationTime": 13.099999999999897,
+        "landingUntil": 0,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 17,
+        "objects": [
+          {
+            "at": 8.64,
+            "type": "obstacle",
+            "spawnDistance": 1728,
+            "id": 13,
+            "x": 115.99999999998639
+          },
+          {
+            "at": 10.39,
+            "type": "obstacle",
+            "spawnDistance": 2078,
+            "id": 15,
+            "x": 465.99999999997647
+          },
+          {
+            "at": 12.14,
+            "type": "obstacle",
+            "spawnDistance": 2428,
+            "id": 16,
+            "x": 816.0000000000019
+          }
+        ],
+        "collectedStarIds": [
+          1,
+          4,
+          6,
+          8,
+          11,
+          14
+        ],
+        "mode": "paused",
+        "reason": null
+      }
+    },
+    {
+      "play": {
+        "id": "vertical-base-S05-20",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S05",
+        "stageVersion": 2,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 70,
+        "snapshot": {
+          "version": 2,
+          "distance": 3999.9999999998595,
+          "elapsed": 19.999999999999506,
+          "lives": 2,
+          "score": 70,
+          "invincibleRemaining": 0,
+          "feetY": 387.03703703703826,
+          "velocityY": 296.2962962962964,
+          "supportId": null,
+          "jumpOriginY": 470,
+          "airAction": "jump",
+          "airJumpsRemaining": 0,
+          "animationTime": 19.999999999999506,
+          "landingUntil": 0,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 23,
+          "objects": [
+            {
+              "at": 15.64,
+              "type": "obstacle",
+              "spawnDistance": 3128,
+              "id": 19,
+              "x": 136.00000000007026
+            },
+            {
+              "at": 17.39,
+              "type": "obstacle",
+              "spawnDistance": 3478,
+              "id": 20,
+              "x": 486.000000000104
+            },
+            {
+              "at": 19.14,
+              "type": "obstacle",
+              "spawnDistance": 3828,
+              "id": 21,
+              "x": 836.0000000001288
+            },
+            {
+              "at": 19.14,
+              "type": "star",
+              "height": 120,
+              "spawnDistance": 3828,
+              "id": 22,
+              "x": 836.0000000001288
+            }
+          ],
+          "collectedStarIds": [
+            1,
+            4,
+            6,
+            8,
+            11,
+            14,
+            18
+          ],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 4019.9999999998577,
+        "elapsed": 20.0999999999995,
+        "lives": 2,
+        "score": 70,
+        "invincibleRemaining": 0,
+        "feetY": 422.59259259259403,
+        "velocityY": 414.8148148148151,
+        "supportId": null,
+        "jumpOriginY": 470,
+        "airAction": "jump",
+        "airJumpsRemaining": 0,
+        "animationTime": 20.0999999999995,
+        "landingUntil": 0,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 23,
+        "objects": [
+          {
+            "at": 15.64,
+            "type": "obstacle",
+            "spawnDistance": 3128,
+            "id": 19,
+            "x": 116.00000000007026
+          },
+          {
+            "at": 17.39,
+            "type": "obstacle",
+            "spawnDistance": 3478,
+            "id": 20,
+            "x": 466.0000000001038
+          },
+          {
+            "at": 19.14,
+            "type": "obstacle",
+            "spawnDistance": 3828,
+            "id": 21,
+            "x": 816.0000000001293
+          },
+          {
+            "at": 19.14,
+            "type": "star",
+            "height": 120,
+            "spawnDistance": 3828,
+            "id": 22,
+            "x": 816.0000000001293
+          }
+        ],
+        "collectedStarIds": [
+          1,
+          4,
+          6,
+          8,
+          11,
+          14,
+          18
+        ],
+        "mode": "paused",
+        "reason": null
+      }
+    },
+    {
+      "play": {
+        "id": "vertical-base-S05-26.4",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S05",
+        "stageVersion": 2,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 80,
+        "snapshot": {
+          "version": 2,
+          "distance": 5280.000000000066,
+          "elapsed": 26.399999999999142,
+          "lives": 2,
+          "score": 80,
+          "invincibleRemaining": 0,
+          "feetY": 422.5925925925927,
+          "velocityY": -414.81481481481467,
+          "supportId": null,
+          "jumpOriginY": 470,
+          "airAction": "jump",
+          "airJumpsRemaining": 0,
+          "animationTime": 26.399999999999142,
+          "landingUntil": 0,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 28,
+          "objects": [
+            {
+              "at": 22.64,
+              "type": "obstacle",
+              "spawnDistance": 4528,
+              "id": 24,
+              "x": 256.00000000007867
+            },
+            {
+              "at": 24.39,
+              "type": "obstacle",
+              "spawnDistance": 4878,
+              "id": 25,
+              "x": 606.0000000000158
+            },
+            {
+              "at": 24.39,
+              "type": "star",
+              "height": 120,
+              "spawnDistance": 4878,
+              "id": 26,
+              "x": 606.0000000000158
+            },
+            {
+              "at": 26.14,
+              "type": "obstacle",
+              "spawnDistance": 5228,
+              "id": 27,
+              "x": 955.9999999999442
+            }
+          ],
+          "collectedStarIds": [
+            1,
+            4,
+            6,
+            8,
+            11,
+            14,
+            18,
+            22
+          ],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 5300.00000000007,
+        "elapsed": 26.499999999999137,
+        "lives": 2,
+        "score": 80,
+        "invincibleRemaining": 0,
+        "feetY": 387.03703703703735,
+        "velocityY": -296.29629629629596,
+        "supportId": null,
+        "jumpOriginY": 470,
+        "airAction": "jump",
+        "airJumpsRemaining": 0,
+        "animationTime": 26.499999999999137,
+        "landingUntil": 0,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 28,
+        "objects": [
+          {
+            "at": 22.64,
+            "type": "obstacle",
+            "spawnDistance": 4528,
+            "id": 24,
+            "x": 236.00000000007878
+          },
+          {
+            "at": 24.39,
+            "type": "obstacle",
+            "spawnDistance": 4878,
+            "id": 25,
+            "x": 586.0000000000163
+          },
+          {
+            "at": 24.39,
+            "type": "star",
+            "height": 120,
+            "spawnDistance": 4878,
+            "id": 26,
+            "x": 586.0000000000163
+          },
+          {
+            "at": 26.14,
+            "type": "obstacle",
+            "spawnDistance": 5228,
+            "id": 27,
+            "x": 935.9999999999446
+          }
+        ],
+        "collectedStarIds": [
+          1,
+          4,
+          6,
+          8,
+          11,
+          14,
+          18,
+          22
+        ],
+        "mode": "paused",
+        "reason": null
+      }
+    },
+    {
+      "play": {
+        "id": "vertical-base-S05-34",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S05",
+        "stageVersion": 2,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 100,
+        "snapshot": {
+          "version": 2,
+          "distance": 6800.000000000343,
+          "elapsed": 33.999999999998714,
+          "lives": 2,
+          "score": 100,
+          "invincibleRemaining": 0,
+          "feetY": 470,
+          "velocityY": 0,
+          "supportId": "ground",
+          "jumpOriginY": 470,
+          "airAction": null,
+          "airJumpsRemaining": 0,
+          "animationTime": 33.999999999998714,
+          "landingUntil": 32.5699999999988,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 30,
+          "objects": [],
+          "collectedStarIds": [
+            1,
+            4,
+            6,
+            8,
+            11,
+            14,
+            18,
+            22,
+            26,
+            29
+          ],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 6820.0000000003465,
+        "elapsed": 34.09999999999871,
+        "lives": 2,
+        "score": 100,
+        "invincibleRemaining": 0,
+        "feetY": 470,
+        "velocityY": 0,
+        "supportId": "ground",
+        "jumpOriginY": 470,
+        "airAction": null,
+        "airJumpsRemaining": 0,
+        "animationTime": 34.09999999999871,
+        "landingUntil": 32.5699999999988,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 30,
+        "objects": [],
+        "collectedStarIds": [
+          1,
+          4,
+          6,
+          8,
+          11,
+          14,
+          18,
+          22,
+          26,
+          29
+        ],
+        "mode": "paused",
+        "reason": null
+      }
+    },
+    {
+      "play": {
+        "id": "vertical-base-S06-0",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S06",
+        "stageVersion": 2,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 0,
+        "snapshot": {
+          "version": 2,
+          "distance": 0,
+          "elapsed": 0,
+          "lives": 2,
+          "score": 0,
+          "invincibleRemaining": 0,
+          "feetY": 470,
+          "velocityY": 0,
+          "supportId": "ground",
+          "jumpOriginY": 470,
+          "airAction": null,
+          "airJumpsRemaining": 0,
+          "animationTime": 0,
+          "landingUntil": 0,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 3,
+          "objects": [
+            {
+              "at": -2.01,
+              "type": "obstacle",
+              "spawnDistance": -401.99999999999994,
+              "id": 0,
+              "x": 606
+            },
+            {
+              "at": -2.01,
+              "type": "star",
+              "height": 120,
+              "spawnDistance": -401.99999999999994,
+              "id": 1,
+              "x": 606
+            },
+            {
+              "at": -0.81,
+              "type": "obstacle",
+              "spawnDistance": -162,
+              "id": 2,
+              "x": 846
+            }
+          ],
+          "collectedStarIds": [],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 20,
+        "elapsed": 0.09999999999999999,
+        "lives": 2,
+        "score": 0,
+        "invincibleRemaining": 0,
+        "feetY": 470,
+        "velocityY": 0,
+        "supportId": "ground",
+        "jumpOriginY": 470,
+        "airAction": null,
+        "airJumpsRemaining": 0,
+        "animationTime": 0.09999999999999999,
+        "landingUntil": 0,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 3,
+        "objects": [
+          {
+            "at": -2.01,
+            "type": "obstacle",
+            "spawnDistance": -401.99999999999994,
+            "id": 0,
+            "x": 586.0000000000005
+          },
+          {
+            "at": -2.01,
+            "type": "star",
+            "height": 120,
+            "spawnDistance": -401.99999999999994,
+            "id": 1,
+            "x": 586.0000000000005
+          },
+          {
+            "at": -0.81,
+            "type": "obstacle",
+            "spawnDistance": -162,
+            "id": 2,
+            "x": 826.0000000000005
+          }
+        ],
+        "collectedStarIds": [],
+        "mode": "paused",
+        "reason": null
+      }
+    },
+    {
+      "play": {
+        "id": "vertical-base-S06-7.1",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S06",
+        "stageVersion": 2,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 30,
+        "snapshot": {
+          "version": 2,
+          "distance": 1419.9999999999802,
+          "elapsed": 7.1,
+          "lives": 2,
+          "score": 30,
+          "invincibleRemaining": 0,
+          "feetY": 260.0000000000007,
+          "velocityY": -1.6825651982799172e-10,
+          "supportId": null,
+          "jumpOriginY": 380,
+          "airAction": "jump",
+          "airJumpsRemaining": 0,
+          "animationTime": 7.1,
+          "landingUntil": 0,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 14,
+          "objects": [
+            {
+              "at": 2.39,
+              "type": "platform",
+              "width": 90,
+              "height": 90,
+              "spawnDistance": 478,
+              "id": 5,
+              "x": 66.00000000003534
+            },
+            {
+              "at": 3.39,
+              "type": "platform",
+              "width": 90,
+              "height": 110,
+              "spawnDistance": 678,
+              "id": 7,
+              "x": 266.00000000003837
+            },
+            {
+              "at": 3.39,
+              "type": "star",
+              "height": 110,
+              "spawnDistance": 678,
+              "id": 8,
+              "x": 266.00000000003837
+            },
+            {
+              "at": 4.29,
+              "type": "wall",
+              "width": 800,
+              "height": 70,
+              "spawnDistance": 858,
+              "id": 9,
+              "x": 446.0000000000445
+            },
+            {
+              "at": 4.59,
+              "type": "platform",
+              "width": 90,
+              "height": 80,
+              "spawnDistance": 918,
+              "id": 10,
+              "x": 506.00000000004655
+            },
+            {
+              "at": 4.59,
+              "type": "star",
+              "height": 80,
+              "spawnDistance": 918,
+              "id": 11,
+              "x": 506.00000000004655
+            },
+            {
+              "at": 5.64,
+              "type": "platform",
+              "width": 90,
+              "height": 105,
+              "spawnDistance": 1128,
+              "id": 12,
+              "x": 716.0000000000397
+            },
+            {
+              "at": 5.64,
+              "type": "star",
+              "height": 105,
+              "spawnDistance": 1128,
+              "id": 13,
+              "x": 716.0000000000397
+            }
+          ],
+          "collectedStarIds": [
+            1,
+            4,
+            6
+          ],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 1439.9999999999811,
+        "elapsed": 7.200000000000005,
+        "lives": 2,
+        "score": 30,
+        "invincibleRemaining": 0,
+        "feetY": 265.92592592590984,
+        "velocityY": 118.51851851835026,
+        "supportId": null,
+        "jumpOriginY": 380,
+        "airAction": "jump",
+        "airJumpsRemaining": 0,
+        "animationTime": 7.200000000000005,
+        "landingUntil": 0,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 14,
+        "objects": [
+          {
+            "at": 2.39,
+            "type": "platform",
+            "width": 90,
+            "height": 90,
+            "spawnDistance": 478,
+            "id": 5,
+            "x": 46.000000000035364
+          },
+          {
+            "at": 3.39,
+            "type": "platform",
+            "width": 90,
+            "height": 110,
+            "spawnDistance": 678,
+            "id": 7,
+            "x": 246.0000000000383
+          },
+          {
+            "at": 3.39,
+            "type": "star",
+            "height": 110,
+            "spawnDistance": 678,
+            "id": 8,
+            "x": 246.0000000000383
+          },
+          {
+            "at": 4.29,
+            "type": "wall",
+            "width": 800,
+            "height": 70,
+            "spawnDistance": 858,
+            "id": 9,
+            "x": 426.0000000000443
+          },
+          {
+            "at": 4.59,
+            "type": "platform",
+            "width": 90,
+            "height": 80,
+            "spawnDistance": 918,
+            "id": 10,
+            "x": 486.0000000000463
+          },
+          {
+            "at": 4.59,
+            "type": "star",
+            "height": 80,
+            "spawnDistance": 918,
+            "id": 11,
+            "x": 486.0000000000463
+          },
+          {
+            "at": 5.64,
+            "type": "platform",
+            "width": 90,
+            "height": 105,
+            "spawnDistance": 1128,
+            "id": 12,
+            "x": 696.0000000000401
+          },
+          {
+            "at": 5.64,
+            "type": "star",
+            "height": 105,
+            "spawnDistance": 1128,
+            "id": 13,
+            "x": 696.0000000000401
+          }
+        ],
+        "collectedStarIds": [
+          1,
+          4,
+          6
+        ],
+        "mode": "paused",
+        "reason": null
+      }
+    },
+    {
+      "play": {
+        "id": "vertical-base-S06-13",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S06",
+        "stageVersion": 2,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 60,
+        "snapshot": {
+          "version": 2,
+          "distance": 2599.999999999987,
+          "elapsed": 12.999999999999902,
+          "lives": 2,
+          "score": 60,
+          "invincibleRemaining": 0,
+          "feetY": 355.92592592592655,
+          "velocityY": -118.51851851851829,
+          "supportId": null,
+          "jumpOriginY": 470,
+          "airAction": "jump",
+          "airJumpsRemaining": 0,
+          "animationTime": 12.999999999999902,
+          "landingUntil": 0,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 20,
+          "objects": [
+            {
+              "at": 8.99,
+              "type": "obstacle",
+              "spawnDistance": 1798,
+              "id": 15,
+              "x": 205.9999999999828
+            },
+            {
+              "at": 10.29,
+              "type": "obstacle",
+              "spawnDistance": 2058,
+              "id": 16,
+              "x": 465.99999999997465
+            },
+            {
+              "at": 11.59,
+              "type": "obstacle",
+              "spawnDistance": 2318,
+              "id": 17,
+              "x": 725.999999999994
+            },
+            {
+              "at": 11.59,
+              "type": "star",
+              "height": 120,
+              "spawnDistance": 2318,
+              "id": 18,
+              "x": 725.999999999994
+            },
+            {
+              "at": 12.89,
+              "type": "obstacle",
+              "spawnDistance": 2578,
+              "id": 19,
+              "x": 986.0000000000117
+            }
+          ],
+          "collectedStarIds": [
+            1,
+            4,
+            6,
+            8,
+            11,
+            13
+          ],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 2619.999999999985,
+        "elapsed": 13.099999999999897,
+        "lives": 2,
+        "score": 60,
+        "invincibleRemaining": 0,
+        "feetY": 350.00000000000074,
+        "velocityY": 2.3803181647963356e-13,
+        "supportId": null,
+        "jumpOriginY": 470,
+        "airAction": "jump",
+        "airJumpsRemaining": 0,
+        "animationTime": 13.099999999999897,
+        "landingUntil": 0,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 20,
+        "objects": [
+          {
+            "at": 8.99,
+            "type": "obstacle",
+            "spawnDistance": 1798,
+            "id": 15,
+            "x": 185.99999999998292
+          },
+          {
+            "at": 10.29,
+            "type": "obstacle",
+            "spawnDistance": 2058,
+            "id": 16,
+            "x": 445.9999999999744
+          },
+          {
+            "at": 11.59,
+            "type": "obstacle",
+            "spawnDistance": 2318,
+            "id": 17,
+            "x": 705.9999999999944
+          },
+          {
+            "at": 11.59,
+            "type": "star",
+            "height": 120,
+            "spawnDistance": 2318,
+            "id": 18,
+            "x": 705.9999999999944
+          },
+          {
+            "at": 12.89,
+            "type": "obstacle",
+            "spawnDistance": 2578,
+            "id": 19,
+            "x": 966.0000000000122
+          }
+        ],
+        "collectedStarIds": [
+          1,
+          4,
+          6,
+          8,
+          11,
+          13
+        ],
+        "mode": "paused",
+        "reason": null
+      }
+    },
+    {
+      "play": {
+        "id": "vertical-base-S06-20",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S06",
+        "stageVersion": 2,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 70,
+        "snapshot": {
+          "version": 2,
+          "distance": 3999.9999999998595,
+          "elapsed": 19.999999999999506,
+          "lives": 2,
+          "score": 70,
+          "invincibleRemaining": 0,
+          "feetY": 444.8148148148164,
+          "velocityY": 474.0740740740745,
+          "supportId": null,
+          "jumpOriginY": 470,
+          "airAction": "jump",
+          "airJumpsRemaining": 0,
+          "animationTime": 19.999999999999506,
+          "landingUntil": 0,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 26,
+          "objects": [
+            {
+              "at": 15.49,
+              "type": "obstacle",
+              "spawnDistance": 3098,
+              "id": 21,
+              "x": 106.0000000000675
+            },
+            {
+              "at": 16.79,
+              "type": "obstacle",
+              "spawnDistance": 3358,
+              "id": 22,
+              "x": 366.00000000009175
+            },
+            {
+              "at": 18.09,
+              "type": "obstacle",
+              "spawnDistance": 3618,
+              "id": 23,
+              "x": 626.0000000001145
+            },
+            {
+              "at": 18.09,
+              "type": "star",
+              "height": 120,
+              "spawnDistance": 3618,
+              "id": 24,
+              "x": 626.0000000001145
+            },
+            {
+              "at": 19.39,
+              "type": "obstacle",
+              "spawnDistance": 3878,
+              "id": 25,
+              "x": 886.0000000001322
+            }
+          ],
+          "collectedStarIds": [
+            1,
+            4,
+            6,
+            8,
+            11,
+            13,
+            18
+          ],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 4019.9999999998577,
+        "elapsed": 20.0999999999995,
+        "lives": 2,
+        "score": 70,
+        "invincibleRemaining": 0,
+        "feetY": 470,
+        "velocityY": 0,
+        "supportId": "ground",
+        "jumpOriginY": 470,
+        "airAction": null,
+        "airJumpsRemaining": 0,
+        "animationTime": 20.0999999999995,
+        "landingUntil": 20.1699999999995,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 26,
+        "objects": [
+          {
+            "at": 15.49,
+            "type": "obstacle",
+            "spawnDistance": 3098,
+            "id": 21,
+            "x": 86.00000000006744
+          },
+          {
+            "at": 16.79,
+            "type": "obstacle",
+            "spawnDistance": 3358,
+            "id": 22,
+            "x": 346.0000000000915
+          },
+          {
+            "at": 18.09,
+            "type": "obstacle",
+            "spawnDistance": 3618,
+            "id": 23,
+            "x": 606.0000000001149
+          },
+          {
+            "at": 18.09,
+            "type": "star",
+            "height": 120,
+            "spawnDistance": 3618,
+            "id": 24,
+            "x": 606.0000000001149
+          },
+          {
+            "at": 19.39,
+            "type": "obstacle",
+            "spawnDistance": 3878,
+            "id": 25,
+            "x": 866.0000000001327
+          }
+        ],
+        "collectedStarIds": [
+          1,
+          4,
+          6,
+          8,
+          11,
+          13,
+          18
+        ],
+        "mode": "paused",
+        "reason": null
+      }
+    },
+    {
+      "play": {
+        "id": "vertical-base-S06-26.4",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S06",
+        "stageVersion": 2,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 80,
+        "snapshot": {
+          "version": 2,
+          "distance": 5280.000000000066,
+          "elapsed": 26.399999999999142,
+          "lives": 2,
+          "score": 80,
+          "invincibleRemaining": 0,
+          "feetY": 403.3333333333346,
+          "velocityY": 355.55555555555577,
+          "supportId": null,
+          "jumpOriginY": 470,
+          "airAction": "jump",
+          "airJumpsRemaining": 0,
+          "animationTime": 26.399999999999142,
+          "landingUntil": 0,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 32,
+          "objects": [
+            {
+              "at": 21.99,
+              "type": "obstacle",
+              "spawnDistance": 4398,
+              "id": 27,
+              "x": 126.00000000010303
+            },
+            {
+              "at": 23.29,
+              "type": "obstacle",
+              "spawnDistance": 4658,
+              "id": 28,
+              "x": 386.0000000000565
+            },
+            {
+              "at": 24.59,
+              "type": "obstacle",
+              "spawnDistance": 4918,
+              "id": 29,
+              "x": 646.0000000000076
+            },
+            {
+              "at": 24.59,
+              "type": "star",
+              "height": 120,
+              "spawnDistance": 4918,
+              "id": 30,
+              "x": 646.0000000000076
+            },
+            {
+              "at": 25.89,
+              "type": "obstacle",
+              "spawnDistance": 5178,
+              "id": 31,
+              "x": 905.9999999999544
+            }
+          ],
+          "collectedStarIds": [
+            1,
+            4,
+            6,
+            8,
+            11,
+            13,
+            18,
+            24
+          ],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 5300.00000000007,
+        "elapsed": 26.499999999999137,
+        "lives": 2,
+        "score": 80,
+        "invincibleRemaining": 0,
+        "feetY": 444.8148148148164,
+        "velocityY": 474.0740740740745,
+        "supportId": null,
+        "jumpOriginY": 470,
+        "airAction": "jump",
+        "airJumpsRemaining": 0,
+        "animationTime": 26.499999999999137,
+        "landingUntil": 0,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 32,
+        "objects": [
+          {
+            "at": 21.99,
+            "type": "obstacle",
+            "spawnDistance": 4398,
+            "id": 27,
+            "x": 106.00000000010297
+          },
+          {
+            "at": 23.29,
+            "type": "obstacle",
+            "spawnDistance": 4658,
+            "id": 28,
+            "x": 366.0000000000563
+          },
+          {
+            "at": 24.59,
+            "type": "obstacle",
+            "spawnDistance": 4918,
+            "id": 29,
+            "x": 626.0000000000081
+          },
+          {
+            "at": 24.59,
+            "type": "star",
+            "height": 120,
+            "spawnDistance": 4918,
+            "id": 30,
+            "x": 626.0000000000081
+          },
+          {
+            "at": 25.89,
+            "type": "obstacle",
+            "spawnDistance": 5178,
+            "id": 31,
+            "x": 885.9999999999549
+          }
+        ],
+        "collectedStarIds": [
+          1,
+          4,
+          6,
+          8,
+          11,
+          13,
+          18,
+          24
+        ],
+        "mode": "paused",
+        "reason": null
+      }
+    },
+    {
+      "play": {
+        "id": "vertical-base-S06-34",
+        "profile": "student",
+        "game": "runner",
+        "schemaVersion": 1,
+        "stageId": "S06",
+        "stageVersion": 2,
+        "characterId": "shiba",
+        "startedAt": "2020-01-01T00:00:00.000Z",
+        "updatedAt": "2020-01-01T00:00:00.000Z",
+        "status": "active",
+        "score": 100,
+        "snapshot": {
+          "version": 2,
+          "distance": 6800.000000000343,
+          "elapsed": 33.999999999998714,
+          "lives": 2,
+          "score": 100,
+          "invincibleRemaining": 0,
+          "feetY": 355.92592592592695,
+          "velocityY": 118.51851851851876,
+          "supportId": null,
+          "jumpOriginY": 470,
+          "airAction": "jump",
+          "airJumpsRemaining": 0,
+          "animationTime": 33.999999999998714,
+          "landingUntil": 0,
+          "hitFeedbackRemaining": 0,
+          "hitPoint": null,
+          "nextSpawn": 36,
+          "objects": [
+            {
+              "at": 29.79,
+              "type": "obstacle",
+              "spawnDistance": 5958,
+              "id": 34,
+              "x": 165.9999999998191
+            }
+          ],
+          "collectedStarIds": [
+            1,
+            4,
+            6,
+            8,
+            11,
+            13,
+            18,
+            24,
+            30,
+            35
+          ],
+          "mode": "running",
+          "reason": null
+        }
+      },
+      "next": {
+        "version": 2,
+        "distance": 6820.0000000003465,
+        "elapsed": 34.09999999999871,
+        "lives": 2,
+        "score": 100,
+        "invincibleRemaining": 0,
+        "feetY": 373.7037037037049,
+        "velocityY": 237.03703703703712,
+        "supportId": null,
+        "jumpOriginY": 470,
+        "airAction": "jump",
+        "airJumpsRemaining": 0,
+        "animationTime": 34.09999999999871,
+        "landingUntil": 0,
+        "hitFeedbackRemaining": 0,
+        "hitPoint": null,
+        "nextSpawn": 36,
+        "objects": [
+          {
+            "at": 29.79,
+            "type": "obstacle",
+            "spawnDistance": 5958,
+            "id": 34,
+            "x": 145.9999999998192
+          }
+        ],
+        "collectedStarIds": [
+          1,
+          4,
+          6,
+          8,
+          11,
+          13,
+          18,
+          24,
+          30,
+          35
+        ],
+        "mode": "paused",
+        "reason": null
+      }
+    }
+  ]
+}
