@@ -29,7 +29,7 @@ class RunnerSelectionTest(unittest.TestCase):
             for text in [name,f'走力：{speed}',f'ジャンプ：{jump}','♥'*hearts]:self.assertIn(text,info)
             self.assertNotIn('残機',self.page.locator('#runner').inner_text())
             self.assertEqual(self.page.evaluate('formalRunner.bridge.view.state.initialLives'),hearts)
-            self.assertIn('▶ '+name,self.page.locator('#runner-character-bests').inner_text())
+            self.assertEqual(self.page.locator('#runner-character-bests .is-selected .runner-record-name').inner_text(),name)
             frame=self.page.frame_locator('iframe')
             self.assertIn(f'あと{hearts}個',frame.locator('#runner-lives').get_attribute('aria-label'))
         self.assertEqual(self.page.evaluate("async()=>(await readAll('coinSpends')).length"),0)
@@ -80,7 +80,7 @@ class RunnerSelectionTest(unittest.TestCase):
             self.assertNotIn('前のステージ',card.inner_text())
             self.assertIn('100点' if i==6 else '0点',self.page.locator('#runner-stage-best').inner_text())
         self.card('character','goldfish').click()
-        self.assertIn('▶ 金魚',self.page.locator('#runner-character-bests').inner_text())
+        self.assertEqual(self.page.locator('#runner-character-bests .is-selected .runner-record-name').inner_text(),'金魚')
         self.assertEqual(self.page.evaluate("async()=>(await readAll('coinSpends')).length"),0)
 
     def test_running_paused_finished_and_pending_selection(self):

@@ -613,8 +613,18 @@
     .runner-home-panel { background:linear-gradient(145deg,#edf7ee,#fffdf6); }
     #runner-choices { margin:16px 0; padding:16px; border:1px solid #d4e3d8; border-radius:16px; background:#fffdf6; }
     #runner-info { font-size:.85rem; min-height:1.5em; }
-    .runner-character-bests { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
-    .runner-character-bests dt, .runner-character-bests dd { margin:0; overflow-wrap:anywhere; }
+    .runner-records { max-width:500px; }
+    #runner-stage-best { padding:12px; border-radius:10px; background:#e6f1e9; font-weight:700; }
+    .runner-character-bests { margin:8px 0 16px; }
+    .runner-record-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; padding:10px 12px; border:1px solid #d4e3d8; border-radius:10px; background:#fff; }
+    .runner-record-row + .runner-record-row { margin-top:6px; }
+    .runner-character-bests dt, .runner-character-bests dd { margin:0; min-width:0; overflow-wrap:anywhere; }
+    .runner-character-bests dt { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; }
+    .runner-character-bests dd { text-align:right; font-variant-numeric:tabular-nums; font-weight:700; }
+    .runner-record-row.is-selected { background:#e2f2df; border-color:#528344; box-shadow:inset 4px 0 #528344; }
+    .runner-record-selected { padding:2px 6px; border-radius:6px; background:#35652b; color:#fff; font-size:12px; font-weight:700; }
+    .runner-records summary { padding:10px 0; cursor:pointer; }
+    .runner-records-label { font-weight:700; margin-bottom:8px; }
     #runner-frame-host { height:85vh; height:85dvh; }
     /* iPad横: 幅いっぱいの16:9と操作・通知の必要高まで。状態では高さを変えない。 */
     @media (min-width:900px) and (min-height:600px) and (orientation:landscape) {
@@ -625,8 +635,8 @@
       #runner-frame-host { height:90vh; height:90dvh; }
     }
   </style>
-  <link rel="stylesheet" href="./runner/balance.css?v=1.7.40">
-  <link rel="stylesheet" href="./runner/selection.css?v=1.7.40">
+  <link rel="stylesheet" href="./runner/balance.css?v=1.7.41">
+  <link rel="stylesheet" href="./runner/selection.css?v=1.7.41">
 </head>
 <body>
 <!-- 立体的な金貨イラスト：ホーム・正解時に共用 -->
@@ -729,10 +739,11 @@
       <h3 id="formal-character-heading">キャラクターをえらぶ</h3><select id="formal-character" hidden aria-hidden="true" tabindex="-1"></select>
       <div id="formal-character-cards" class="runner-choice-grid" role="group" aria-labelledby="formal-character-heading"></div>
       <p id="formal-character-info" role="status" aria-live="polite" aria-atomic="true"></p>
-      <section aria-labelledby="runner-records-heading">
+      <section class="runner-records" aria-labelledby="runner-records-heading">
         <h3 id="runner-records-heading">このステージの最高得点</h3>
         <p id="runner-stage-best" role="status" aria-live="polite"></p>
-        <dl id="runner-character-bests" class="runner-character-bests"></dl>
+        <p id="runner-character-bests-label" class="runner-records-label">キャラクター別の最高得点</p>
+        <dl id="runner-character-bests" class="runner-character-bests" aria-labelledby="runner-character-bests-label"></dl>
         <details><summary>全ステージの最高得点</summary><dl id="runner-stage-bests" class="runner-character-bests"></dl></details>
       </section>
     </div>
@@ -987,7 +998,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.40";
+const APP_VERSION = "v1.7.41";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3223,7 +3234,7 @@ function summarizeRunnerPlays(records, who) {
 // C3-B 内部API。無料試遊のURL/選択UIからは呼ばない。
 let runnerModelPromise;
 function loadRunnerModel() {
-  return runnerModelPromise ||= import('./runner/game.js?v=1.7.40');
+  return runnerModelPromise ||= import('./runner/game.js?v=1.7.41');
 }
 function runnerTransaction(names, action, {mode='readwrite', keys={}}={}) {
   return new Promise((resolve,reject)=>{
@@ -3366,13 +3377,20 @@ function renderRunnerRecords(d,m) {
   const score=p=>p?`${p.score}点`:'記録なし';
   $('runner-stage-best').textContent=`${stageId} 総合：${score(d.summary.bestByStage[stageId])}`;
   const fill=(id,rows)=>{
-    const nodes=rows.flatMap(([name,value])=>{
-      const dt=document.createElement('dt'),dd=document.createElement('dd');
-      dt.textContent=name;dd.textContent=value;return [dt,dd];
+    const nodes=rows.map(([name,value,selected=false])=>{
+      // dl内のdivは1組のdt/ddをまとめる。読み上げも名前→選択状態→得点の順。
+      const row=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');
+      row.className='runner-record-row';
+      const label=document.createElement('span');label.className='runner-record-name';label.textContent=name;dt.append(label);
+      if(selected){
+        row.classList.add('is-selected');
+        const badge=document.createElement('span');badge.className='runner-record-selected';badge.textContent='選択中';dt.append(badge);
+      }
+      dd.textContent=value;row.append(dt,dd);return row;
     });$(id).replaceChildren(...nodes);
   };
   fill('runner-character-bests',[...m.CHARACTERS,...(d.secret?[m.getCharacter('secret_yuniko')]:[])].map(c=>[
-    `${c.characterId===$('formal-character').value?'▶ ':''}${c.name}`,score(d.summary.bestByStageCharacter[`${stageId}:${c.characterId}`])
+    c.name,score(d.summary.bestByStageCharacter[`${stageId}:${c.characterId}`]),c.characterId===$('formal-character').value
   ]));
   fill('runner-stage-bests',m.STAGES.map(stage=>[`${stage.stageId} ${stage.name}`,score(d.summary.bestByStage[stage.stageId])]));
 }
@@ -3584,7 +3602,7 @@ async function startFormalRunner(ctx,d,m) {
   const frame=current.frame;
   frame.title='わくわくランナー';frame.className='runner-formal-frame';
   frame.onload=()=>{if(formalRunner===current){frame.contentWindow.mountFormalRunner(current.bridge);choices();}};
-  frame.src='./runner/?embedded=1&v=1.7.40';
+  frame.src='./runner/?embedded=1&v=1.7.41';
   $('runner-frame-host').replaceChildren(frame);choices();
 }
 $('open-runner').addEventListener('click',()=>navigate('runner').catch(err));
