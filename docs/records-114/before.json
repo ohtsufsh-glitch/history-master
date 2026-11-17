@@ -1,0 +1,26 @@
+{
+  "1180x820": {
+    "width": 812,
+    "gap": 696.390625,
+    "overflow": false,
+    "clipped": false
+  },
+  "1024x768": {
+    "width": 812,
+    "gap": 696.390625,
+    "overflow": false,
+    "clipped": false
+  },
+  "820x1180": {
+    "width": 712,
+    "gap": 596.390625,
+    "overflow": false,
+    "clipped": false
+  },
+  "390x844": {
+    "width": 298,
+    "gap": 182.390625,
+    "overflow": false,
+    "clipped": false
+  }
+}
