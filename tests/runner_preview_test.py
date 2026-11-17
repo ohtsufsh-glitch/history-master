@@ -8,12 +8,12 @@ import unittest
 
 import runner_canvas_test as canvas
 from runner_difficulty_cases import EXPECTED_NAMES
-from runner_density_test import INPUTS
+from runner_density_test import LATEST_INPUTS as INPUTS
 SOLUTIONS = {id:{p:times for p in ('clear','perfect')} for id,times in INPUTS.items()}
-DESIGN = {id:dict(walls=list(range(n))) for id,n in zip(INPUTS,[0,4,2,2,1,1])}
+DESIGN = {id:dict(walls=list(range(n))) for id,n in zip(INPUTS,[0,4,2,2,4,4])}
 EXPECTED = {id:dict(length=length,rocks=[0]*rocks,platforms=[0]*platforms)
     for id,length,rocks,platforms in [('S01',4000,6,0),('S02',5000,14,2),('S03',6000,6,4),
-        ('S04',7000,20,2),('S05',7200,16,3),('S06',8000,21,4)]}
+        ('S04',7000,11,6),('S05',7200,6,15),('S06',8000,5,17)]}
 
 
 

@@ -316,11 +316,74 @@ const DENSE_STAGES = [
   course: Object.freeze(stage.course.slice().sort((a,b) => a.at-b.at).map(entry => Object.freeze(entry))),
 }));
 
+// Issue #85 高所・上下分岐版。旧定義には触れず、新規購入だけに適用する。
+// 高度は地面からの論理px、phaseはラジアン、periodはゲーム内秒。
+const spike = (x, height, amplitude, period, phase = 0) => ({x, height, amplitude, period, phase});
+const VERTICAL_STAGES = [
+  {
+    ...DENSE_STAGES[3], stageVersion: 5,
+    birds: [...[2180,2420,2660].map(x => incoming(x,143)), incoming(3620,193),
+      ...[5180,5420,5660].map(x => incoming(x,143)), incoming(6660,70)],
+    spikes: [spike(3050,90,48,2.4,.4), spike(3980,145,60,2.8,1.2)],
+    course: [...rocks([420,630,840,1050,1260,1470,1680,4380,4660,6240,6920]),
+      ...birdDeck(1900),
+      platform(3240,220,80), platform(3460,220,150), platform(3680,260,150),
+      platform(3960,220,80), ...birdDeck(4900),
+      ...stars([[420,120],[1260,120],[2180,220],[2660,220],[3240,80],
+        [3620,270],[3960,80],[5420,220],[6240,120],[6660,120]])],
+  },
+  {
+    ...DENSE_STAGES[4], stageVersion: 3,
+    birds: [incoming(1400,133), incoming(3100,243),
+      ...[4140,4380,4620].map((x,i) => incoming(x, i===0?143:i===1?235:240)),
+      ...[5100,5340,5580,5820,6060,6300,6540].map((x,i) => incoming(x,143+(i%2)*8))],
+    spikes: [spike(1080,150,40,2.6,.2), spike(3260,270,55,2.8,3.59),
+      spike(4660,50,25,2.4,2), spike(6880,105,55,2.6,.5)],
+    course: [...rocks([420,680,940,2200,4660,7120]),
+      // PR #131の短い3足場を維持。
+      platform(1300,90,90), platform(1500,90,110), platform(1730,90,90), wall(1280,1860,80),
+      platform(2460,220,80), platform(2680,220,150), platform(2920,300,200),
+      platform(3260,220,140), platform(3500,220,70),
+      // 跳ばずに地上を選べる分岐。上にのみ鳥がいる。
+      platform(3940,240,80), platform(4180,280,150), platform(4460,280,150), platform(4700,200,80),
+      platform(5200,800,100), platform(6000,800,100), platform(6700,600,100),
+      wall(4900,5600,90), wall(5600,6300,90), wall(6300,6950,90),
+      ...stars([[420,120],[940,120],[1300,90],[1730,90],[2460,80],
+        [3100,320],[3500,70],[4780,80],[5580,220],[6540,220]])],
+  },
+  {
+    ...DENSE_STAGES[5], stageVersion: 3,
+    birds: [incoming(1400,133), incoming(1840,123), incoming(3400,253),
+      ...[4520,4570,4620,4670].map((x,i) => incoming(x,i%2?280:193)),
+      ...[5780,6020,6260,6500,6740,6980,7220,7460,7700].map((x,i) => incoming(x,143+(i%3)*5))],
+    spikes: [spike(1080,100,45,2.4,.4), spike(3520,120,40,2.6,1.5),
+      spike(3980,190,45,2.8,.8), spike(5300,50,25,2.4,2), spike(7900,100,50,2.6,.5)],
+    // 鳥シルエットと警戒色を分岐手前から表示。物理や保存には関与しない。
+    routeWarnings: [{start:4100,end:5160,height:150}],
+    course: [...rocks([420,660,900,2360,5260]),
+      // PR #131の短い4足場を維持。
+      platform(1300,90,90), platform(1500,90,110), platform(1740,90,80), platform(1950,90,105), wall(1280,2080,70),
+      platform(2600,220,80), platform(2820,220,140), platform(3040,220,185), platform(3280,300,210),
+      platform(3620,240,140), platform(3860,220,70),
+      platform(4240,240,80), platform(4460,240,150), platform(4840,640,150), platform(5260,240,80),
+      platform(5800,800,100), platform(6600,800,100), platform(7450,900,100),
+      wall(5500,6300,90), wall(6300,7100,90), wall(7100,7850,90),
+      ...stars([[420,120],[900,120],[1300,90],[1740,80],[2600,80],
+        [3400,330],[3860,70],[5360,80],[6260,220],[7460,220]])],
+  },
+].map(stage => Object.freeze({...stage,
+  spikes: Object.freeze(stage.spikes.map(s => Object.freeze(s))),
+  routeWarnings: Object.freeze((stage.routeWarnings ?? []).map(r => Object.freeze(r))),
+  birds: Object.freeze(stage.birds.map(b => Object.freeze(b))),
+  course: Object.freeze(stage.course.sort((a,b) => a.at-b.at).map(e => Object.freeze(e))),
+}));
+
 // 選択・新規購入は最新版。再開は必ず(ID, 版)で引く。未知版の推測は禁止。
 const STAGES = Object.freeze(LEGACY_STAGES.map(stage =>
+  VERTICAL_STAGES.find(current => current.stageId === stage.stageId) ??
   DENSE_STAGES.find(current => current.stageId === stage.stageId) ?? stage));
 function getStage(stageId, stageVersion) {
-  return [...LEGACY_STAGES, ...VERSION2_STAGES, ...VERSION3_STAGES, ...DENSE_STAGES].find(stage =>
+  return [...LEGACY_STAGES, ...VERSION2_STAGES, ...VERSION3_STAGES, ...DENSE_STAGES, ...VERTICAL_STAGES].find(stage =>
     stage.stageId === stageId && (stage.stageVersion ?? 1) === stageVersion);
 }
 export { STAGES, LEGACY_STAGES, getStage };

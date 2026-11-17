@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.46";
-import { STAGES, getStage } from "./stages.js?v=1.7.46";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.46";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.47";
+import { STAGES, getStage } from "./stages.js?v=1.7.47";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.47";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -105,6 +105,8 @@ function createRunnerState(course = COURSE, characterId = course?.characterId ??
   const state = { stageId: stage.stageId ?? null, stageVersion: stage.stageVersion ?? 1,
     holes: (stage.holes ?? []).map(hole => ({...hole})),
     holeFailure: stage.holeFailure ?? "recover",
+    spikes: (stage.spikes ?? []).map(spike => ({...spike})),
+    routeWarnings: (stage.routeWarnings ?? []).map(route => ({...route})),
     birds: (stage.birds ?? []).map(bird => ({...bird})), goalDistance: stage.goalDistance,
     characterId: character.characterId, speed: character.speed, jump: character.jump,
     initialLives: character.initialLives, airJumpsRemaining: character.airJumps,
@@ -251,6 +253,17 @@ function birdCenter(state, bird) {
   return {x: CHARACTER_X + bird.x - state.distance - (bird.speed ?? 0) * state.elapsed, y: GROUND_Y - bird.height};
 }
 
+// 位置は定義とelapsedだけから再計算。描画・衝突・再開で同じ関数を使う。
+const SPIKE_RADIUS = 26;
+function spikeCenter(state, spike) {
+  return {x: CHARACTER_X + spike.x - state.distance,
+    y: GROUND_Y - spike.height - spike.amplitude * Math.sin(2 * Math.PI * state.elapsed / spike.period + spike.phase)};
+}
+function touchesSpike(state, spike) {
+  const a = characterCenter(state), b = spikeCenter(state, spike);
+  return Math.hypot(a.x-b.x,a.y-b.y) <= COLLISION.characterRadius + SPIKE_RADIUS;
+}
+
 function touchesBird(state, bird) {
   const center = birdCenter(state, bird), character = characterCenter(state);
   return Math.hypot(character.x - center.x, character.y - center.y) <=
@@ -364,7 +377,8 @@ function updateRunner(state, seconds) {
     }
     if (!invincible && (state.objects.some(object =>
       (object.type === "obstacle" || object.type === "wall") && touchesObject(state, object)) ||
-      state.birds.some(bird => touchesBird(state, bird)))) {
+      state.birds.some(bird => touchesBird(state, bird)) ||
+      state.spikes.some(spike => touchesSpike(state, spike)))) {
       state.lives = Math.max(0, state.lives - 1);
       if (state.lives === 0) {
         state.mode = "finished";
@@ -681,6 +695,37 @@ function drawBird(context, state, bird) {
   context.restore();
 }
 
+function drawSpike(context, state, spike) {
+  const {x,y} = spikeCenter(state, spike);
+  if(x + SPIKE_RADIUS < 0 || x - SPIKE_RADIUS > WORLD.width) return;
+  context.save();
+  // 最大半径26のトゲ球。先端・輪郭を衝突円内に収める。
+  context.fillStyle = "#ba4663"; context.strokeStyle = "#61243e"; context.lineWidth = 2;
+  context.beginPath();
+  for(let i=0;i<24;i++){
+    const angle=i*Math.PI/12, r=i%2?17:SPIKE_RADIUS-1;
+    const px=x+Math.cos(angle)*r, py=y+Math.sin(angle)*r;
+    if(i===0)context.moveTo(px,py);else context.lineTo(px,py);
+  }
+  context.closePath();context.fill();context.stroke();
+  context.fillStyle="#ffd8e0";context.beginPath();context.arc(x-5,y-5,5,0,Math.PI*2);context.fill();
+  context.restore();
+}
+function drawRouteWarnings(context, state) {
+  for(const route of state.routeWarnings){
+    const x=CHARACTER_X+route.start-state.distance, end=CHARACTER_X+route.end-state.distance;
+    context.save();context.fillStyle="rgba(168,62,87,.12)";
+    context.fillRect(x,GROUND_Y-route.height-120,end-x,120);
+    // 進路を選ぶ前に読める、上空の群れのシルエット。
+    context.strokeStyle="#844d66";context.lineWidth=4;
+    for(let i=0;i<4;i++){
+      const bx=x+60+i*60, by=GROUND_Y-route.height-85-(i%2)*15;
+      context.beginPath();context.moveTo(bx-12,by);context.quadraticCurveTo(bx-6,by-10,bx,by);
+      context.quadraticCurveTo(bx+6,by-10,bx+12,by);context.stroke();
+    }context.restore();
+  }
+}
+
 function drawPlatform(context, object) {
   const { left, top, width, thickness } = platformBounds(object);
   context.fillStyle = "#79c9d4";
@@ -762,7 +807,9 @@ function renderScene(context, canvas, state, characterImages, obstacleImage) {
   context.setTransform(canvas.width / WORLD.width, 0, 0, canvas.height / WORLD.height, 0, 0);
   drawBackground(context, state);
   drawGround(context, state);
+  drawRouteWarnings(context, state);
   drawObjects(context, state, obstacleImage);
+  for (const spike of state.spikes) drawSpike(context, state, spike);
   for (const bird of state.birds) drawBird(context, state, bird);
   drawGoal(context, state);
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1206,4 +1253,4 @@ export {snapshotRunner,restoreRunner,STAGES,getStage};
 // コースとゲーム状態はDOMから独立。配置の差し替えや決定的なルール検証に使う。
 export { ANIMATION_SETS, loadCharacterImages, drawCharacter, describeCharacter, selectionItems, renderSelectionCards, CHARACTERS, getCharacter, COURSE, COLLISION, CHARACTER_X, SPAWN_X, CHARACTER_IMAGE, CHARACTER_SET, OBSTACLE_IMAGE, PLATFORM, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
   createRunnerState, updateRunner, resumeRunner, startJump, progressPercent, goalX, characterCenter, characterPose,
-  platformBounds, wallBounds, birdCenter, touchesBird, BIRD_RADIUS, characterBob, shadowY };
+  spikeCenter, touchesSpike, SPIKE_RADIUS, drawSpike, drawBird, drawRouteWarnings, platformBounds, wallBounds, birdCenter, touchesBird, BIRD_RADIUS, characterBob, shadowY };
