@@ -43,7 +43,8 @@ class RunnerPhase1PhysicsTest(unittest.TestCase):
     def model(self):
         page, errors, requests = self.model_runner()
         page.evaluate('() => { window.phase1Trial = (' + TRIAL + '); }')
-        page.evaluate('async()=>{window.stageModule=await import("./stages.js");}')
+        page.evaluate('''async()=>{window.stageModule=await import("./stages.js");
+          window.runnerModel={...runnerModel,STAGES:runnerModel.STAGES.map(s=>runnerModel.getStage(s.stageId,['S02','S03','S04'].includes(s.stageId)?2:1))};}''')
         self.addCleanup(lambda: self.assert_isolated(page, errors, requests))
         return page
 
@@ -237,6 +238,16 @@ class RunnerPhase1CompatibilityTest(unittest.TestCase):
             d.coinSpends=d.runnerPlays.map(p=>({id:p.id,profile:p.profile,game:'runner',amount:p.profile==='test'?0:30,at:p.startedAt}));
             validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:10,data:d});await plushInstall(d);
           };
+          // 公開可能な合成の旧版購入記録。版3の新規購入APIはtuning suiteで検証。
+          window.buyLegacy=async({stageId='S01',profile='student',characterId='shiba'}={})=>{
+            const active=(await readAll('runnerPlays')).find(p=>p.profile===profile&&p.status==='active');if(active)return active;
+            const stage=m.getStage(stageId,['S02','S03','S04'].includes(stageId)?2:1),at=new Date().toISOString();
+            const p={id:crypto.randomUUID(),profile,game:'runner',schemaVersion:1,stageId,stageVersion:stage.stageVersion??1,characterId,
+              startedAt:at,updatedAt:at,status:'active',score:0,snapshot:m.snapshotRunner(m.createRunnerState(stage,characterId))};
+            await runnerTransaction(['runnerPlays','coinSpends'],tx=>{
+              tx.objectStore('runnerPlays').add(p);tx.objectStore('coinSpends').add({id:p.id,profile,game:'runner',amount:profile==='test'?0:30,at});
+            });return p;
+          };
           await installPhase();
         }""", GOLDEN)
 
@@ -273,11 +284,11 @@ class RunnerPhase1CompatibilityTest(unittest.TestCase):
           const c=await openRunnerSession(p.profile,p.id,{lifecycle:false});return [c.view.state.stageVersion,c.view.state.goalDistance];
         }"""), [1,5600])
 
-    def test_new_purchases_versions_and_new_paid_routes_save_resume_finish(self):
+    def test_version2_paid_routes_save_resume_finish(self):
         self.assertTrue(self.page.evaluate("""async plans=>{
-          for(const stage of m.STAGES){
+          for(const stage of m.STAGES.map(s=>m.getStage(s.stageId,['S02','S03','S04'].includes(s.stageId)?2:1))){
             await installPhase();const before=await snapshotAllStores();
-            const p=await buy({stageId:stage.stageId});
+            const p=await buyLegacy({stageId:stage.stageId});
             const version=['S02','S03','S04'].includes(stage.stageId)?2:1;
             if(p.stageVersion!==version||!runnerCanResume(p)||p.snapshot.version!==2)throw Error('new version wrong '+stage.stageId+' expected '+version+' got '+p.stageVersion+' resumable '+runnerCanResume(p));
             let c=await openRunnerSession('student',p.id,{lifecycle:false});
@@ -311,9 +322,9 @@ class RunnerPhase1CompatibilityTest(unittest.TestCase):
           }return true;
         }""", INPUTS))
 
-    def test_falling_and_recovered_new_paid_snapshot_survive_reload(self):
+    def test_falling_and_recovered_version2_paid_snapshot_survive_reload(self):
         self.assertTrue(self.page.evaluate("""async()=>{
-          await installPhase();const p=await buy({stageId:'S03'});
+          await installPhase();const p=await buyLegacy({stageId:'S03'});
           let c=await openRunnerSession('student',p.id,{lifecycle:false});await c.resume();let jumped=false;
           while(c.view.state.feetY<=470){
             if(!jumped&&c.view.state.distance>=1510-1e-6){await c.jump();jumped=true;}
@@ -347,7 +358,7 @@ class RunnerPhase1CompatibilityTest(unittest.TestCase):
         self.page.evaluate("""async()=>{
           const old=golden.states.find(r=>r.play.stageId==='S02'&&r.phase==='paused').play;
           await installPhase([old]);
-          await purchaseRunnerPlay({profile:'test',stageId:'S03',characterId:'shiba'});
+          await buyLegacy({profile:'test',stageId:'S03',characterId:'shiba'});
           const extra=complete('S02',2,'student',100);
           await runnerTransaction(['runnerPlays','coinSpends'],tx=>{
             tx.objectStore('runnerPlays').put(extra);
