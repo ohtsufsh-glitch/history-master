@@ -27,6 +27,7 @@ iPhoneは一覧幅を維持し、左右の内側余白・太字・名前から�
 - 新規UI 2件成功: 上記4サイズ、0点/100点/記録なし、キャラ選択3回、アクセシビリティツリーの「名前 選択中」、dt→dd順、S02切替、student/test分離、未所持シークレット非表示、Enter/Spaceで全ステージ開閉。
 - 既存runner_results_testの3件成功: test_stage_character_records_and_strict_improvements / test_committed_result_retry_single_charge_and_home / test_refresh_records_secret_reset_and_other_profile。
 - home_arcade_test.HomeArcadeTest.test_layout成功（既存7サイズ、PR #124の配置維持）。
+- runner_selection_testの旧「▶」期待値2箇所を新しい選択行の正式名称へ更新。該当2件（キーボード選択・全ステージの記録切替）成功。
 - app_version_test 9件成功。親inline JS・runner/game.js構文、git diff --check成功。
 - 初回のfixtureは保存上限100点を超えて検証に失敗。100点/70点へ修正。選択操作もhidden selectから実際のキャラクターカードへ修正し、最終成功。
 
