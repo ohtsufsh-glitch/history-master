@@ -25,6 +25,9 @@ on:
       - 'tests/fixtures/runner85-tuning-base.json'
       - 'tests/fixtures/runner85-phase2a-base.json'
       - 'tests/fixtures/runner85-v1.json'
+      - 'tests/runner_spike_design_test.py'
+      - 'tests/runner_canvas_test.py'
+      - 'tests/fixtures/runner137-spike-baseline.json'
       - 'tests/runner_test_mode_test.py'
       - 'tests/runner_session_test.py'
       - 'tests/runner_storage_test.py'
@@ -56,6 +59,9 @@ jobs:
           PYTHONPATH: tests
         run: |
           python -m unittest -v \
+            runner_spike_design_test \
+            runner_canvas_test.RunnerCanvasTest.test_spike_rock_image_loads_with_alpha_and_stays_grounded_in_phone_tablet_layouts \
+            runner_canvas_test.RunnerCanvasTest.test_missing_spike_rock_uses_fallback_and_preserves_motion_jump_collision_and_retry \
             runner_test_mode_test \
             runner_layout_test \
             runner_header_test \

@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.52";
-import { STAGES, getStage } from "./stages.js?v=1.7.52";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.52";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.53";
+import { STAGES, getStage } from "./stages.js?v=1.7.53";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.53";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -66,7 +66,7 @@ function loadCharacterImages(cache, id, redraw) {
 }
 const OBSTACLE_WIDTH = 80;
 // 元画像の下端2pxは透明。実体の底面Y=464を地面に合わせる。
-const OBSTACLE_IMAGE = Object.freeze({ src: "./assets/spike-rock.webp", width: OBSTACLE_WIDTH,
+const OBSTACLE_IMAGE = Object.freeze({ src: "./assets/spike-rock.webp?v=1.7.53", width: OBSTACLE_WIDTH,
   height: OBSTACLE_WIDTH * 466 / 640, feetRatio: 464 / 466 });
 const PLATFORM = Object.freeze({ width: 190, thickness: 32, height: 80, footHalfWidth: 20 });
 const BIRD_RADIUS = 28; // 輪郭を含む円。描画と当たり判定で共有。
@@ -626,26 +626,48 @@ function drawObstacle(context, object, obstacleImage) {
       GROUND_Y - height * feetRatio, width, height);
     return;
   }
-  // 読み込み中・404でも、同じ大きさのトゲ岩を図形で示してプレイを続ける。
-  const outline = [[-.5, 0], [-.46, -.33], [-.32, -.5], [-.32, -.78],
-    [-.18, -.62], [-.11, -.6], [0, -1], [.14, -.58], [.28, -.78],
-    [.34, -.48], [.47, -.29], [.5, 0]];
-  context.beginPath();
-  outline.forEach(([x, y], index) => {
-    const pointX = object.x + x * width, pointY = GROUND_Y + y * height;
-    if (index === 0) context.moveTo(pointX, pointY);
-    else context.lineTo(pointX, pointY);
-  });
-  context.closePath();
-  context.fillStyle = "#514650";
-  context.fill();
-  context.strokeStyle = "#ff4048";
-  context.lineWidth = 3;
-  context.beginPath();
-  context.moveTo(object.x - width * .2, GROUND_Y - height * .4);
-  context.lineTo(object.x - width * .05, GROUND_Y - height * .22);
-  context.lineTo(object.x + width * .15, GROUND_Y - height * .34);
-  context.stroke();
+  // 読み込み中・404も、赤い鋭角トゲと大きな亀裂で危険を示す。
+  // 640×466の素材座標で描き、画像と同じ矩形・足元基準へ変換する。
+  context.save();
+  context.translate(object.x - width / 2, GROUND_Y - height * feetRatio);
+  context.scale(width / 640, height / 466);
+  const polygon = (points, color) => {
+    context.beginPath();
+    points.forEach(([x, y], i) => i ? context.lineTo(x, y) : context.moveTo(x, y));
+    context.closePath();
+    context.fillStyle = color;
+    context.fill();
+  };
+  // 太い暗色の輪郭。中央・左右の細い判定矩形もこの実体の内側。
+  polygon([[1,432],[26,353],[45,274],[89,190],[170,160],[226,157],
+    [284,35],[303,8],[320,3],[337,8],[356,35],[414,157],[472,160],
+    [552,190],[595,274],[614,353],[638,432],[617,453],[560,464],
+    [80,464],[23,453]], "#211c23");
+  polygon([[82,263],[85,148],[94,109],[112,100],[135,109],[204,183],
+    [220,230],[190,271],[117,281]], "#211c24");
+  polygon([[420,230],[436,183],[505,109],[528,100],[546,109],[555,148],
+    [558,263],[523,281],[450,271]], "#211c24");
+  polygon([[38,356],[57,278],[100,204],[176,177],[232,173],[408,173],
+    [464,177],[540,204],[583,278],[602,356],[555,340],[469,375],
+    [323,416],[174,375],[85,340]], "#45434f");
+  polygon([[38,404],[92,360],[160,390],[179,443],[70,443],[24,427]], "#45434f");
+  polygon([[461,443],[480,390],[548,360],[602,404],[616,427],[570,443]], "#45434f");
+  // 輪郭より内側に赤い三角を置く。色に頼らず、尖った面でも識別できる。
+  for (const points of [
+    [[320,17],[235,194],[268,217],[366,217],[400,194]],
+    [[118,115],[92,251],[118,266],[181,251],[204,221]],
+    [[522,115],[435,221],[459,251],[522,266],[548,251]],
+  ]) polygon(points, "#ff2418");
+  for (const points of [
+    [[320,25],[248,191],[303,145]],
+    [[118,121],[101,249],[136,202]],
+    [[522,121],[443,232],[497,202]],
+  ]) polygon(points, "#ff9b22");
+  polygon([[150,290],[193,284],[211,307],[311,259],[256,317],
+    [270,332],[221,350],[169,388],[157,371],[185,330]], "#ff302b");
+  polygon([[306,436],[346,375],[408,351],[394,318],[485,275],
+    [517,283],[440,329],[458,356],[373,390]], "#ff302b");
+  context.restore();
 }
 
 function drawBird(context, state, bird) {
