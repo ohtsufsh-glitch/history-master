@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 import unittest
+from playwright.sync_api import expect
 from runner_session_test import RunnerSessionTest
 
 
@@ -62,8 +63,8 @@ class RunnerTestModeTest(unittest.TestCase):
         self.assertEqual(self.page.evaluate("async()=>(await readAll('coinSpends')).length"), 2)
 
     def costs(self, who):
-        self.assertEqual(self.page.locator('#runner-home-cost-text').inner_text(), 'テスト中：無料で何回でも' if who=='test' else 'コイン30枚 / 1プレイ')
-        self.assertEqual(self.page.locator('#arcade-home-cost-text').inner_text(), 'テスト中：無料で何回でも' if who=='test' else 'コイン100枚 / 1プレイ')
+        expect(self.page.locator('#runner-home-cost-text')).to_have_text( 'テスト中：無料で何回でも' if who=='test' else 'コイン30枚 / 1プレイ')
+        expect(self.page.locator('#arcade-home-cost-text')).to_have_text( 'テスト中：無料で何回でも' if who=='test' else 'コイン100枚 / 1プレイ')
 
     def test_home_switch_reload_history_and_stale_async(self):
         self.page.evaluate("navigateHome('student')");self.costs('student')
