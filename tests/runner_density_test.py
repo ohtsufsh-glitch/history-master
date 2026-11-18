@@ -430,7 +430,7 @@ class RunnerDensityCompatibilityTest(unittest.TestCase):
         probe="""async()=>{
           const m=await loadRunnerModel(),p=(await readAll('runnerPlays')).find(p=>p.profile==='test'&&p.status==='active');
           const c=await openRunnerSession('test',p.id,{lifecycle:false}),s=c.view.state;
-          if(s.stageVersion!==6||!s.birds.every(b=>b.speed===120)||s.mode!=='paused')throw Error('reload state');
+          if(s.stageVersion!==7||!s.birds.every(b=>b.speed===120)||s.mode!=='paused')throw Error('reload state');
           return {snapshot:m.snapshotRunner(s),birds:s.birds.map(b=>m.birdCenter(s,b))};
         }"""
         saved=self.page.evaluate(probe)

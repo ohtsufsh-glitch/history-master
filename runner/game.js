@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.50";
-import { STAGES, getStage } from "./stages.js?v=1.7.50";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.50";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.51";
+import { STAGES, getStage } from "./stages.js?v=1.7.51";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.51";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -105,6 +105,7 @@ function createRunnerState(course = COURSE, characterId = course?.characterId ??
   const state = { stageId: stage.stageId ?? null, stageVersion: stage.stageVersion ?? 1,
     holes: (stage.holes ?? []).map(hole => ({...hole})),
     holeFailure: stage.holeFailure ?? "recover",
+    crumbling: stage.crumbling ?? [],
     spikes: (stage.spikes ?? []).map(spike => ({...spike})),
     routeWarnings: (stage.routeWarnings ?? []).map(route => ({...route})),
     birds: (stage.birds ?? []).map(bird => ({...bird})), goalDistance: stage.goalDistance,
@@ -180,8 +181,18 @@ function advanceMotion(state, seconds) {
         state.feetY = bounds.top;
         const untilEdge = (bounds.right + state.speed * remaining -
           (CHARACTER_X - PLATFORM.footHalfWidth)) / state.speed;
-        if (untilEdge > remaining + PHYSICS_EPSILON) return;
-        remaining = Math.max(0, remaining - Math.max(0, untilEdge));
+        const crumble = state.crumbling.find(p => p.id === platform.id);
+        // landingUntilは接地中に上書きされない着地アニメの終了時刻。
+        // サブステップ途中の崩壊時刻で支持を切り、残り時間は自由落下する。
+        const untilCollapse = crumble ? state.landingUntil - CHARACTER_SET.landingSeconds +
+          crumble.seconds - (state.animationTime - remaining) : Infinity;
+        const untilRelease = Math.min(untilEdge, untilCollapse);
+        if (untilRelease > remaining + PHYSICS_EPSILON) return;
+        if (untilCollapse <= untilEdge + PHYSICS_EPSILON) {
+          // 不在そのものが永続状態。再生成せず保存し、描画と着地判定の両方から除く。
+          state.objects = state.objects.filter(o => o.id !== platform.id);
+        }
+        remaining = Math.max(0, remaining - Math.max(0, untilRelease));
       }
       state.supportId = null;
       state.airAction = "fall";
@@ -726,15 +737,38 @@ function drawRouteWarnings(context, state) {
   }
 }
 
-function drawPlatform(context, object) {
+function crumbleProgress(state, object) {
+  const crumble = state.crumbling.find(p => p.id === object.id);
+  if (!crumble) return null;
+  return state.supportId === object.id ? Math.max(0, Math.min(1,
+    (state.animationTime - state.landingUntil + CHARACTER_SET.landingSeconds) / crumble.seconds)) : 0;
+}
+
+function drawPlatform(context, object, state) {
   const { left, top, width, thickness } = platformBounds(object);
-  context.fillStyle = "#79c9d4";
+  const progress = crumbleProgress(state, object);
+  context.fillStyle = progress === null ? "#79c9d4" : progress > .65 ? "#ed9962" : "#e4bc85";
   context.fillRect(left, top, width, thickness);
-  context.fillStyle = "#d9f6b0";
+  context.fillStyle = progress === null ? "#d9f6b0" : "#fff1c1";
   context.fillRect(left, top, width, Math.min(6, thickness));
-  context.strokeStyle = "#397b85";
+  context.strokeStyle = progress === null ? "#397b85" : "#65402c";
   context.lineWidth = 2;
   context.strokeRect(left + 1, top + 1, width - 2, thickness - 2);
+  if (progress !== null) {
+    context.lineWidth = state.supportId === object.id ? 4 : 3;
+    for (let x = left + 20; x < left + width - 10; x += 44) {
+      context.beginPath();
+      context.moveTo(x, top + 4);
+      context.lineTo(x - 7, top + 13);
+      context.lineTo(x + 4, top + 19);
+      context.lineTo(x - 5 - progress * 9, top + thickness - 3);
+      if (state.supportId === object.id) {
+        context.moveTo(x + 4, top + 19);
+        context.lineTo(x + 15 + progress * 12, top + 10);
+      }
+      context.stroke();
+    }
+  }
 }
 
 function drawWall(context, object) {
@@ -781,7 +815,7 @@ function drawObjects(context, state, obstacleImage) {
     } else if (object.type === "wall") {
       drawWall(context, object);
     } else if (object.type === "platform") {
-      drawPlatform(context, object);
+      drawPlatform(context, object, state);
     } else if (object.type === "star") {
       context.beginPath();
       for (let point = 0; point < 10; point++) {
@@ -1277,13 +1311,24 @@ function restoreRunner(play) {
   if(s.nextSpawn!==next||!Array.isArray(s.collectedStarIds)||new Set(s.collectedStarIds).size!==s.collectedStarIds.length||
     !s.collectedStarIds.every(id=>Number.isInteger(id)&&id>=0&&id<next&&state.course[id].type==='star')||
     s.score!==s.collectedStarIds.length*10||s.score!==play.score||s.score>100)throw new Error('スター記録が不正です。');
-  const expected=courseObjectsAt(state,s.distance,next,s.collectedStarIds);
+  // 版7だけ崩れる足場の不在を認める。通常足場・他object・旧版は従来どおり完全一致。
+  const presentIds=new Set(Array.isArray(s.objects)?s.objects.map(o=>o?.id):[]);
+  const expected=courseObjectsAt(state,s.distance,next,s.collectedStarIds).filter(o=> {
+    const crumble=state.crumbling.find(p=>p.id===o.id);
+    // 最も早い水平接触から必要秒数が経つ前の消失も拒否する。
+    return presentIds.has(o.id)||!crumble||
+      platformBounds(o).left+state.speed*crumble.seconds>CHARACTER_X+PLATFORM.footHalfWidth+1e-6;
+  });
   if(!Array.isArray(s.objects)||s.objects.length!==expected.length||!s.objects.every((o,i)=>{
     const e=expected[i];return Object.keys(o).length===Object.keys(e).length&&Object.keys(e).every(k=>k==='x'?Math.abs(o.x-e.x)<1e-6:o[k]===e[k]);
   }))throw new Error('コース状態が不正です。');
   if(s.hitPoint!==null && (!s.hitPoint||Object.keys(s.hitPoint).sort().join(',')!=='distance,x,y'||!Object.values(s.hitPoint).every(Number.isFinite)))throw new Error('衝撃状態が不正です。');
   if(s.supportId!==null && s.supportId!=='ground' && !s.objects.some(o=>o.id===s.supportId&&o.type==='platform'&&overlapsPlatform(o)&&Math.abs(platformBounds(o).top-s.feetY)<1e-6))throw new Error('足場状態が不正です。');
   if(s.supportId==='ground'&&(s.feetY!==GROUND_Y||s.velocityY!==0||groundHoleAt(state,s.distance)))throw new Error('接地状態が不正です。');
+  const crumble=state.crumbling.find(p=>p.id===s.supportId);
+  if(crumble && (s.landingUntil<CHARACTER_SET.landingSeconds ||
+    s.landingUntil-CHARACTER_SET.landingSeconds>s.animationTime+PHYSICS_EPSILON ||
+    s.animationTime-s.landingUntil+CHARACTER_SET.landingSeconds>=crumble.seconds+PHYSICS_EPSILON))throw new Error('崩れる足場の接地時刻が不正です。');
   Object.assign(state,structuredClone(s));delete state.version;
   if(state.mode!=='finished')state.mode='paused';
   return state;
@@ -1293,4 +1338,4 @@ export {snapshotRunner,restoreRunner,STAGES,getStage};
 // コースとゲーム状態はDOMから独立。配置の差し替えや決定的なルール検証に使う。
 export { ANIMATION_SETS, loadCharacterImages, drawCharacter, describeCharacter, selectionItems, renderSelectionCards, CHARACTERS, getCharacter, COURSE, COLLISION, CHARACTER_X, SPAWN_X, CHARACTER_IMAGE, CHARACTER_SET, OBSTACLE_IMAGE, PLATFORM, GROUND_Y, JUMP, COURSE_LENGTH, SCROLL_SPEED,
   createRunnerState, updateRunner, resumeRunner, startJump, progressPercent, goalX, characterCenter, characterPose,
-  spikeCenter, touchesSpike, SPIKE_RADIUS, drawSpike, drawBird, drawRouteWarnings, platformBounds, wallBounds, birdCenter, touchesBird, BIRD_RADIUS, characterBob, shadowY };
+  spikeCenter, touchesSpike, SPIKE_RADIUS, drawSpike, drawBird, drawRouteWarnings, platformBounds, wallBounds, birdCenter, touchesBird, BIRD_RADIUS, characterBob, shadowY, crumbleProgress, drawPlatform };

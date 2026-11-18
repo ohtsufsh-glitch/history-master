@@ -122,7 +122,7 @@ class RunnerBalanceCompatibilityTest(unittest.TestCase):
           }
           for(const id of ['S05','S06']){
             const old=base.states.find(r=>r.play.stageId===id&&r.play.snapshot.elapsed>22).play;
-            await installPhase([old]);const fresh=await purchaseRunnerPlay({profile:'test',stageId:id,characterId:'shiba'});if(fresh.stageVersion!==6)throw Error('purchase version');
+            await installPhase([old]);const fresh=await purchaseRunnerPlay({profile:'test',stageId:id,characterId:'shiba'});if(fresh.stageVersion!==7)throw Error('purchase version');
             const data=await snapshotAllStores();validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:10,data});await plushInstall(data);
             if(JSON.stringify(data)!==JSON.stringify(await snapshotAllStores()))throw Error('backup stores');
             for(const p of [old,fresh]){const c=await openRunnerSession(p.profile,p.id,{lifecycle:false});if(c.view.state.stageVersion!==p.stageVersion)throw Error('version conversion');}

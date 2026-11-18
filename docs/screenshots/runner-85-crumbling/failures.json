@@ -1,0 +1,20 @@
+[
+  {
+    "id": "S05",
+    "mode": "finished",
+    "lives": 0,
+    "reason": "collision",
+    "feetY": 470.1464423273554,
+    "x": 5805.000000000162,
+    "collapsed": true
+  },
+  {
+    "id": "S06",
+    "mode": "finished",
+    "lives": 0,
+    "reason": "collision",
+    "feetY": 470.1464423273554,
+    "x": 6375.000000000266,
+    "collapsed": true
+  }
+]

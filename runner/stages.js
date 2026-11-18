@@ -473,15 +473,31 @@ const BALANCED_STAGES = [
   course:Object.freeze(stage.course.slice().sort((a,b)=>a.at-b.at).map(e=>Object.freeze(e))),
 }));
 
+// 版7の崩れる足場。固定定義をcourseの外に置き、snapshot v2のobject項目を増やさない。
+// 秒数は連続接地時間。ジャンプで解除し、再着地から数え直す。
+const CRUMBLING_STAGES = BALANCED_STAGES.map(stage => Object.freeze({...stage,
+  stageVersion: 7,
+  course: stage.stageId === "S05" ? Object.freeze(stage.course.map(e =>
+    e.type === "platform" && Math.abs(e.at * 200 + 822 - 4930) < 1e-6 ?
+      Object.freeze({...e, width: 280}) : e)) : stage.course,
+  crumbling: Object.freeze((stage.stageId === "S05" ?
+    [[2460,.50],[2680,.55],[4930,.55],[5610,.80]] :
+    [[1950,.35],[2600,.50],[2820,.45],[3040,.40],[4240,.50],[4920,.55],[6180,.80]])
+    .map(([x, seconds]) => Object.freeze({
+      id: stage.course.findIndex(e => e.type === "platform" && Math.abs(e.at * 200 + 822 - x) < 1e-6), seconds,
+    }))),
+}));
+
 // 選択・新規購入は最新版。再開は必ず(ID, 版)で引く。未知版の推測は禁止。
 const STAGES = Object.freeze(LEGACY_STAGES.map(stage =>
+  CRUMBLING_STAGES.find(current => current.stageId === stage.stageId) ??
   BALANCED_STAGES.find(current => current.stageId === stage.stageId) ??
   ASCENT_STAGES.find(current => current.stageId === stage.stageId) ??
   VARIED_STAGES.find(current => current.stageId === stage.stageId) ??
   VERTICAL_STAGES.find(current => current.stageId === stage.stageId) ??
   DENSE_STAGES.find(current => current.stageId === stage.stageId) ?? stage));
 function getStage(stageId, stageVersion) {
-  return [...LEGACY_STAGES, ...VERSION2_STAGES, ...VERSION3_STAGES, ...DENSE_STAGES, ...VERTICAL_STAGES, ...VARIED_STAGES, ...ASCENT_STAGES, ...BALANCED_STAGES].find(stage =>
+  return [...LEGACY_STAGES, ...VERSION2_STAGES, ...VERSION3_STAGES, ...DENSE_STAGES, ...VERTICAL_STAGES, ...VARIED_STAGES, ...ASCENT_STAGES, ...BALANCED_STAGES, ...CRUMBLING_STAGES].find(stage =>
     stage.stageId === stageId && (stage.stageVersion ?? 1) === stageVersion);
 }
 export { STAGES, LEGACY_STAGES, getStage };

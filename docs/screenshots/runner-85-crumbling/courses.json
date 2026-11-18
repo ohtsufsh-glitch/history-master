@@ -1,0 +1,1588 @@
+[
+  {
+    "stageId": "S05",
+    "name": "トゲ岩と足場",
+    "difficulty": 5,
+    "goalDistance": 7200,
+    "course": [
+      {
+        "at": -2.01,
+        "type": "obstacle"
+      },
+      {
+        "at": -2.01,
+        "type": "star",
+        "height": 120
+      },
+      {
+        "at": -0.71,
+        "type": "obstacle"
+      },
+      {
+        "at": 0.59,
+        "type": "obstacle"
+      },
+      {
+        "at": 0.59,
+        "type": "star",
+        "height": 120
+      },
+      {
+        "at": 2.39,
+        "type": "platform",
+        "width": 90,
+        "height": 90
+      },
+      {
+        "at": 2.39,
+        "type": "star",
+        "height": 90
+      },
+      {
+        "at": 3.39,
+        "type": "platform",
+        "width": 90,
+        "height": 110
+      },
+      {
+        "at": 3.74,
+        "type": "wall",
+        "width": 580,
+        "height": 80
+      },
+      {
+        "at": 4.54,
+        "type": "platform",
+        "width": 90,
+        "height": 90
+      },
+      {
+        "at": 4.54,
+        "type": "star",
+        "height": 90
+      },
+      {
+        "at": 6.89,
+        "type": "obstacle"
+      },
+      {
+        "at": 8.19,
+        "type": "platform",
+        "width": 220,
+        "height": 80
+      },
+      {
+        "at": 8.19,
+        "type": "star",
+        "height": 80
+      },
+      {
+        "at": 9.29,
+        "type": "platform",
+        "width": 220,
+        "height": 150
+      },
+      {
+        "at": 10.49,
+        "type": "platform",
+        "width": 300,
+        "height": 200
+      },
+      {
+        "at": 11.39,
+        "type": "star",
+        "height": 320
+      },
+      {
+        "at": 12.19,
+        "type": "platform",
+        "width": 220,
+        "height": 140
+      },
+      {
+        "at": 13.39,
+        "type": "platform",
+        "width": 220,
+        "height": 70
+      },
+      {
+        "at": 13.39,
+        "type": "star",
+        "height": 70
+      },
+      {
+        "at": 15.59,
+        "type": "platform",
+        "width": 240,
+        "height": 80
+      },
+      {
+        "at": 16.79,
+        "type": "platform",
+        "width": 280,
+        "height": 150
+      },
+      {
+        "at": 18.19,
+        "type": "platform",
+        "width": 280,
+        "height": 150
+      },
+      {
+        "at": 19.39,
+        "type": "platform",
+        "width": 200,
+        "height": 80
+      },
+      {
+        "at": 19.79,
+        "type": "star",
+        "height": 80
+      },
+      {
+        "at": 20.54,
+        "type": "platform",
+        "width": 220,
+        "height": 100
+      },
+      {
+        "at": 22.24,
+        "type": "platform",
+        "width": 220,
+        "height": 150
+      },
+      {
+        "at": 23.94,
+        "type": "platform",
+        "width": 220,
+        "height": 70
+      },
+      {
+        "at": 23.94,
+        "type": "star",
+        "height": 70
+      },
+      {
+        "at": 25.64,
+        "type": "platform",
+        "width": 220,
+        "height": 140
+      },
+      {
+        "at": 27.34,
+        "type": "platform",
+        "width": 220,
+        "height": 80
+      },
+      {
+        "at": 29.04,
+        "type": "platform",
+        "width": 220,
+        "height": 130
+      },
+      {
+        "at": 30.74,
+        "type": "platform",
+        "width": 220,
+        "height": 70
+      },
+      {
+        "at": 30.74,
+        "type": "star",
+        "height": 70
+      }
+    ],
+    "stageVersion": 6,
+    "birds": [
+      {
+        "x": 2240,
+        "height": 133,
+        "speed": 120
+      },
+      {
+        "x": 4960,
+        "height": 243,
+        "speed": 120
+      },
+      {
+        "x": 6624,
+        "height": 143,
+        "speed": 120
+      },
+      {
+        "x": 7008,
+        "height": 235,
+        "speed": 120
+      },
+      {
+        "x": 7392,
+        "height": 240,
+        "speed": 120
+      },
+      {
+        "x": 7888,
+        "height": 330,
+        "speed": 120
+      },
+      {
+        "x": 8208,
+        "height": 143,
+        "speed": 120
+      },
+      {
+        "x": 8752,
+        "height": 193,
+        "speed": 120
+      },
+      {
+        "x": 9296,
+        "height": 113,
+        "speed": 120
+      },
+      {
+        "x": 9840,
+        "height": 183,
+        "speed": 120
+      },
+      {
+        "x": 10384,
+        "height": 123,
+        "speed": 120
+      },
+      {
+        "x": 10928,
+        "height": 173,
+        "speed": 120
+      }
+    ],
+    "holes": [
+      {
+        "start": 2500,
+        "end": 3600
+      },
+      {
+        "start": 3980,
+        "end": 4210
+      },
+      {
+        "start": 4250,
+        "end": 4510
+      },
+      {
+        "start": 4550,
+        "end": 4790
+      },
+      {
+        "start": 4860,
+        "end": 7010
+      }
+    ],
+    "spikes": [
+      {
+        "x": 1080,
+        "height": 150,
+        "amplitude": 40,
+        "period": 2.6,
+        "phase": 0.2
+      },
+      {
+        "x": 3260,
+        "height": 270,
+        "amplitude": 55,
+        "period": 2.8,
+        "phase": 3.59
+      },
+      {
+        "x": 4660,
+        "height": 50,
+        "amplitude": 25,
+        "period": 2.4,
+        "phase": 2
+      },
+      {
+        "x": 6440,
+        "height": 70,
+        "amplitude": 25,
+        "period": 2.6,
+        "phase": 0.5
+      },
+      {
+        "x": 2590,
+        "height": 115,
+        "amplitude": 35,
+        "period": 2.7,
+        "phase": 0
+      },
+      {
+        "x": 3080,
+        "height": 230,
+        "amplitude": 35,
+        "period": 2.3,
+        "phase": 0
+      }
+    ],
+    "routeWarnings": [],
+    "holeFailure": "fatal"
+  },
+  {
+    "stageId": "S05",
+    "name": "トゲ岩と足場",
+    "difficulty": 5,
+    "goalDistance": 7200,
+    "course": [
+      {
+        "at": -2.01,
+        "type": "obstacle"
+      },
+      {
+        "at": -2.01,
+        "type": "star",
+        "height": 120
+      },
+      {
+        "at": -0.71,
+        "type": "obstacle"
+      },
+      {
+        "at": 0.59,
+        "type": "obstacle"
+      },
+      {
+        "at": 0.59,
+        "type": "star",
+        "height": 120
+      },
+      {
+        "at": 2.39,
+        "type": "platform",
+        "width": 90,
+        "height": 90
+      },
+      {
+        "at": 2.39,
+        "type": "star",
+        "height": 90
+      },
+      {
+        "at": 3.39,
+        "type": "platform",
+        "width": 90,
+        "height": 110
+      },
+      {
+        "at": 3.74,
+        "type": "wall",
+        "width": 580,
+        "height": 80
+      },
+      {
+        "at": 4.54,
+        "type": "platform",
+        "width": 90,
+        "height": 90
+      },
+      {
+        "at": 4.54,
+        "type": "star",
+        "height": 90
+      },
+      {
+        "at": 6.89,
+        "type": "obstacle"
+      },
+      {
+        "at": 8.19,
+        "type": "platform",
+        "width": 220,
+        "height": 80
+      },
+      {
+        "at": 8.19,
+        "type": "star",
+        "height": 80
+      },
+      {
+        "at": 9.29,
+        "type": "platform",
+        "width": 220,
+        "height": 150
+      },
+      {
+        "at": 10.49,
+        "type": "platform",
+        "width": 300,
+        "height": 200
+      },
+      {
+        "at": 11.39,
+        "type": "star",
+        "height": 320
+      },
+      {
+        "at": 12.19,
+        "type": "platform",
+        "width": 220,
+        "height": 140
+      },
+      {
+        "at": 13.39,
+        "type": "platform",
+        "width": 220,
+        "height": 70
+      },
+      {
+        "at": 13.39,
+        "type": "star",
+        "height": 70
+      },
+      {
+        "at": 15.59,
+        "type": "platform",
+        "width": 240,
+        "height": 80
+      },
+      {
+        "at": 16.79,
+        "type": "platform",
+        "width": 280,
+        "height": 150
+      },
+      {
+        "at": 18.19,
+        "type": "platform",
+        "width": 280,
+        "height": 150
+      },
+      {
+        "at": 19.39,
+        "type": "platform",
+        "width": 200,
+        "height": 80
+      },
+      {
+        "at": 19.79,
+        "type": "star",
+        "height": 80
+      },
+      {
+        "at": 20.54,
+        "type": "platform",
+        "width": 280,
+        "height": 100
+      },
+      {
+        "at": 22.24,
+        "type": "platform",
+        "width": 220,
+        "height": 150
+      },
+      {
+        "at": 23.94,
+        "type": "platform",
+        "width": 220,
+        "height": 70
+      },
+      {
+        "at": 23.94,
+        "type": "star",
+        "height": 70
+      },
+      {
+        "at": 25.64,
+        "type": "platform",
+        "width": 220,
+        "height": 140
+      },
+      {
+        "at": 27.34,
+        "type": "platform",
+        "width": 220,
+        "height": 80
+      },
+      {
+        "at": 29.04,
+        "type": "platform",
+        "width": 220,
+        "height": 130
+      },
+      {
+        "at": 30.74,
+        "type": "platform",
+        "width": 220,
+        "height": 70
+      },
+      {
+        "at": 30.74,
+        "type": "star",
+        "height": 70
+      }
+    ],
+    "stageVersion": 7,
+    "birds": [
+      {
+        "x": 2240,
+        "height": 133,
+        "speed": 120
+      },
+      {
+        "x": 4960,
+        "height": 243,
+        "speed": 120
+      },
+      {
+        "x": 6624,
+        "height": 143,
+        "speed": 120
+      },
+      {
+        "x": 7008,
+        "height": 235,
+        "speed": 120
+      },
+      {
+        "x": 7392,
+        "height": 240,
+        "speed": 120
+      },
+      {
+        "x": 7888,
+        "height": 330,
+        "speed": 120
+      },
+      {
+        "x": 8208,
+        "height": 143,
+        "speed": 120
+      },
+      {
+        "x": 8752,
+        "height": 193,
+        "speed": 120
+      },
+      {
+        "x": 9296,
+        "height": 113,
+        "speed": 120
+      },
+      {
+        "x": 9840,
+        "height": 183,
+        "speed": 120
+      },
+      {
+        "x": 10384,
+        "height": 123,
+        "speed": 120
+      },
+      {
+        "x": 10928,
+        "height": 173,
+        "speed": 120
+      }
+    ],
+    "holes": [
+      {
+        "start": 2500,
+        "end": 3600
+      },
+      {
+        "start": 3980,
+        "end": 4210
+      },
+      {
+        "start": 4250,
+        "end": 4510
+      },
+      {
+        "start": 4550,
+        "end": 4790
+      },
+      {
+        "start": 4860,
+        "end": 7010
+      }
+    ],
+    "spikes": [
+      {
+        "x": 1080,
+        "height": 150,
+        "amplitude": 40,
+        "period": 2.6,
+        "phase": 0.2
+      },
+      {
+        "x": 3260,
+        "height": 270,
+        "amplitude": 55,
+        "period": 2.8,
+        "phase": 3.59
+      },
+      {
+        "x": 4660,
+        "height": 50,
+        "amplitude": 25,
+        "period": 2.4,
+        "phase": 2
+      },
+      {
+        "x": 6440,
+        "height": 70,
+        "amplitude": 25,
+        "period": 2.6,
+        "phase": 0.5
+      },
+      {
+        "x": 2590,
+        "height": 115,
+        "amplitude": 35,
+        "period": 2.7,
+        "phase": 0
+      },
+      {
+        "x": 3080,
+        "height": 230,
+        "amplitude": 35,
+        "period": 2.3,
+        "phase": 0
+      }
+    ],
+    "routeWarnings": [],
+    "holeFailure": "fatal",
+    "crumbling": [
+      {
+        "id": 12,
+        "seconds": 0.5
+      },
+      {
+        "id": 14,
+        "seconds": 0.55
+      },
+      {
+        "id": 25,
+        "seconds": 0.55
+      },
+      {
+        "id": 27,
+        "seconds": 0.8
+      }
+    ]
+  },
+  {
+    "stageId": "S06",
+    "name": "マスターコース",
+    "difficulty": 6,
+    "goalDistance": 8000,
+    "course": [
+      {
+        "at": -2.01,
+        "type": "obstacle"
+      },
+      {
+        "at": -2.01,
+        "type": "star",
+        "height": 120
+      },
+      {
+        "at": -0.81,
+        "type": "obstacle"
+      },
+      {
+        "at": 0.39,
+        "type": "obstacle"
+      },
+      {
+        "at": 0.39,
+        "type": "star",
+        "height": 120
+      },
+      {
+        "at": 2.39,
+        "type": "platform",
+        "width": 90,
+        "height": 90
+      },
+      {
+        "at": 2.39,
+        "type": "star",
+        "height": 90
+      },
+      {
+        "at": 3.39,
+        "type": "platform",
+        "width": 90,
+        "height": 110
+      },
+      {
+        "at": 4.29,
+        "type": "wall",
+        "width": 800,
+        "height": 70
+      },
+      {
+        "at": 4.59,
+        "type": "platform",
+        "width": 90,
+        "height": 80
+      },
+      {
+        "at": 4.59,
+        "type": "star",
+        "height": 80
+      },
+      {
+        "at": 5.64,
+        "type": "platform",
+        "width": 90,
+        "height": 105
+      },
+      {
+        "at": 7.69,
+        "type": "obstacle"
+      },
+      {
+        "at": 8.89,
+        "type": "platform",
+        "width": 220,
+        "height": 80
+      },
+      {
+        "at": 8.89,
+        "type": "star",
+        "height": 80
+      },
+      {
+        "at": 9.99,
+        "type": "platform",
+        "width": 220,
+        "height": 140
+      },
+      {
+        "at": 11.09,
+        "type": "platform",
+        "width": 220,
+        "height": 185
+      },
+      {
+        "at": 12.29,
+        "type": "platform",
+        "width": 300,
+        "height": 210
+      },
+      {
+        "at": 12.89,
+        "type": "star",
+        "height": 330
+      },
+      {
+        "at": 13.99,
+        "type": "platform",
+        "width": 240,
+        "height": 140
+      },
+      {
+        "at": 15.19,
+        "type": "platform",
+        "width": 220,
+        "height": 70
+      },
+      {
+        "at": 15.19,
+        "type": "star",
+        "height": 70
+      },
+      {
+        "at": 17.09,
+        "type": "platform",
+        "width": 240,
+        "height": 80
+      },
+      {
+        "at": 18.19,
+        "type": "platform",
+        "width": 240,
+        "height": 150
+      },
+      {
+        "at": 20.49,
+        "type": "platform",
+        "width": 800,
+        "height": 150
+      },
+      {
+        "at": 22.19,
+        "type": "obstacle"
+      },
+      {
+        "at": 22.19,
+        "type": "platform",
+        "width": 240,
+        "height": 80
+      },
+      {
+        "at": 22.69,
+        "type": "star",
+        "height": 80
+      },
+      {
+        "at": 23.39,
+        "type": "platform",
+        "width": 220,
+        "height": 100
+      },
+      {
+        "at": 25.09,
+        "type": "platform",
+        "width": 220,
+        "height": 150
+      },
+      {
+        "at": 26.79,
+        "type": "platform",
+        "width": 220,
+        "height": 70
+      },
+      {
+        "at": 26.79,
+        "type": "star",
+        "height": 70
+      },
+      {
+        "at": 28.49,
+        "type": "platform",
+        "width": 220,
+        "height": 140
+      },
+      {
+        "at": 30.19,
+        "type": "platform",
+        "width": 220,
+        "height": 80
+      },
+      {
+        "at": 31.89,
+        "type": "platform",
+        "width": 220,
+        "height": 130
+      },
+      {
+        "at": 33.59,
+        "type": "platform",
+        "width": 220,
+        "height": 70
+      },
+      {
+        "at": 33.59,
+        "type": "star",
+        "height": 70
+      }
+    ],
+    "stageVersion": 6,
+    "birds": [
+      {
+        "x": 2240,
+        "height": 133,
+        "speed": 120
+      },
+      {
+        "x": 2944,
+        "height": 123,
+        "speed": 120
+      },
+      {
+        "x": 5440,
+        "height": 253,
+        "speed": 120
+      },
+      {
+        "x": 7296,
+        "height": 233,
+        "speed": 120
+      },
+      {
+        "x": 7648,
+        "height": 233,
+        "speed": 120
+      },
+      {
+        "x": 8000,
+        "height": 233,
+        "speed": 120
+      },
+      {
+        "x": 8352,
+        "height": 233,
+        "speed": 120
+      },
+      {
+        "x": 8800,
+        "height": 340,
+        "speed": 120
+      },
+      {
+        "x": 9120,
+        "height": 143,
+        "speed": 120
+      },
+      {
+        "x": 9344,
+        "height": 320,
+        "speed": 120
+      },
+      {
+        "x": 9664,
+        "height": 193,
+        "speed": 120
+      },
+      {
+        "x": 9888,
+        "height": 240,
+        "speed": 120
+      },
+      {
+        "x": 10208,
+        "height": 113,
+        "speed": 120
+      },
+      {
+        "x": 10432,
+        "height": 310,
+        "speed": 120
+      },
+      {
+        "x": 10752,
+        "height": 183,
+        "speed": 120
+      },
+      {
+        "x": 10976,
+        "height": 250,
+        "speed": 120
+      },
+      {
+        "x": 11296,
+        "height": 123,
+        "speed": 120
+      },
+      {
+        "x": 11520,
+        "height": 300,
+        "speed": 120
+      },
+      {
+        "x": 11840,
+        "height": 173,
+        "speed": 120
+      },
+      {
+        "x": 12064,
+        "height": 240,
+        "speed": 120
+      },
+      {
+        "x": 12384,
+        "height": 113,
+        "speed": 120
+      }
+    ],
+    "holes": [
+      {
+        "start": 2640,
+        "end": 3960
+      },
+      {
+        "start": 5480,
+        "end": 7780
+      }
+    ],
+    "spikes": [
+      {
+        "x": 1080,
+        "height": 100,
+        "amplitude": 45,
+        "period": 2.4,
+        "phase": 0.4
+      },
+      {
+        "x": 3520,
+        "height": 120,
+        "amplitude": 40,
+        "period": 2.6,
+        "phase": 1.5
+      },
+      {
+        "x": 3980,
+        "height": 190,
+        "amplitude": 45,
+        "period": 2.8,
+        "phase": 0.8
+      },
+      {
+        "x": 5300,
+        "height": 50,
+        "amplitude": 25,
+        "period": 2.4,
+        "phase": 2
+      },
+      {
+        "x": 2740,
+        "height": 115,
+        "amplitude": 35,
+        "period": 2.5,
+        "phase": 0
+      },
+      {
+        "x": 3140,
+        "height": 220,
+        "amplitude": 35,
+        "period": 2.9,
+        "phase": 0
+      },
+      {
+        "x": 5660,
+        "height": 135,
+        "amplitude": 25,
+        "period": 2.4,
+        "phase": 0.6
+      },
+      {
+        "x": 6000,
+        "height": 150,
+        "amplitude": 25,
+        "period": 2.5,
+        "phase": 0.3
+      },
+      {
+        "x": 6340,
+        "height": 105,
+        "amplitude": 30,
+        "period": 2.7,
+        "phase": 1.2
+      },
+      {
+        "x": 6720,
+        "height": 175,
+        "amplitude": 25,
+        "period": 2.9,
+        "phase": 1.7
+      },
+      {
+        "x": 7400,
+        "height": 165,
+        "amplitude": 25,
+        "period": 3.1,
+        "phase": 2
+      },
+      {
+        "x": 4420,
+        "height": 48,
+        "amplitude": 12,
+        "period": 2.1,
+        "phase": 0.2
+      },
+      {
+        "x": 4600,
+        "height": 46,
+        "amplitude": 14,
+        "period": 2.3,
+        "phase": 1
+      },
+      {
+        "x": 4780,
+        "height": 48,
+        "amplitude": 12,
+        "period": 2.5,
+        "phase": 2
+      },
+      {
+        "x": 4960,
+        "height": 46,
+        "amplitude": 14,
+        "period": 2.7,
+        "phase": 3
+      },
+      {
+        "x": 5100,
+        "height": 32,
+        "amplitude": 8,
+        "period": 2.9,
+        "phase": 4
+      }
+    ],
+    "routeWarnings": [],
+    "holeFailure": "fatal"
+  },
+  {
+    "stageId": "S06",
+    "name": "マスターコース",
+    "difficulty": 6,
+    "goalDistance": 8000,
+    "course": [
+      {
+        "at": -2.01,
+        "type": "obstacle"
+      },
+      {
+        "at": -2.01,
+        "type": "star",
+        "height": 120
+      },
+      {
+        "at": -0.81,
+        "type": "obstacle"
+      },
+      {
+        "at": 0.39,
+        "type": "obstacle"
+      },
+      {
+        "at": 0.39,
+        "type": "star",
+        "height": 120
+      },
+      {
+        "at": 2.39,
+        "type": "platform",
+        "width": 90,
+        "height": 90
+      },
+      {
+        "at": 2.39,
+        "type": "star",
+        "height": 90
+      },
+      {
+        "at": 3.39,
+        "type": "platform",
+        "width": 90,
+        "height": 110
+      },
+      {
+        "at": 4.29,
+        "type": "wall",
+        "width": 800,
+        "height": 70
+      },
+      {
+        "at": 4.59,
+        "type": "platform",
+        "width": 90,
+        "height": 80
+      },
+      {
+        "at": 4.59,
+        "type": "star",
+        "height": 80
+      },
+      {
+        "at": 5.64,
+        "type": "platform",
+        "width": 90,
+        "height": 105
+      },
+      {
+        "at": 7.69,
+        "type": "obstacle"
+      },
+      {
+        "at": 8.89,
+        "type": "platform",
+        "width": 220,
+        "height": 80
+      },
+      {
+        "at": 8.89,
+        "type": "star",
+        "height": 80
+      },
+      {
+        "at": 9.99,
+        "type": "platform",
+        "width": 220,
+        "height": 140
+      },
+      {
+        "at": 11.09,
+        "type": "platform",
+        "width": 220,
+        "height": 185
+      },
+      {
+        "at": 12.29,
+        "type": "platform",
+        "width": 300,
+        "height": 210
+      },
+      {
+        "at": 12.89,
+        "type": "star",
+        "height": 330
+      },
+      {
+        "at": 13.99,
+        "type": "platform",
+        "width": 240,
+        "height": 140
+      },
+      {
+        "at": 15.19,
+        "type": "platform",
+        "width": 220,
+        "height": 70
+      },
+      {
+        "at": 15.19,
+        "type": "star",
+        "height": 70
+      },
+      {
+        "at": 17.09,
+        "type": "platform",
+        "width": 240,
+        "height": 80
+      },
+      {
+        "at": 18.19,
+        "type": "platform",
+        "width": 240,
+        "height": 150
+      },
+      {
+        "at": 20.49,
+        "type": "platform",
+        "width": 800,
+        "height": 150
+      },
+      {
+        "at": 22.19,
+        "type": "obstacle"
+      },
+      {
+        "at": 22.19,
+        "type": "platform",
+        "width": 240,
+        "height": 80
+      },
+      {
+        "at": 22.69,
+        "type": "star",
+        "height": 80
+      },
+      {
+        "at": 23.39,
+        "type": "platform",
+        "width": 220,
+        "height": 100
+      },
+      {
+        "at": 25.09,
+        "type": "platform",
+        "width": 220,
+        "height": 150
+      },
+      {
+        "at": 26.79,
+        "type": "platform",
+        "width": 220,
+        "height": 70
+      },
+      {
+        "at": 26.79,
+        "type": "star",
+        "height": 70
+      },
+      {
+        "at": 28.49,
+        "type": "platform",
+        "width": 220,
+        "height": 140
+      },
+      {
+        "at": 30.19,
+        "type": "platform",
+        "width": 220,
+        "height": 80
+      },
+      {
+        "at": 31.89,
+        "type": "platform",
+        "width": 220,
+        "height": 130
+      },
+      {
+        "at": 33.59,
+        "type": "platform",
+        "width": 220,
+        "height": 70
+      },
+      {
+        "at": 33.59,
+        "type": "star",
+        "height": 70
+      }
+    ],
+    "stageVersion": 7,
+    "birds": [
+      {
+        "x": 2240,
+        "height": 133,
+        "speed": 120
+      },
+      {
+        "x": 2944,
+        "height": 123,
+        "speed": 120
+      },
+      {
+        "x": 5440,
+        "height": 253,
+        "speed": 120
+      },
+      {
+        "x": 7296,
+        "height": 233,
+        "speed": 120
+      },
+      {
+        "x": 7648,
+        "height": 233,
+        "speed": 120
+      },
+      {
+        "x": 8000,
+        "height": 233,
+        "speed": 120
+      },
+      {
+        "x": 8352,
+        "height": 233,
+        "speed": 120
+      },
+      {
+        "x": 8800,
+        "height": 340,
+        "speed": 120
+      },
+      {
+        "x": 9120,
+        "height": 143,
+        "speed": 120
+      },
+      {
+        "x": 9344,
+        "height": 320,
+        "speed": 120
+      },
+      {
+        "x": 9664,
+        "height": 193,
+        "speed": 120
+      },
+      {
+        "x": 9888,
+        "height": 240,
+        "speed": 120
+      },
+      {
+        "x": 10208,
+        "height": 113,
+        "speed": 120
+      },
+      {
+        "x": 10432,
+        "height": 310,
+        "speed": 120
+      },
+      {
+        "x": 10752,
+        "height": 183,
+        "speed": 120
+      },
+      {
+        "x": 10976,
+        "height": 250,
+        "speed": 120
+      },
+      {
+        "x": 11296,
+        "height": 123,
+        "speed": 120
+      },
+      {
+        "x": 11520,
+        "height": 300,
+        "speed": 120
+      },
+      {
+        "x": 11840,
+        "height": 173,
+        "speed": 120
+      },
+      {
+        "x": 12064,
+        "height": 240,
+        "speed": 120
+      },
+      {
+        "x": 12384,
+        "height": 113,
+        "speed": 120
+      }
+    ],
+    "holes": [
+      {
+        "start": 2640,
+        "end": 3960
+      },
+      {
+        "start": 5480,
+        "end": 7780
+      }
+    ],
+    "spikes": [
+      {
+        "x": 1080,
+        "height": 100,
+        "amplitude": 45,
+        "period": 2.4,
+        "phase": 0.4
+      },
+      {
+        "x": 3520,
+        "height": 120,
+        "amplitude": 40,
+        "period": 2.6,
+        "phase": 1.5
+      },
+      {
+        "x": 3980,
+        "height": 190,
+        "amplitude": 45,
+        "period": 2.8,
+        "phase": 0.8
+      },
+      {
+        "x": 5300,
+        "height": 50,
+        "amplitude": 25,
+        "period": 2.4,
+        "phase": 2
+      },
+      {
+        "x": 2740,
+        "height": 115,
+        "amplitude": 35,
+        "period": 2.5,
+        "phase": 0
+      },
+      {
+        "x": 3140,
+        "height": 220,
+        "amplitude": 35,
+        "period": 2.9,
+        "phase": 0
+      },
+      {
+        "x": 5660,
+        "height": 135,
+        "amplitude": 25,
+        "period": 2.4,
+        "phase": 0.6
+      },
+      {
+        "x": 6000,
+        "height": 150,
+        "amplitude": 25,
+        "period": 2.5,
+        "phase": 0.3
+      },
+      {
+        "x": 6340,
+        "height": 105,
+        "amplitude": 30,
+        "period": 2.7,
+        "phase": 1.2
+      },
+      {
+        "x": 6720,
+        "height": 175,
+        "amplitude": 25,
+        "period": 2.9,
+        "phase": 1.7
+      },
+      {
+        "x": 7400,
+        "height": 165,
+        "amplitude": 25,
+        "period": 3.1,
+        "phase": 2
+      },
+      {
+        "x": 4420,
+        "height": 48,
+        "amplitude": 12,
+        "period": 2.1,
+        "phase": 0.2
+      },
+      {
+        "x": 4600,
+        "height": 46,
+        "amplitude": 14,
+        "period": 2.3,
+        "phase": 1
+      },
+      {
+        "x": 4780,
+        "height": 48,
+        "amplitude": 12,
+        "period": 2.5,
+        "phase": 2
+      },
+      {
+        "x": 4960,
+        "height": 46,
+        "amplitude": 14,
+        "period": 2.7,
+        "phase": 3
+      },
+      {
+        "x": 5100,
+        "height": 32,
+        "amplitude": 8,
+        "period": 2.9,
+        "phase": 4
+      }
+    ],
+    "routeWarnings": [],
+    "holeFailure": "fatal",
+    "crumbling": [
+      {
+        "id": 11,
+        "seconds": 0.35
+      },
+      {
+        "id": 13,
+        "seconds": 0.5
+      },
+      {
+        "id": 15,
+        "seconds": 0.45
+      },
+      {
+        "id": 16,
+        "seconds": 0.4
+      },
+      {
+        "id": 22,
+        "seconds": 0.5
+      },
+      {
+        "id": 24,
+        "seconds": 0.55
+      },
+      {
+        "id": 30,
+        "seconds": 0.8
+      }
+    ]
+  }
+]
