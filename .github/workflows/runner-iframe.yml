@@ -25,6 +25,7 @@ on:
       - 'tests/fixtures/runner85-tuning-base.json'
       - 'tests/fixtures/runner85-phase2a-base.json'
       - 'tests/fixtures/runner85-v1.json'
+      - 'tests/runner_test_mode_test.py'
       - 'tests/runner_session_test.py'
       - 'tests/runner_storage_test.py'
       - 'tests/runner_integration_test.py'
@@ -55,6 +56,7 @@ jobs:
           PYTHONPATH: tests
         run: |
           python -m unittest -v \
+            runner_test_mode_test \
             runner_layout_test \
             runner_header_test \
             home_arcade_test.HomeArcadeTest \

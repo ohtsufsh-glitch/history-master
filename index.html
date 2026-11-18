@@ -643,8 +643,8 @@
       #runner-frame-host { height:90vh; height:90dvh; }
     }
   </style>
-  <link rel="stylesheet" href="./runner/balance.css?v=1.7.51">
-  <link rel="stylesheet" href="./runner/selection.css?v=1.7.51">
+  <link rel="stylesheet" href="./runner/balance.css?v=1.7.52">
+  <link rel="stylesheet" href="./runner/selection.css?v=1.7.52">
 </head>
 <body>
 <!-- 立体的な金貨イラスト：ホーム・正解時に共用 -->
@@ -716,7 +716,7 @@
       <button id="open-arcade" class="primary arcade-entry" type="button">キャッチャーで遊ぶ →</button>
     </div>
     <section class="home-panel arcade-home-panel runner-home-panel" aria-labelledby="runner-home-title">
-      <div class="panel-head"><div><span class="section-kicker">ARCADE</span><h3 id="runner-home-title">🐕 わくわくランナー</h3></div><div class="arcade-home-cost"><img src="assets/coins/crown-gold.webp" width="30" height="30" alt=""><span>コイン30枚 / 1プレイ</span></div></div>
+      <div class="panel-head"><div><span class="section-kicker">ARCADE</span><h3 id="runner-home-title">🐕 わくわくランナー</h3></div><div class="arcade-home-cost"><img src="assets/coins/crown-gold.webp" width="30" height="30" alt=""><span id="runner-home-cost-text">コイン30枚 / 1プレイ</span></div></div>
       <div class="arcade-home-body">
         <div class="arcade-home-preview" aria-hidden="true">🐕 <span>⭐</span> 🏁</div>
         <div class="arcade-home-copy"><p>ジャンプでトゲ岩を飛びこえて、ゴールを目指そう！</p><p id="runner-home-info" class="small muted">実績を確認中…</p></div>
@@ -743,7 +743,7 @@
     <div id="runner-choices">
       <h3 id="formal-stage-heading">ステージをえらぶ</h3><select id="formal-stage" hidden aria-hidden="true" tabindex="-1"></select>
       <div id="formal-stage-cards" class="runner-choice-grid" role="group" aria-labelledby="formal-stage-heading"></div>
-      <p>🔒のステージは、ひとつ前のステージを正式クリアすると遊べるよ。</p>
+      <p id="formal-stage-lock-help">🔒のステージは、ひとつ前のステージを正式クリアすると遊べるよ。</p>
       <h3 id="formal-character-heading">キャラクターをえらぶ</h3><select id="formal-character" hidden aria-hidden="true" tabindex="-1"></select>
       <div id="formal-character-cards" class="runner-choice-grid" role="group" aria-labelledby="formal-character-heading"></div>
       <p id="formal-character-info" role="status" aria-live="polite" aria-atomic="true"></p>
@@ -1006,7 +1006,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.51";
+const APP_VERSION = "v1.7.52";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3243,7 +3243,7 @@ function summarizeRunnerPlays(records, who) {
 // C3-B 内部API。無料試遊のURL/選択UIからは呼ばない。
 let runnerModelPromise;
 function loadRunnerModel() {
-  return runnerModelPromise ||= import('./runner/game.js?v=1.7.51');
+  return runnerModelPromise ||= import('./runner/game.js?v=1.7.52');
 }
 function runnerTransaction(names, action, {mode='readwrite', keys={}}={}) {
   return new Promise((resolve,reject)=>{
@@ -3264,6 +3264,10 @@ function runnerTransaction(names, action, {mode='readwrite', keys={}}={}) {
     }
   });
 }
+// テスト用の選択権限だけを拡張し、正式クリア・最高点の集計は変更しない。
+function runnerUnlockedStageIds(summary, who) {
+  return who==='test'?[...RUNNER_STAGE_IDS]:summary.unlockedStageIds;
+}
 async function purchaseRunnerPlay({profile:who,stageId,characterId,id=crypto.randomUUID()}) {
   const model=await loadRunnerModel();
   if(!isProfile(who)||!RUNNER_STAGE_IDS.includes(stageId)||!RUNNER_CHARACTER_IDS.includes(characterId)||!isNonemptyString(id,100))throw new Error('プレイ指定が不正です。');
@@ -3271,7 +3275,7 @@ async function purchaseRunnerPlay({profile:who,stageId,characterId,id=crypto.ran
     const active=d.runnerPlays.find(p=>p.profile===who&&p.status==='active');
     if(active)return active; // 定義版が合わなくても、購入済みプレイを保持・返却する。
     if(d.runnerPlays.some(p=>p.id===id)||d.arcadePlays.some(p=>p.id===id)||d.coinSpends.some(p=>p.id===id))throw new Error('このプレイIDは使用済みです。');
-    if(!summarizeRunnerPlays(d.runnerPlays,who).unlockedStageIds.includes(stageId)||
+    if(!runnerUnlockedStageIds(summarizeRunnerPlays(d.runnerPlays,who),who).includes(stageId)||
       (characterId==='secret_yuniko'&&!d.arcadePrizes.some(p=>p.profile===who&&p.prizeId==='secret_yuniko')))throw new Error('ステージまたはキャラクターが未解放です。');
     if(who==='student'&&availableCoins(d.coinEvents,d.reviewEvents,d.coinSpends,who)<30)throw new Error('コインが足りません。');
     const at=new Date().toISOString();
@@ -3375,7 +3379,7 @@ async function runnerLobbyData(who) {
     return {
       active:d.runnerPlays.find(p=>p.profile===who&&p.status==='active'),
       records:d.runnerPlays.filter(p=>p.profile===who&&p.status==='finished'),
-      summary,unlocked:summary.unlockedStageIds,
+      summary,unlocked:runnerUnlockedStageIds(summary,who),
       secret:d.arcadePrizes.some(p=>p.profile===who&&p.prizeId==='secret_yuniko'),
       balance:availableCoins(d.coinEvents,d.reviewEvents,d.coinSpends,who)
     };
@@ -3419,12 +3423,14 @@ function runnerPrice(who,d) {return `${who==='test'?'テスト用：無料':'1�
 async function refreshRunnerHome(ctx) {
   const d=await runnerLobbyData(ctx.who);
   if(!viewCurrent(ctx))return;
+  $('runner-home-cost-text').textContent=ctx.who==='test'?'テスト中：無料で何回でも':'コイン30枚 / 1プレイ';
   const cleared=new Set(d.records.filter(p=>p.result.reason==='clear').map(p=>p.stageId)).size;
   $('runner-home-info').textContent=`クリア：${cleared}/${RUNNER_STAGE_IDS.length}ステージ ／ プレイ：${d.records.length}回${d.active?' ／ 続きから遊べます':''}`;
 }
 // selectは既存IDの選択状態だけを保持し、操作はボタンへ集約する。
 function renderFormalRunnerChoices(d,m) {
   const stages=$('formal-stage'), characters=$('formal-character');
+  $('formal-stage-lock-help').hidden=profile==='test';
   const available=[...m.CHARACTERS,...(d.secret?[m.getCharacter('secret_yuniko')]:[])];
   const items=m.selectionItems(m.STAGES,available,d.unlocked,d.secret);
   for(const [kind,select] of [['stage',stages],['character',characters]]) {
@@ -3613,7 +3619,7 @@ async function startFormalRunner(ctx,d,m) {
   const frame=current.frame;
   frame.title='わくわくランナー';frame.className='runner-formal-frame';
   frame.onload=()=>{if(formalRunner===current){frame.contentWindow.mountFormalRunner(current.bridge);choices();}};
-  frame.src='./runner/?embedded=1&v=1.7.51';
+  frame.src='./runner/?embedded=1&v=1.7.52';
   $('runner-frame-host').replaceChildren(frame);choices();
 }
 $('open-runner').addEventListener('click',()=>navigate('runner').catch(err));
