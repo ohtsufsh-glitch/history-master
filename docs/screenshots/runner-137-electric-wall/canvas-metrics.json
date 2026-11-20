@@ -1,0 +1,86 @@
+[
+  {
+    "viewport": [
+      390,
+      844
+    ],
+    "key": "before",
+    "canvas": {
+      "x": 45,
+      "y": 15.671875,
+      "width": 300,
+      "height": 168.75
+    },
+    "wallCSSWidth": 22.5
+  },
+  {
+    "viewport": [
+      390,
+      844
+    ],
+    "key": "after",
+    "canvas": {
+      "x": 45,
+      "y": 15.671875,
+      "width": 300,
+      "height": 168.75
+    },
+    "wallCSSWidth": 22.5
+  },
+  {
+    "viewport": [
+      844,
+      390
+    ],
+    "key": "before",
+    "canvas": {
+      "x": 71.234375,
+      "y": 93.96875,
+      "width": 439.109375,
+      "height": 247
+    },
+    "wallCSSWidth": 32.933203125
+  },
+  {
+    "viewport": [
+      844,
+      390
+    ],
+    "key": "after",
+    "canvas": {
+      "x": 71.234375,
+      "y": 93.96875,
+      "width": 439.109375,
+      "height": 247
+    },
+    "wallCSSWidth": 32.933203125
+  },
+  {
+    "viewport": [
+      1024,
+      768
+    ],
+    "key": "before",
+    "canvas": {
+      "x": 187.5625,
+      "y": 93.90625,
+      "width": 648.875,
+      "height": 365
+    },
+    "wallCSSWidth": 48.665625
+  },
+  {
+    "viewport": [
+      1024,
+      768
+    ],
+    "key": "after",
+    "canvas": {
+      "x": 187.5625,
+      "y": 93.90625,
+      "width": 648.875,
+      "height": 365
+    },
+    "wallCSSWidth": 48.665625
+  }
+]

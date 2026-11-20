@@ -268,17 +268,14 @@ class RunnerDifficultyTest(unittest.TestCase):
         # 描画関数だけをテスト用module経由で取得。本番の公開APIは増やさない。
         page, errors, requests = self.model_runner()
         source = (canvas.ROOT / 'runner/game.js').read_text()
-        source = source.replace('initializeRunner();', '') + '\nexport { drawObjects };'
+        source = source.replace('initializeRunner();', ';').replace(
+            'function drawWall(context, object) {',
+            'function drawWall(context, object) { wallPaints.push(wallBounds(object));', 1) + '\nexport { drawObjects };'
         page.route('**/runner/wall-render-test.js', lambda route: route.fulfill(
             status=200,content_type='text/javascript',body=source))
         page.evaluate("""async()=>{
           window.wallRenderer=await import('./wall-render-test.js');
           window.wallPaints=[];
-          const p=CanvasRenderingContext2D.prototype,fill=p.fillRect;
-          p.fillRect=function(x,y,width,height){
-            if(this.fillStyle==='#936247')wallPaints.push({x,y,width,height});
-            return fill.call(this,x,y,width,height);
-          };
         }""")
         for width,height in [(375,667),(667,375),(768,1024),(1024,768)]:
             page.set_viewport_size(dict(width=width,height=height))
@@ -289,7 +286,7 @@ class RunnerDifficultyTest(unittest.TestCase):
                 {type:'wall',x:400,width:40,height:180},
                 {type:'wall',x:600,width:96,height:220},
                 {type:'wall',x:1030,width:160,height:200}]},null);
-              return wallPaints;
+              return wallPaints.map(({left:x,top:y,width,height})=>({x,y,width,height}));
             }""")
             self.assertEqual(painted,[dict(x=380,y=290,width=40,height=180),
                                       dict(x=552,y=250,width=96,height=220),

@@ -1,0 +1,493 @@
+{
+  "source": "d2d2f431afc5f467a3cc1def8e671558b6522eca",
+  "before": {
+    "geometry": {
+      "src": null,
+      "width": 80,
+      "height": 58.25,
+      "feetRatio": 0.9957081545064378
+    },
+    "collision": {
+      "characterRadius": 28,
+      "starRadius": 20,
+      "starHitRadius": 18,
+      "obstacleRegions": [
+        {
+          "left": -34,
+          "right": 34,
+          "top": -20,
+          "bottom": -3
+        },
+        {
+          "left": -28,
+          "right": 28,
+          "top": -34,
+          "bottom": -18
+        },
+        {
+          "left": -4,
+          "right": 4,
+          "top": -53,
+          "bottom": -32
+        },
+        {
+          "left": -27,
+          "right": -20,
+          "top": -41,
+          "bottom": -32
+        },
+        {
+          "left": 20,
+          "right": 27,
+          "top": -41,
+          "bottom": -32
+        }
+      ]
+    },
+    "rows": [
+      {
+        "id": "S01",
+        "hz": 30,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 4000,
+        "frames": 600,
+        "sha256": "a845db31b87a8d4671a6187fcb79c9a00c7d20b9c7801494d13ca82303db4764"
+      },
+      {
+        "id": "S01",
+        "hz": 30,
+        "path": "hit",
+        "reason": "collision",
+        "score": 20,
+        "lives": 0,
+        "distance": 1146.6666666666629,
+        "frames": 172,
+        "sha256": "2a92918de887256e3a0cabf8478679ff943ae1ef29e7b2cca46849e404f771c4"
+      },
+      {
+        "id": "S01",
+        "hz": 60,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 4000,
+        "frames": 1200,
+        "sha256": "6e6a4c97e2d9f895329d2f510d8e91ea1c9a823718f18e98f9e4504791246de0"
+      },
+      {
+        "id": "S01",
+        "hz": 60,
+        "path": "hit",
+        "reason": "collision",
+        "score": 20,
+        "lives": 0,
+        "distance": 1146.6666666666629,
+        "frames": 344,
+        "sha256": "69973c011dd3583929a1ef104e05609474c01e46cfe77118777557b0e65346d3"
+      },
+      {
+        "id": "S01",
+        "hz": 120,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 4000,
+        "frames": 2400,
+        "sha256": "e120fcebb4b051656f4cc423f307b1d9bb72a4837d0b27311b5aafe2e3e87610"
+      },
+      {
+        "id": "S01",
+        "hz": 120,
+        "path": "hit",
+        "reason": "collision",
+        "score": 20,
+        "lives": 0,
+        "distance": 1146.6666666666629,
+        "frames": 688,
+        "sha256": "05be4b4262c79b14dbd61d52304c322b5544c5a19cbf4d70ac4894e6a99fd3a6"
+      },
+      {
+        "id": "S05",
+        "hz": 30,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 7200,
+        "frames": 1080,
+        "sha256": "3da5303264472e817ee7d66950901d106f26b8513fb57420bfce0c4f50bc44a4"
+      },
+      {
+        "id": "S05",
+        "hz": 30,
+        "path": "hit",
+        "reason": "collision",
+        "score": 0,
+        "lives": 0,
+        "distance": 626.6666666666664,
+        "frames": 94,
+        "sha256": "5a7b7b699f959fbe81508c980c5e49a4004603861f597a7988763134f123f466"
+      },
+      {
+        "id": "S05",
+        "hz": 60,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 7200,
+        "frames": 2160,
+        "sha256": "26310f0f86581e5f7a65af24edb636f2588d427a75d56e21c5be2fd4009234c4"
+      },
+      {
+        "id": "S05",
+        "hz": 60,
+        "path": "hit",
+        "reason": "collision",
+        "score": 0,
+        "lives": 0,
+        "distance": 626.6666666666664,
+        "frames": 188,
+        "sha256": "e39a351dbac1f4599f028a2c58b22f7e12f8e24135885d335cb4d249347c5a72"
+      },
+      {
+        "id": "S05",
+        "hz": 120,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 7200,
+        "frames": 4320,
+        "sha256": "710af78942f486cfb414b2ef9b832356aded598ebf587b1eee35d988f3dec780"
+      },
+      {
+        "id": "S05",
+        "hz": 120,
+        "path": "hit",
+        "reason": "collision",
+        "score": 0,
+        "lives": 0,
+        "distance": 626.6666666666664,
+        "frames": 376,
+        "sha256": "01a8b7a181185f8cc33c3ed5953d128f7d0c6afbc3ccc1f3e15ecc0db391a7c0"
+      },
+      {
+        "id": "S06",
+        "hz": 30,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 8000,
+        "frames": 1200,
+        "sha256": "93c67b7758a4c50025670bb9a4b78e93d456b9c6a64b14a4132c6f4e10250731"
+      },
+      {
+        "id": "S06",
+        "hz": 30,
+        "path": "hit",
+        "reason": "collision",
+        "score": 0,
+        "lives": 0,
+        "distance": 606.6666666666669,
+        "frames": 91,
+        "sha256": "038ad3c2d33fad775088eee253aa4934332bf55e444cd522cf18aeb8896bf951"
+      },
+      {
+        "id": "S06",
+        "hz": 60,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 8000,
+        "frames": 2400,
+        "sha256": "3b2ea98797ff94d5bfc9a46d89e23ae10a05f91fbf70b2c1492ff5ffa16c20e6"
+      },
+      {
+        "id": "S06",
+        "hz": 60,
+        "path": "hit",
+        "reason": "collision",
+        "score": 0,
+        "lives": 0,
+        "distance": 606.6666666666669,
+        "frames": 182,
+        "sha256": "fddef85b93f7b9ddbbdcb26264955214917980a64aca397088b725a0f9013a9a"
+      },
+      {
+        "id": "S06",
+        "hz": 120,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 8000,
+        "frames": 4800,
+        "sha256": "58e3c874ff69b8c582b55de5a5bb6ecebe517d118b5981d3921af8e2a9aaa729"
+      },
+      {
+        "id": "S06",
+        "hz": 120,
+        "path": "hit",
+        "reason": "collision",
+        "score": 0,
+        "lives": 0,
+        "distance": 606.6666666666669,
+        "frames": 364,
+        "sha256": "c09a4acfcb0b24bca91d6b193c449c9fd56776fdd25c8409c41389a064c17dbc"
+      }
+    ]
+  },
+  "after": {
+    "geometry": {
+      "src": null,
+      "width": 80,
+      "height": 58.25,
+      "feetRatio": 0.9957081545064378
+    },
+    "collision": {
+      "characterRadius": 28,
+      "starRadius": 20,
+      "starHitRadius": 18,
+      "obstacleRegions": [
+        {
+          "left": -34,
+          "right": 34,
+          "top": -20,
+          "bottom": -3
+        },
+        {
+          "left": -28,
+          "right": 28,
+          "top": -34,
+          "bottom": -18
+        },
+        {
+          "left": -4,
+          "right": 4,
+          "top": -53,
+          "bottom": -32
+        },
+        {
+          "left": -27,
+          "right": -20,
+          "top": -41,
+          "bottom": -32
+        },
+        {
+          "left": 20,
+          "right": 27,
+          "top": -41,
+          "bottom": -32
+        }
+      ]
+    },
+    "rows": [
+      {
+        "id": "S01",
+        "hz": 30,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 4000,
+        "frames": 600,
+        "sha256": "a845db31b87a8d4671a6187fcb79c9a00c7d20b9c7801494d13ca82303db4764"
+      },
+      {
+        "id": "S01",
+        "hz": 30,
+        "path": "hit",
+        "reason": "collision",
+        "score": 20,
+        "lives": 0,
+        "distance": 1146.6666666666629,
+        "frames": 172,
+        "sha256": "2a92918de887256e3a0cabf8478679ff943ae1ef29e7b2cca46849e404f771c4"
+      },
+      {
+        "id": "S01",
+        "hz": 60,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 4000,
+        "frames": 1200,
+        "sha256": "6e6a4c97e2d9f895329d2f510d8e91ea1c9a823718f18e98f9e4504791246de0"
+      },
+      {
+        "id": "S01",
+        "hz": 60,
+        "path": "hit",
+        "reason": "collision",
+        "score": 20,
+        "lives": 0,
+        "distance": 1146.6666666666629,
+        "frames": 344,
+        "sha256": "69973c011dd3583929a1ef104e05609474c01e46cfe77118777557b0e65346d3"
+      },
+      {
+        "id": "S01",
+        "hz": 120,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 4000,
+        "frames": 2400,
+        "sha256": "e120fcebb4b051656f4cc423f307b1d9bb72a4837d0b27311b5aafe2e3e87610"
+      },
+      {
+        "id": "S01",
+        "hz": 120,
+        "path": "hit",
+        "reason": "collision",
+        "score": 20,
+        "lives": 0,
+        "distance": 1146.6666666666629,
+        "frames": 688,
+        "sha256": "05be4b4262c79b14dbd61d52304c322b5544c5a19cbf4d70ac4894e6a99fd3a6"
+      },
+      {
+        "id": "S05",
+        "hz": 30,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 7200,
+        "frames": 1080,
+        "sha256": "3da5303264472e817ee7d66950901d106f26b8513fb57420bfce0c4f50bc44a4"
+      },
+      {
+        "id": "S05",
+        "hz": 30,
+        "path": "hit",
+        "reason": "collision",
+        "score": 0,
+        "lives": 0,
+        "distance": 626.6666666666664,
+        "frames": 94,
+        "sha256": "5a7b7b699f959fbe81508c980c5e49a4004603861f597a7988763134f123f466"
+      },
+      {
+        "id": "S05",
+        "hz": 60,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 7200,
+        "frames": 2160,
+        "sha256": "26310f0f86581e5f7a65af24edb636f2588d427a75d56e21c5be2fd4009234c4"
+      },
+      {
+        "id": "S05",
+        "hz": 60,
+        "path": "hit",
+        "reason": "collision",
+        "score": 0,
+        "lives": 0,
+        "distance": 626.6666666666664,
+        "frames": 188,
+        "sha256": "e39a351dbac1f4599f028a2c58b22f7e12f8e24135885d335cb4d249347c5a72"
+      },
+      {
+        "id": "S05",
+        "hz": 120,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 7200,
+        "frames": 4320,
+        "sha256": "710af78942f486cfb414b2ef9b832356aded598ebf587b1eee35d988f3dec780"
+      },
+      {
+        "id": "S05",
+        "hz": 120,
+        "path": "hit",
+        "reason": "collision",
+        "score": 0,
+        "lives": 0,
+        "distance": 626.6666666666664,
+        "frames": 376,
+        "sha256": "01a8b7a181185f8cc33c3ed5953d128f7d0c6afbc3ccc1f3e15ecc0db391a7c0"
+      },
+      {
+        "id": "S06",
+        "hz": 30,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 8000,
+        "frames": 1200,
+        "sha256": "93c67b7758a4c50025670bb9a4b78e93d456b9c6a64b14a4132c6f4e10250731"
+      },
+      {
+        "id": "S06",
+        "hz": 30,
+        "path": "hit",
+        "reason": "collision",
+        "score": 0,
+        "lives": 0,
+        "distance": 606.6666666666669,
+        "frames": 91,
+        "sha256": "038ad3c2d33fad775088eee253aa4934332bf55e444cd522cf18aeb8896bf951"
+      },
+      {
+        "id": "S06",
+        "hz": 60,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 8000,
+        "frames": 2400,
+        "sha256": "3b2ea98797ff94d5bfc9a46d89e23ae10a05f91fbf70b2c1492ff5ffa16c20e6"
+      },
+      {
+        "id": "S06",
+        "hz": 60,
+        "path": "hit",
+        "reason": "collision",
+        "score": 0,
+        "lives": 0,
+        "distance": 606.6666666666669,
+        "frames": 182,
+        "sha256": "fddef85b93f7b9ddbbdcb26264955214917980a64aca397088b725a0f9013a9a"
+      },
+      {
+        "id": "S06",
+        "hz": 120,
+        "path": "clear",
+        "reason": "clear",
+        "score": 100,
+        "lives": 2,
+        "distance": 8000,
+        "frames": 4800,
+        "sha256": "58e3c874ff69b8c582b55de5a5bb6ecebe517d118b5981d3921af8e2a9aaa729"
+      },
+      {
+        "id": "S06",
+        "hz": 120,
+        "path": "hit",
+        "reason": "collision",
+        "score": 0,
+        "lives": 0,
+        "distance": 606.6666666666669,
+        "frames": 364,
+        "sha256": "c09a4acfcb0b24bca91d6b193c449c9fd56776fdd25c8409c41389a064c17dbc"
+      }
+    ]
+  }
+}

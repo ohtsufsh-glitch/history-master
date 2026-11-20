@@ -25,6 +25,8 @@ on:
       - 'tests/fixtures/runner85-tuning-base.json'
       - 'tests/fixtures/runner85-phase2a-base.json'
       - 'tests/fixtures/runner85-v1.json'
+      - 'tests/runner_wall_design_test.py'
+      - 'tests/runner_difficulty_test.py'
       - 'tests/runner_spike_design_test.py'
       - 'tests/runner_canvas_test.py'
       - 'tests/fixtures/runner137-spike-baseline.json'
@@ -59,6 +61,10 @@ jobs:
           PYTHONPATH: tests
         run: |
           python -m unittest -v \
+            runner_wall_design_test \
+            runner_difficulty_test.RunnerDifficultyTest.test_wall_rectangle_contacts_size_culling_and_no_landing \
+            runner_difficulty_test.RunnerDifficultyTest.test_wall_shield_auto_continue_and_fatal_goal_priority \
+            runner_difficulty_test.RunnerDifficultyTest.test_wall_canvas_matches_bounds_at_phone_tablet_sizes_without_images \
             runner_spike_design_test \
             runner_canvas_test.RunnerCanvasTest.test_spike_rock_image_loads_with_alpha_and_stays_grounded_in_phone_tablet_layouts \
             runner_canvas_test.RunnerCanvasTest.test_missing_spike_rock_uses_fallback_and_preserves_motion_jump_collision_and_retry \
