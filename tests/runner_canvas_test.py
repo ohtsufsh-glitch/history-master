@@ -129,7 +129,7 @@ MANUAL_FRAMES = """(() => {
         horizontalScale:matrix.a/(this.canvas.width/960),
         naturalWidth:image.naturalWidth,naturalHeight:image.naturalHeight};
     }
-    if (image.src?.endsWith('/runner/assets/spike-rock.webp') && args.length === 4) {
+    if (image.src && new URL(image.src).pathname.endsWith('/runner/assets/spike-rock.webp') && args.length === 4) {
       const [x,y,width,height] = args;
       scene.rocks.push({x,y,width,height,src:image.src,
         naturalWidth:image.naturalWidth,naturalHeight:image.naturalHeight});
@@ -137,7 +137,7 @@ MANUAL_FRAMES = """(() => {
     return drawImage.call(this,image,...args);
   };
   proto.fill = function(...args) {
-    if (this.fillStyle === '#514650') scene.fallbackRocks++;
+    if (this.fillStyle === '#211c23') scene.fallbackRocks++;
     return fill.apply(this,args);
   };
   proto.fillText = function(text, x, y, ...args) {
@@ -266,7 +266,7 @@ class RunnerCanvasTest(unittest.TestCase):
         if broken_image:
             page.route('**/assets/plush/shiba.webp', lambda route: route.fulfill(status=404, body='missing'))
         if broken_obstacle_image:
-            page.route('**/runner/assets/spike-rock.webp', lambda route: route.fulfill(status=404, body='missing'))
+            page.route('**/runner/assets/spike-rock.webp*', lambda route: route.fulfill(status=404, body='missing'))
         for frame in broken_frames:
             page.route(f'**/runner/assets/shiba/{frame}.webp',
                 lambda route: route.fulfill(status=404, body='missing'))
@@ -1630,7 +1630,7 @@ class RunnerCanvasTest(unittest.TestCase):
                 before=self.snapshot(page)
                 self.assertEqual(len(before['rocks']),1)
                 rock=before['rocks'][0]
-                self.assertTrue(rock['src'].endswith('/runner/assets/spike-rock.webp'))
+                self.assertTrue(rock['src'].endswith('/runner/assets/spike-rock.webp?v=1.7.53'))
                 self.assertEqual((rock['naturalWidth'],rock['naturalHeight']),(640,466))
                 self.assertEqual((rock['width'],rock['height']),(80,58.25))
                 self.assertAlmostEqual(rock['width']/rock['height'],640/466,delta=.000001)
@@ -1645,7 +1645,7 @@ class RunnerCanvasTest(unittest.TestCase):
                 self.assert_geometry(page)
                 if width == 375:
                     alpha=page.evaluate("""() => {
-                      const image=runnerImages.find(image=>image.src.endsWith('/runner/assets/spike-rock.webp'));
+                      const image=runnerImages.find(image=>new URL(image.src).pathname.endsWith('/runner/assets/spike-rock.webp'));
                       const canvas=document.createElement('canvas');
                       canvas.width=image.naturalWidth; canvas.height=image.naturalHeight;
                       const ctx=canvas.getContext('2d'); ctx.drawImage(image,0,0);
@@ -1663,7 +1663,7 @@ class RunnerCanvasTest(unittest.TestCase):
 
     def test_missing_spike_rock_uses_fallback_and_preserves_motion_jump_collision_and_retry(self):
         page,errors,requests=self.manual_runner(broken_obstacle_image=True,probe=True)
-        self.assertEqual(page.evaluate("runnerImages.find(image=>image.src.endsWith('/runner/assets/spike-rock.webp')).naturalWidth"),0)
+        self.assertEqual(page.evaluate("runnerImages.find(image=>new URL(image.src).pathname.endsWith('/runner/assets/spike-rock.webp')).naturalWidth"),0)
         self.toggle(page); page.evaluate('runnerClock.step(0)')
         page.evaluate('runnerClock.advance(3500,20)')
         before=self.snapshot(page)
