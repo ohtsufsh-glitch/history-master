@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.53";
-import { STAGES, getStage } from "./stages.js?v=1.7.53";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.53";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.54";
+import { STAGES, getStage } from "./stages.js?v=1.7.54";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.54";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -795,36 +795,65 @@ function drawPlatform(context, object, state) {
 
 function drawWall(context, object) {
   const { left, top, width, height } = wallBounds(object);
-  context.fillStyle = "#936247";
-  context.fillRect(left, top, width, height);
-  // 目地も斜線も実体の内側に収める。画像の読み込みには依存しない。
+  // 全面が危険な電撃ブロック。放電も輪郭も既存の判定矩形内に収める。
   context.save();
+  context.translate(left, top);
   context.beginPath();
-  context.rect(left, top, width, height);
+  context.rect(0, 0, width, height);
   context.clip();
-  context.strokeStyle = "#e8ba85";
-  context.lineWidth = 2;
-  for (let y = top + 30, row = 0; y < GROUND_Y; y += 30, row++) {
+  const unit = Math.min(width, height);
+  const rim = Math.min(10, unit * .14);
+  const stripe = Math.min(18, unit * .26);
+  context.fillStyle = "#ffd84a";
+  context.fillRect(0, 0, width, height);
+  context.fillStyle = "#202337";
+  for (let x = -height; x < width; x += stripe * 2) {
     context.beginPath();
-    context.moveTo(left, y);
-    context.lineTo(left + width, y);
-    const seam = left + width * (row % 2 ? .35 : .65);
-    context.moveTo(seam, y - 30);
-    context.lineTo(seam, y);
-    context.stroke();
+    context.moveTo(x, 0); context.lineTo(x + stripe, 0);
+    context.lineTo(x + stripe + height, height); context.lineTo(x + height, height);
+    context.closePath(); context.fill();
   }
-  context.strokeStyle = "#ffe099";
-  context.lineWidth = 4;
+  context.fillStyle = "#292b50";
+  context.fillRect(rim, rim, width - rim * 2, height - rim * 2);
+
+  // 小さな壁でも読める大きな稲妻。縦横を別々に合わせ、細長い壁にも対応。
+  const boltWidth = Math.min(width * .57, height * .65);
+  const boltHeight = Math.min(height * .66, width * 1.35);
+  // 画面より長い壁も、見えている区間に危険マークが残る間隔で繰り返す。
+  const bolts = Math.max(1, Math.floor(width / Math.max(120, height * 1.5)));
+  for (let i = 0; i < bolts; i++) {
+    context.save();
+    context.translate(width * (i + .5) / bolts - boltWidth / 2, (height - boltHeight) / 2);
+    context.scale(boltWidth, boltHeight);
+    context.fillStyle = "#ffe15a";
+    context.beginPath();
+    context.moveTo(.55, 0); context.lineTo(0, .57); context.lineTo(.42, .57);
+    context.lineTo(.26, 1); context.lineTo(1, .36); context.lineTo(.58, .36);
+    context.lineTo(.82, 0); context.closePath(); context.fill();
+    context.restore();
+  }
+
+  // 上面・両側面・底面に静止した太い放電。時間依存や点滅は加えない。
+  const inset = rim * .38, amplitude = rim * .65;
   context.beginPath();
-  context.moveTo(left + width * .25, top + 12);
-  context.lineTo(left + width * .75, top + 26);
-  context.moveTo(left + width * .25, top + 26);
-  context.lineTo(left + width * .75, top + 40);
+  for (const [x, y, dx, dy, length] of [
+    [inset, inset, 1, 0, width - inset * 2],
+    [width - inset, inset, 0, 1, height - inset * 2],
+    [width - inset, height - inset, -1, 0, width - inset * 2],
+    [inset, height - inset, 0, -1, height - inset * 2]
+  ]) {
+    const steps = Math.max(4, Math.round(length / (unit * .25)));
+    context.moveTo(x, y);
+    for (let i = 1; i <= steps; i++) {
+      const along = length * i / steps, zig = i < steps && i % 2 ? amplitude : 0;
+      context.lineTo(x + dx * along - dy * zig, y + dy * along + dx * zig);
+    }
+  }
+  context.strokeStyle = "#359cdb"; context.lineWidth = Math.min(6, unit * .09);
+  context.lineJoin = "round"; context.stroke();
+  context.strokeStyle = "#dcfcff"; context.lineWidth = Math.min(3, unit * .045);
   context.stroke();
   context.restore();
-  context.strokeStyle = "#573c32";
-  context.lineWidth = 2;
-  context.strokeRect(left + 1, top + 1, width - 2, height - 2);
 }
 
 function drawObjects(context, state, obstacleImage) {
