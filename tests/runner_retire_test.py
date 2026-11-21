@@ -187,16 +187,32 @@ class RunnerRetireUITest(unittest.TestCase):
         frame=self.start()
         for paused in [False,True]:
             if paused:frame.locator('#runner-toggle').click()
-            frame.locator('#runner-retire').click()
-            self.assertEqual(self.page.locator(':focus').get_attribute('id'),'runner-retire-cancel')
-            frozen=self.page.evaluate('formalRunner.session.view.state')
-            self.page.wait_for_timeout(100)
-            self.assertEqual(frozen,self.page.evaluate('formalRunner.session.view.state'))
-            self.page.keyboard.press('Tab');self.assertEqual(self.page.locator(':focus').get_attribute('id'),'runner-retire-confirm')
-            self.page.keyboard.press('Escape')
-            self.page.wait_for_function("!document.querySelector('#runner-retire-dialog').open")
-            self.assertEqual(self.page.evaluate('formalRunner.session.view.state.mode'),'paused' if paused else 'running')
-            self.assertTrue(frame.locator('#runner-retire').evaluate("e=>e===document.activeElement"))
+            for action in ['Escape','button']:
+                frame.locator('#runner-retire').click()
+                self.assertEqual(self.page.locator(':focus').get_attribute('id'),'runner-retire-cancel')
+                frozen=self.page.evaluate('formalRunner.session.view.state')
+                self.page.wait_for_timeout(100)
+                self.assertEqual(frozen,self.page.evaluate('formalRunner.session.view.state'))
+                self.page.keyboard.press('Tab');self.assertEqual(self.page.locator(':focus').get_attribute('id'),'runner-retire-confirm')
+                # 実時間の待機に頼らず、キャンセルと再表示の各awaitを保留する。
+                self.page.evaluate("""()=>{
+                  window.originalCancel=formalRunner.session.cancelRetire;window.originalLobby=runnerLobbyData;
+                  const cancelGate=new Promise(r=>window.releaseCancel=r),refreshGate=new Promise(r=>window.releaseRefresh=r);
+                  window.cancelReturned=false;window.refreshWaiting=false;
+                  formalRunner.session.cancelRetire=async()=>{await cancelGate;await originalCancel();cancelReturned=true;};
+                  runnerLobbyData=async(...args)=>{if(cancelReturned){refreshWaiting=true;await refreshGate;}return originalLobby(...args);};
+                }""")
+                if action=='Escape':self.page.keyboard.press('Escape')
+                else:self.page.locator('#runner-retire-cancel').click()
+                self.assertTrue(self.page.locator('#runner-retire-dialog').evaluate('e=>e.open'))
+                self.assertEqual(frozen,self.page.evaluate('formalRunner.session.view.state'))
+                self.page.evaluate('releaseCancel()');self.page.wait_for_function('refreshWaiting')
+                self.assertTrue(self.page.locator('#runner-retire-dialog').evaluate('e=>e.open'))
+                self.page.evaluate('releaseRefresh()')
+                self.page.wait_for_function("!document.querySelector('#runner-retire-dialog').open")
+                self.assertEqual(self.page.evaluate('formalRunner.session.view.state.mode'),'paused' if paused else 'running')
+                self.assertTrue(frame.locator('#runner-retire').evaluate("e=>e===document.activeElement"))
+                self.page.evaluate('()=>{formalRunner.session.cancelRetire=originalCancel;runnerLobbyData=originalLobby;}')
         frame.locator('#runner-retire').click();self.page.locator('#runner-retire-confirm').click()
         frame.locator('#runner-result-title').filter(has_text='リタイアしました').wait_for()
         self.assertEqual(frame.locator('#runner-result-record').inner_text(),'')
@@ -232,11 +248,32 @@ class RunnerRetireUITest(unittest.TestCase):
         self.page.evaluate("()=>{saveRunnerState=async()=>{throw Error('disk full')};}")
         self.page.locator('#runner-retire-confirm').click()
         frame.locator('#runner-toggle').filter(has_text='最後の保存から再開（無料）').wait_for()
+        self.page.wait_for_function("!document.querySelector('#runner-retire-dialog').open")
+        self.assertTrue(frame.locator('#runner-toggle').evaluate('e=>e===document.activeElement'))
         self.assertTrue(self.page.locator('#formal-character').is_disabled())
         self.page.evaluate('()=>{saveRunnerState=originalSave;}')
         frame.locator('#runner-toggle').click();self.page.wait_for_function('!runnerStarting')
         self.assertEqual(self.page.evaluate('formalRunner.session.view.savedPlay.status'),'active')
         self.assertEqual(self.page.evaluate("async()=>(await readAll('coinSpends')).map(s=>s.amount).sort()"),[0,30])
+        # キャンセル待ち中に非表示へ移ったタブでは、焦点を明示的に移さない。
+        frame.locator('#runner-retire').click()
+        self.page.evaluate("""()=>{
+          const cancel=formalRunner.session.cancelRetire;
+          const gate=new Promise(r=>window.releaseHiddenCancel=r);
+          formalRunner.session.cancelRetire=async()=>{await gate;await cancel();};
+          const w=document.querySelector('iframe').contentWindow,focus=w.HTMLElement.prototype.focus;
+          window.hiddenFocusCalls=0;
+          w.HTMLElement.prototype.focus=function(...args){hiddenFocusCalls++;return focus.apply(this,args);};
+        }""")
+        self.page.locator('#runner-retire-cancel').click()
+        self.page.evaluate("""()=>{
+          Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});
+          document.dispatchEvent(new Event('visibilitychange'));releaseHiddenCancel();
+        }""")
+        self.page.wait_for_function("!document.querySelector('#runner-retire-dialog').open")
+        self.assertEqual(self.page.evaluate('hiddenFocusCalls'),0)
+        self.assertEqual(self.page.evaluate('formalRunner.session.view.state.mode'),'paused')
+        self.page.evaluate("()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));}")
 
     def test_four_viewports_dialog_text_enlargement_and_demo_isolation(self):
         self.context.add_init_script(MANUAL_FRAME_TIME)

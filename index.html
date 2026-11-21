@@ -3610,21 +3610,22 @@ async function startFormalRunner(ctx,d,m) {
   const retireDialog=$('runner-retire-dialog'),retireCancel=$('runner-retire-cancel'),retireConfirm=$('runner-retire-confirm');
   let retireBusy=false;
   function focusRetireControl(){
+    if(closed||document.hidden||!viewCurrent(ctx)||formalRunner!==current)return;
     const doc=current.frame.contentDocument;
     const target=doc?.getElementById(current.session?.view.state.mode==='finished'||current.session?.view.error?'runner-toggle':'runner-retire');
-    target?.focus({preventScroll:true});
+    if(target?.isConnected&&!target.disabled&&!target.hidden)target.focus({preventScroll:true});
   }
   async function finishRetire(confirmRetire){
     if(retireBusy||!retireDialog.open||closed)return;
     retireBusy=true;retireCancel.disabled=true;retireConfirm.disabled=true;
     $('runner-retire-status').textContent=confirmRetire?'保存しています…':'';
-    if(!confirmRetire)retireDialog.close();
     try {
       if(confirmRetire)await current.session.retire();
       else await current.session.cancelRetire();
     } catch(e){localError=e.message;}
     finally {
       try {if(!closed){await refresh();choices();current.frame.contentWindow?.refreshFormalRunner?.();}}
+      // 閉鎖を操作完了の合図にする。closeと焦点復帰の間にawaitを挟まない。
       finally {retireBusy=false;if(!closed){retireDialog.close();focusRetireControl();}}
     }
   }
