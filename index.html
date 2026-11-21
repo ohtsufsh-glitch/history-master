@@ -642,9 +642,16 @@
     @media (max-height:500px) and (min-width:481px) {
       #runner-frame-host { height:90vh; height:90dvh; }
     }
+    #runner-retire-dialog { width:min(30rem, calc(100% - 32px)); max-height:calc(100dvh - 32px); overflow:auto; padding:24px; border:2px solid #6d9b77; border-radius:18px; background:#fffdf3; color:#263f3b; }
+    #runner-retire-dialog::backdrop { background:#102b24a6; }
+    #runner-retire-dialog h2 { margin-top:0; font-size:1.25rem; overflow-wrap:anywhere; }
+    #runner-retire-dialog p { line-height:1.6; }
+    .runner-retire-actions { display:flex; flex-wrap:wrap; gap:16px; }
+    .runner-retire-actions button { flex:1 1 10rem; min-height:48px; overflow-wrap:anywhere; }
+    #runner-retire-confirm { color:#8b2438; border:2px solid #a94b5a; background:#fff; }
   </style>
-  <link rel="stylesheet" href="./runner/balance.css?v=1.7.54">
-  <link rel="stylesheet" href="./runner/selection.css?v=1.7.54">
+  <link rel="stylesheet" href="./runner/balance.css?v=1.7.55">
+  <link rel="stylesheet" href="./runner/selection.css?v=1.7.55">
 </head>
 <body>
 <!-- 立体的な金貨イラスト：ホーム・正解時に共用 -->
@@ -757,6 +764,15 @@
     </div>
 
   </section>
+  <dialog id="runner-retire-dialog" aria-labelledby="runner-retire-title" aria-describedby="runner-retire-description">
+    <h2 id="runner-retire-title">このプレイをリタイアしますか？</h2>
+    <p id="runner-retire-description">使ったコインは戻らず、途中の得点は最高記録にはなりません。</p>
+    <div class="runner-retire-actions">
+      <button id="runner-retire-cancel" type="button" autofocus>プレイに戻る</button>
+      <button id="runner-retire-confirm" type="button">リタイアする</button>
+    </div>
+    <p id="runner-retire-status" role="status" aria-live="polite"></p>
+  </dialog>
   <section id="arcade" class="card arcade-screen hidden" aria-label="ぬいぐるみキャッチャー">
     <button id="arcade-back" type="button" class="game-home">← 学習ホームへ戻る</button>
     <div class="arcade-title-row"><div><span class="section-kicker">PLUSH CATCHER</span><h2>🧸 ぬいぐるみキャッチャー</h2></div><div class="arcade-balance"><img src="assets/coins/crown-gold.webp" alt="" width="33" height="33">コイン <strong id="arcade-balance">0枚</strong></div></div>
@@ -1006,7 +1022,7 @@
 <script>
 "use strict";
 // 歴史マスター：画面に表示するアプリ版はこの定数で管理。
-const APP_VERSION = "v1.7.54";
+const APP_VERSION = "v1.7.55";
 // 公開可能なオリジナルのサンプル問題のみ。教材由来の問題はここに書かないこと。
 const ERAS = [
   ["E01", "旧石器・縄文・弥生"],
@@ -3217,7 +3233,7 @@ function validateRunnerPlays(records) {
       active.add(p.profile);
     } else {
       const r=p.result;
-      if(!exactRunnerFields(r,['reason','at','livesRemaining'])||!['clear','gameover'].includes(r.reason)||r.at!==p.updatedAt||!Number.isInteger(r.livesRemaining)||r.livesRemaining<0||r.livesRemaining>lives||(r.reason==='clear'?r.livesRemaining<1:r.livesRemaining!==0))throw new Error('ランナーの終了記録が不正です。');
+      if(!exactRunnerFields(r,['reason','at','livesRemaining'])||!['clear','gameover','retire'].includes(r.reason)||r.at!==p.updatedAt||!Number.isInteger(r.livesRemaining)||r.livesRemaining<0||r.livesRemaining>lives||(r.reason==='gameover'?r.livesRemaining!==0:r.livesRemaining<1))throw new Error('ランナーの終了記録が不正です。');
     }
     plays.set(p.id,p);
   }
@@ -3231,7 +3247,7 @@ function summarizeRunnerPlays(records, who) {
     const next=RUNNER_STAGE_IDS[RUNNER_STAGE_IDS.indexOf(p.stageId)+1];
     if(p.result.reason==='clear'&&next)unlocked.add(next);
   }
-  const ordered=[...plays].sort((a,b)=>b.score-a.score||RUNNER_CHARACTER_IDS.indexOf(a.characterId)-RUNNER_CHARACTER_IDS.indexOf(b.characterId)||(a.startedAt<b.startedAt?-1:a.startedAt>b.startedAt?1:0)||(a.id<b.id?-1:a.id>b.id?1:0));
+  const ordered=plays.filter(p=>p.result.reason!=='retire').sort((a,b)=>b.score-a.score||RUNNER_CHARACTER_IDS.indexOf(a.characterId)-RUNNER_CHARACTER_IDS.indexOf(b.characterId)||(a.startedAt<b.startedAt?-1:a.startedAt>b.startedAt?1:0)||(a.id<b.id?-1:a.id>b.id?1:0));
   const bestByStageCharacter={}, bestByStage={};
   for(const p of ordered) {
     const key=`${p.stageId}:${p.characterId}`;
@@ -3243,7 +3259,7 @@ function summarizeRunnerPlays(records, who) {
 // C3-B 内部API。無料試遊のURL/選択UIからは呼ばない。
 let runnerModelPromise;
 function loadRunnerModel() {
-  return runnerModelPromise ||= import('./runner/game.js?v=1.7.54');
+  return runnerModelPromise ||= import('./runner/game.js?v=1.7.55');
 }
 function runnerTransaction(names, action, {mode='readwrite', keys={}}={}) {
   return new Promise((resolve,reject)=>{
@@ -3308,7 +3324,7 @@ async function saveRunnerState(who,id,expectedUpdatedAt,snapshot) {
     const state=model.restoreRunner(candidate);
     if(state.mode==='finished') {
       delete candidate.snapshot;candidate.status='finished';
-      candidate.result={reason:state.reason==='clear'?'clear':'gameover',at,livesRemaining:state.lives};
+      candidate.result={reason:state.reason==='retire'?'retire':state.reason==='clear'?'clear':'gameover',at,livesRemaining:state.lives};
     }
     validateRunnerPlays([candidate]);
     tx.objectStore('runnerPlays').put(candidate);
@@ -3331,7 +3347,14 @@ async function openRunnerSession(who,id,{lifecycle=true}={}) {
   });
   let play=records,state=model.restoreRunner(play),error=null,dirty=false,queue=Promise.resolve(),disposed=false;
   let lastCheckpoint=state.elapsed, suspended=lifecycle&&document.hidden;
-  let pendingSnapshot=null, savingCheckpoint=null;
+  let pendingSnapshot=null, savingCheckpoint=null, retireFrom=null;
+  // 確認状態はメモリ内だけ。snapshot v2のキーは増やさない。
+  function acceptFinished(savedPlay) {
+    play=savedPlay;state.mode='finished';state.reason=play.result.reason==='gameover'?'collision':play.result.reason;
+    state.score=play.score;state.lives=play.result.livesRemaining;
+    if(state.reason==='clear')state.distance=state.goalDistance;
+    pendingSnapshot=null;dirty=false;retireFrom=null;
+  }
   function checkpoint() {
     if(play.status==='finished'&&!dirty)return queue.then(()=>structuredClone(play));
     pendingSnapshot=model.snapshotRunner(state);dirty=true;
@@ -3342,10 +3365,23 @@ async function openRunnerSession(who,id,{lifecycle=true}={}) {
           const snap=pendingSnapshot;pendingSnapshot=null;
           if(error)throw error;
           play=await saveRunnerState(who,id,play.updatedAt,snap);
+          if(play.status==='finished') {
+            // 別タブのclear/gameoverが先に確定した場合も、保存済み正本を優先する。
+            acceptFinished(play);break;
+          }
           dirty=JSON.stringify(model.snapshotRunner(state))!==JSON.stringify(snap);
         }
         return structuredClone(play);
-      } catch(e) {error=e;dirty=true;if(state.mode==='running')state.mode='paused';throw e;}
+      } catch(e) {
+        // 確認前から進行中だったactive保存が、別タブの終了に負けた場合。
+        if(state.reason==='retire') {
+          const latest=await runnerTransaction(['runnerPlays'],(tx,d)=>d.runnerPlays[0],{mode:'readonly',keys:{runnerPlays:id}}).catch(()=>null);
+          if(latest?.profile===who&&latest.status==='finished') {
+            validateRunnerPlays([latest]);acceptFinished(latest);return structuredClone(play);
+          }
+        }
+        error=e;dirty=true;if(state.mode==='running')state.mode='paused';throw e;
+      }
       finally {savingCheckpoint=null;}
     })();
     queue=savingCheckpoint.catch(()=>{});return savingCheckpoint;
@@ -3357,13 +3393,31 @@ async function openRunnerSession(who,id,{lifecycle=true}={}) {
   const visibility=()=>{if(document.hidden)hide();else show();};
   if(lifecycle) {window.addEventListener('pagehide',hide);window.addEventListener('pageshow',show);document.addEventListener('visibilitychange',visibility);}
   return {
-    get view(){return {state:structuredClone(state),savedPlay:structuredClone(play),dirty,error:error?.message||null};},
-    async resume(){usable();await queue;usable();if(state.mode==='paused'){await checkpoint();if(!suspended&&!disposed)model.resumeRunner(state);}},
-    async jump(){usable();if(model.startJump(state))dirty=true;},
+    get view(){return {state:structuredClone(state),savedPlay:structuredClone(play),dirty,error:error?.message||null,confirmingRetire:retireFrom!==null};},
+    async resume(){usable();if(retireFrom!==null)return;await queue;usable();if(retireFrom!==null)return;if(state.mode==='paused'){await checkpoint();if(!suspended&&!disposed&&retireFrom===null)model.resumeRunner(state);}},
+    async jump(){usable();if(retireFrom!==null)return;if(model.startJump(state))dirty=true;},
     async advance(seconds){
-      usable();const lives=state.lives,score=state.score;
+      usable();if(retireFrom!==null)return;const lives=state.lives,score=state.score;
       model.updateRunner(state,seconds);dirty=true;
       if(state.mode==='finished'||state.lives!==lives||state.score!==score||state.elapsed-lastCheckpoint>=2){lastCheckpoint=state.elapsed;await checkpoint();}
+    },
+    beginRetire(){
+      usable();
+      if(retireFrom!==null||play.status!=='active'||!['running','paused'].includes(state.mode))return false;
+      retireFrom=state.mode;state.mode='paused';dirty=true;return true;
+    },
+    async cancelRetire(){
+      await queue;
+      const previous=retireFrom;retireFrom=null;
+      if(previous==='running'&&!error&&!suspended&&!disposed&&state.mode==='paused')model.resumeRunner(state);
+    },
+    retire(){
+      usable();
+      if(retireFrom===null)return queue;
+      retireFrom=null;
+      if(play.status==='finished'||state.mode==='finished')return queue;
+      state.mode='finished';state.reason='retire';
+      return checkpoint();
     },
     pause,checkpoint,
     flush(){return queue;},
@@ -3414,6 +3468,7 @@ function runnerResultData(d,play) {
   const before=summarizeRunnerPlays(d.records.filter(p=>p.id!==play.id&&p.result.at<=play.result.at),play.profile);
   const key=`${play.stageId}:${play.characterId}`;
   const stageBefore=before.bestByStage[play.stageId],characterBefore=before.bestByStageCharacter[key];
+  if(play.result.reason==='retire')return {play,stageRecord:'',characterRecord:'',unlocked:[]};
   return {play,stageBest:d.summary.bestByStage[play.stageId].score,characterBest:d.summary.bestByStageCharacter[key].score,
     stageRecord:!stageBefore?'初記録':play.score>stageBefore.score?'新記録！':'',
     characterRecord:!characterBefore?'初記録':play.score>characterBefore.score?'新記録！':'',
@@ -3532,7 +3587,7 @@ async function startFormalRunner(ctx,d,m) {
     if(!closed&&viewCurrent(ctx)&&request===refreshGeneration){
       if(current.session&&!latest.records.some(p=>p.id===current.session.view.savedPlay.id)&&latest.active?.id!==current.session.view.savedPlay.id){await reconcilePage();return;}
       if(!latest.secret&&current.session?.view.state.characterId==='secret_yuniko'){await reconcilePage();return;}
-      if(current.session?.view.savedPlay.status==='active'&&latest.active?.id===current.session.view.savedPlay.id&&latest.active.updatedAt!==current.session.view.savedPlay.updatedAt&&!current.session.view.dirty){await reconcilePage();return;}
+      if(current.session?.view.savedPlay.status==='active'&&latest.active?.id===current.session.view.savedPlay.id&&latest.active.updatedAt!==current.session.view.savedPlay.updatedAt&&!current.session.view.dirty&&!current.session.view.confirmingRetire){await reconcilePage();return;}
       latestData=latest;resultData=runnerResultData(latest,current.session?.view.savedPlay);
       showRunnerBalance(savedRunnerBalance(ctx.who,latest));
       $('runner-info').textContent=localError||runnerFee(ctx.who);
@@ -3552,7 +3607,38 @@ async function startFormalRunner(ctx,d,m) {
       choices();renderRunnerRecords(latest,m);
     }
   }
+  const retireDialog=$('runner-retire-dialog'),retireCancel=$('runner-retire-cancel'),retireConfirm=$('runner-retire-confirm');
+  let retireBusy=false;
+  function focusRetireControl(){
+    const doc=current.frame.contentDocument;
+    const target=doc?.getElementById(current.session?.view.state.mode==='finished'||current.session?.view.error?'runner-toggle':'runner-retire');
+    target?.focus({preventScroll:true});
+  }
+  async function finishRetire(confirmRetire){
+    if(retireBusy||!retireDialog.open||closed)return;
+    retireBusy=true;retireCancel.disabled=true;retireConfirm.disabled=true;
+    $('runner-retire-status').textContent=confirmRetire?'保存しています…':'';
+    if(!confirmRetire)retireDialog.close();
+    try {
+      if(confirmRetire)await current.session.retire();
+      else await current.session.cancelRetire();
+    } catch(e){localError=e.message;}
+    finally {
+      try {if(!closed){await refresh();choices();current.frame.contentWindow?.refreshFormalRunner?.();}}
+      finally {retireBusy=false;if(!closed){retireDialog.close();focusRetireControl();}}
+    }
+  }
+  retireCancel.onclick=()=>finishRetire(false).catch(err);
+  retireConfirm.onclick=()=>finishRetire(true).catch(err);
+  retireDialog.oncancel=event=>{event.preventDefault();finishRetire(false).catch(err);};
   current.bridge={
+    beginRetire(){
+      if(presentationBusy||closed||runnerStarting||retireBusy||!viewCurrent(ctx)||!current.session)return false;
+      if(!current.session.beginRetire())return false;
+      retireCancel.disabled=false;retireConfirm.disabled=false;$('runner-retire-status').textContent='';
+      retireDialog.showModal();retireCancel.focus({preventScroll:true});
+      current.frame.contentWindow?.refreshFormalRunner?.();return true;
+    },
     get view(){return {...(current.session?.view||{state:structuredClone(waiting),dirty:false,error:null}),message:localError,result:resultData};},
     setPresentationBusy(busy){presentationBusy=busy;choices();},
     async resume(){
@@ -3611,7 +3697,7 @@ async function startFormalRunner(ctx,d,m) {
   };
   Object.defineProperty(current,"data",{get:()=>latestData});
   current.refresh=refresh;
-  current.stop=()=>{closed=true;};
+  current.stop=()=>{closed=true;if(retireDialog.open)retireDialog.close();};
   formalRunner=current;
   try{if(d.active)current.session=await openRunnerSession(ctx.who,d.active.id);}
   catch(e){selectionBlocked=true;localError=e.message;$('runner-info').textContent=e.message;}
@@ -3619,7 +3705,7 @@ async function startFormalRunner(ctx,d,m) {
   const frame=current.frame;
   frame.title='わくわくランナー';frame.className='runner-formal-frame';
   frame.onload=()=>{if(formalRunner===current){frame.contentWindow.mountFormalRunner(current.bridge);choices();}};
-  frame.src='./runner/?embedded=1&v=1.7.54';
+  frame.src='./runner/?embedded=1&v=1.7.55';
   $('runner-frame-host').replaceChildren(frame);choices();
 }
 $('open-runner').addEventListener('click',()=>navigate('runner').catch(err));
