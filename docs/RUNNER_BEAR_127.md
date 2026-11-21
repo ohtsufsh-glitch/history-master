@@ -75,8 +75,8 @@ Issue #85のS05/S06延長は今回実装していない。
   9枚のサイズ/透過/異なる内容/実足先とfeetRatio、正式購入→一時停止→再開→clear/gameover/retire、
   student/test分離、5匹混在＋両プロフィール途中状態のbackup v10復元、旧v1/v9復元、S05/S06版7の両プロフィール保存再開。
   実画面のページ再読込→無料再開、4サイズ・200%文字・44px以上カード・秘密ロック・クマ初期記録なし。
-- 既存39件: アニメーション6、選択5、権限/プロフィール統合1、最高得点1、能力カタログ1、
-  通常5匹UI/残ハート2、最高得点一覧UI2、ゆにこ追加ジャンプ1、セッション11、保存9。
+- 既存40件: アニメーション6、選択5、権限/プロフィール統合1、最高得点1、能力カタログ1、
+  通常5匹UI/残ハート2、最高得点一覧UI2、ゆにこ追加ジャンプ1、セッション11、保存9、旧版リタイア復元1。
 - 既存4匹×6現行ステージ×30/60/120Hzの72代表トレース（各最大14秒）を、変更前mainの同じ入力/全フレームsnapshotとSHA-256比較し全一致。
 - 版管理9件、ZIP内WebPとのバイト比較、親JS・変更JS構文、差分空白、コミット後のAPP_VERSION検査。
 
@@ -97,11 +97,13 @@ PYTHONPATH=tests python3 -m unittest -v \
   runner_characters_test.RunnerCharactersTest.test_catalog_and_character_specific_jump_at_60_and_120_hz \
   runner_character_ui_test.RunnerCharacterUITest.test_five_options_image_abilities_and_default_are_preview_only \
   runner_character_ui_test.RunnerCharacterUITest.test_two_and_three_life_cycles_at_60_and_120_hz \
-  runner_yuniko_test.RunnerYunikoTest.test_air_jump_budget_landing_and_normal_characters
+  runner_yuniko_test.RunnerYunikoTest.test_air_jump_budget_landing_and_normal_characters \
+  runner_retire_test.RunnerRetireTest.test_v10_export_restore_reload_and_old_app_rollback_limit
 ```
 
 初回CIで見つかった最高得点一覧の4匹固定期待を5匹へ拡張し、再読込テストは一時停止の保存完了後に進むよう同期した。該当3件を手元で再実行し成功。
 バックアップ試験の合成解放履歴も、ランダムUUID順への依存を除きキャラIDを指定して構成するよう修正した。
+旧版リタイア復元試験の参照も、変動するorigin/mainから実際のv1.7.54（81286e6）に固定した。
 CIにはrunner_bear_testを既存Runner iframe workflowに追加。CIの確定結果はドラフトPRのChecksで確認。
 Issue #74に従い、全体回帰・クマ全6ステージ100点攻略・無関係なUFO画面試験は省略。
 Safari実機、WebKit、VoiceOver実機は未実施。

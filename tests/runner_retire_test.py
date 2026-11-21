@@ -167,7 +167,7 @@ class RunnerRetireTest(unittest.TestCase):
         self.assertEqual(self.page.evaluate("async()=>{const d=await runnerLobbyData('student');return [d.active||null,d.records[0].result.reason,d.records[0].result.livesRemaining,d.records[0].score,Object.keys(d.summary.bestByStage).length,db.version,BACKUP_VERSION];}"),[None,'retire',2,0,0,10,10])
         # Old v1.7.54 does not accept the new reason; record the exact rollback limit.
         import subprocess
-        old=subprocess.check_output(['git','show','origin/main:index.html'],text=True)
+        old=subprocess.check_output(['git','show','81286e609e91e27019ed6ed1fa6c39d1eaac16cd:index.html'],text=True)
         self.page.route(self.url,lambda route:route.fulfill(body=old,content_type='text/html'))
         self.page.reload();self.page.wait_for_function('appReady')
         self.assertTrue(self.page.evaluate("backup=>{try{validateBackup(backup);return false;}catch{return true;}}",data))
