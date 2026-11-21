@@ -16,6 +16,7 @@ CHARACTERS = {
     'sloth': ('なまけもの', 170, 125, 1.10, 2),
     'goldfish': ('金魚', 185, 160, 1.05, 2),
     'salamander': ('オオサンショウウオ', 230, 105, .82, 3),
+    'bear': ('くま', 180, 130, 1.00, 3),
 }
 
 
@@ -50,10 +51,14 @@ class RunnerCharacterUITest(unittest.TestCase):
                          (character_id, stage_id, 'ready'))
         self.assertEqual(state['lives'], CHARACTERS[character_id][4])
         self.assert_hearts(page, state['lives'], state['initialLives'])
-        for field in ('distance', 'elapsed', 'animationTime', 'score', 'nextSpawn',
+        for field in ('distance', 'elapsed', 'animationTime', 'score',
                       'landingUntil', 'velocityY', 'invincibleRemaining'):
             self.assertEqual(state[field], 0, field)
-        self.assertEqual(state['objects'], [])
+        # Current courses may contain platforms visible before distance zero.
+        initial_events = [e for e in state['course'] if e['at'] <= 0]
+        self.assertEqual(state['nextSpawn'], len(initial_events))
+        self.assertEqual(len(state['objects']), len(initial_events))
+        self.assertTrue(all(o['spawnDistance'] <= 0 for o in state['objects']))
         self.assertEqual((state['feetY'], state['jumpOriginY'], state['supportId']), (470, 470, 'ground'))
         self.assertIsNone(state['reason'])
         self.assertIsNone(state['airAction'])
@@ -76,7 +81,7 @@ class RunnerCharacterUITest(unittest.TestCase):
                 self.assertEqual(page.locator('#runner-toggle').inner_text(), '一時停止')
                 self.assertGreater(current['invincibleRemaining'], 1-1/hz-1e-6)
 
-    def test_four_options_image_abilities_and_default_are_preview_only(self):
+    def test_five_options_image_abilities_and_default_are_preview_only(self):
         for suffix, disabled in (('', False), ('?stagePreview=0', False),
                                  ('?stagePreview=true', False), ('?stagePreview=1', True)):
             with self.subTest(suffix=suffix, disabled=disabled):
@@ -91,7 +96,7 @@ class RunnerCharacterUITest(unittest.TestCase):
         page, errors, requests = self.preview_runner()
         select = page.locator('#runner-character-select')
         self.assertEqual(select.input_value(), 'shiba')
-        self.assertEqual(select.locator('option').count(), 4)
+        self.assertEqual(select.locator('option').count(), 5)
         self.assertEqual(select.locator('option').evaluate_all('items=>items.map(item=>item.value)'),
                          list(CHARACTERS))
         self.select_stage(page, 'S06')
@@ -101,7 +106,7 @@ class RunnerCharacterUITest(unittest.TestCase):
                 self.assert_fresh(page, key)
                 self.assertIn(name, select.locator('option:checked').inner_text())
                 details = page.locator('#runner-character-details').inner_text()
-                levels={'shiba':('中','中'),'sloth':('低','中'),'goldfish':('中','高'),'salamander':('高','低')}
+                levels={'shiba':('中','中'),'sloth':('低','中'),'goldfish':('中','高'),'salamander':('高','低'),'bear':('低','中')}
                 for expected in (f'走力：{levels[key][0]}', f'ジャンプ：{levels[key][1]}', '♥'*lives):
                     self.assertIn(expected, details)
                 image = page.locator('#runner-character-image')
@@ -227,7 +232,7 @@ class RunnerCharacterUITest(unittest.TestCase):
                     self.assert_isolated(page,errors,requests)
                     page.context.close()
 
-    def test_portrait_landscape_four_characters_and_real_touch(self):
+    def test_portrait_landscape_five_characters_and_real_touch(self):
         for width, height in ((375, 667), (390, 844), (667, 375), (844, 390),
                               (768, 1024), (1024, 768)):
             with self.subTest(width=width, height=height):

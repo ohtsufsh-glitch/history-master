@@ -39,7 +39,7 @@ class RunnerResultsTest(unittest.TestCase):
         }"""))
         self.enter()
         self.assertIn('記録なし',self.page.locator('#runner-stage-best').inner_text())
-        self.assertEqual(self.page.locator('#runner-character-bests dt').count(),4)
+        self.assertEqual(self.page.locator('#runner-character-bests dt').count(),5)
         self.assertEqual(self.page.locator('#runner-stage-bests dt').count(),6)
 
     def test_committed_result_retry_single_charge_and_home(self):

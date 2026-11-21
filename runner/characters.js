@@ -1,4 +1,4 @@
-// 公開選択用の通常4匹と、内部モデル専用の秘密キャラを分離する。
+// 公開選択用の通常5匹と、内部モデル専用の秘密キャラを分離する。
 function defineCharacters(definitions) {
   return Object.freeze(definitions.map(({ height, duration, feet, ...definition }) => Object.freeze({
     airJumps: 0, ...definition,
@@ -19,6 +19,8 @@ const CHARACTERS = defineCharacters([
     ability: Object.freeze({ speed: "中", jump: "高" }), initialLives: 2, feature: "高くジャンプ", feet: 454 },
   { characterId: "salamander", name: "オオサンショウウオ", speed: 230, height: 105, duration: 0.82,
     ability: Object.freeze({ speed: "高", jump: "低" }), initialLives: 3, feature: "速く走る・低いジャンプ", feet: 466 },
+  { characterId: "bear", name: "くま", speed: 180, height: 130, duration: 1.00,
+    ability: Object.freeze({ speed: "低", jump: "中" }), initialLives: 3, feature: "ゆっくり走る・ハート3つ", feet: 440 },
 ]);
 
 // 定義の取得は使用権の付与ではない。公開UIはCHARACTERSだけを参照する。

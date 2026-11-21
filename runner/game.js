@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.55";
-import { STAGES, getStage } from "./stages.js?v=1.7.55";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.55";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.56";
+import { STAGES, getStage } from "./stages.js?v=1.7.56";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.56";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -40,6 +40,7 @@ const ANIMATION_SETS = Object.freeze({
     sloth: [461,461,461,461,461,461,461,461,461],
     goldfish: [460,461,459,461,461,461,461,460,461],
     salamander: [460,461,460,461,461,461,461,461,461],
+    bear: [449,449,449,449,449,420,404,422,449],
     secret_yuniko: [461,461,460,461,460,461,461,461,461],
   }).map(([id, feet]) => [id, Object.freeze({
     maxSize: 100, runFrameSeconds: 0.1, bob: false,

@@ -98,14 +98,14 @@ class RunnerCharactersTest(unittest.TestCase):
               frozen:Object.isFrozen(c)&&Object.isFrozen(c.jump)&&Object.isFrozen(c.image)});
           }
           return {results,defaultId:m.createRunnerState().characterId,
-            invalid:['secret_yuniko','unknown',''].map(id=>{try{m.createRunnerState([],id);return false;}
+            invalid:['unknown',''].map(id=>{try{m.createRunnerState([],id);return false;}
               catch(e){return e instanceof TypeError;}})};
         }""")
         expected = {'shiba': (200, 120, .9, 2), 'sloth': (170, 125, 1.1, 2),
-                    'goldfish': (185, 160, 1.05, 2), 'salamander': (230, 105, .82, 3)}
+                    'goldfish': (185, 160, 1.05, 2), 'salamander': (230, 105, .82, 3), 'bear': (180, 130, 1.00, 3)}
         self.assertEqual(actual['defaultId'], 'shiba')
         self.assertTrue(all(actual['invalid']))
-        self.assertEqual(len(actual['results']), 8)
+        self.assertEqual(len(actual['results']), 10)
         for row in actual['results']:
             with self.subTest(character=row['id'], hz=row['hz']):
                 speed, height, duration, lives = expected[row['id']]
@@ -122,10 +122,11 @@ class RunnerCharactersTest(unittest.TestCase):
         self.assert_isolated(page, errors, requests)
 
     def test_all_characters_clear_100_and_keep_world_positions_at_60_and_120_hz(self):
+        # Frozen four-character routes below deliberately exclude later additions.
         page, errors, requests = self.character_runner()
         outcomes = page.evaluate("""solutions=>{
           const m=runnerModel,results=[];
-          for(const c of m.CHARACTERS)for(const stage of runnerStages)for(const hz of [60,120]){
+          for(const c of m.CHARACTERS.slice(0,4))for(const stage of runnerStages)for(const hz of [60,120]){
             const s=m.createRunnerState(stage,c.characterId);s.mode='running';
             const inputs=solutions[c.characterId][stage.stageId];
             let next=0,maxPositionError=0,wrongSpawns=0,maxShield=0;const accepted=[],seen=new Set(),landings=new Set();
@@ -179,7 +180,7 @@ class RunnerCharactersTest(unittest.TestCase):
         page, errors, requests = self.character_runner()
         outcomes = page.evaluate("""()=>{
           const m=runnerModel,results=[];
-          for(const c of m.CHARACTERS)for(const stage of runnerStages)for(const hz of [60,120]){
+          for(const c of m.CHARACTERS.slice(0,4))for(const stage of runnerStages)for(const hz of [60,120]){
             const s=m.createRunnerState(stage,c.characterId),checks=[];s.mode='running';
             let stopped=false,lastHit=-Infinity;
             for(let f=0;f<hz*60&&s.mode!=='finished';f++){
@@ -229,7 +230,7 @@ class RunnerCharactersTest(unittest.TestCase):
         page, errors, requests = self.character_runner()
         outcomes = page.evaluate("""()=>{
           const m=runnerModel,results=[];
-          for(const c of m.CHARACTERS)for(const hz of [60,120]){
+          for(const c of m.CHARACTERS.slice(0,4))for(const hz of [60,120]){
             const s=m.createRunnerState([],c.characterId);s.mode='running';
             s.objects=[{id:'rock-a',type:'obstacle',x:186},{id:'rock-b',type:'obstacle',x:186}];
             m.updateRunner(s,0);

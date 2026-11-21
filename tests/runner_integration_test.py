@@ -43,14 +43,14 @@ class RunnerIntegrationTest(unittest.TestCase):
     def test_locks_secret_profiles_restore_and_free(self):
         self.enter()
         self.assertEqual(self.page.locator('#formal-stage option:disabled').count(),5)
-        self.assertEqual(self.page.locator('#formal-character option').count(),4)
+        self.assertEqual(self.page.locator('#formal-character option').count(),5)
         self.page.evaluate("""async()=>{
           await runnerTransaction(['arcadePrizes'],tx=>tx.objectStore('arcadePrizes').put({id:'secret',profile:'student',prizeId:'secret_yuniko'}));
           await renderRunnerLobby();
         }""")
-        self.assertEqual(self.page.locator('#formal-character option').count(),5)
+        self.assertEqual(self.page.locator('#formal-character option').count(),6)
         self.page.evaluate("async()=>{await navigate('runner','test');}")
-        self.assertEqual(self.page.locator('#formal-character option').count(),4)
+        self.assertEqual(self.page.locator('#formal-character option').count(),5)
         self.page.frame_locator('iframe').locator('#runner-toggle').click()
         self.page.wait_for_function('formalRunner.session !== null')
         self.assertEqual(self.page.evaluate("async()=>(await readAll('coinSpends'))[0].amount"),0)
@@ -115,7 +115,7 @@ class RunnerIntegrationTest(unittest.TestCase):
         self.page.evaluate("""async()=>{
           const data=plushFixture(['secret_yuniko'],'student');await replaceAllStores(data);await renderRunnerLobby();
         }""")
-        self.assertEqual(self.page.locator('#formal-character option').count(),5)
+        self.assertEqual(self.page.locator('#formal-character option').count(),6)
         self.page.locator('#formal-character-cards [data-choice="secret_yuniko"]').click()
         self.page.evaluate("async()=>{await runnerTransaction(['arcadePrizes'],tx=>tx.objectStore('arcadePrizes').clear());}")
         self.page.frame_locator('iframe').locator('#runner-toggle').click()

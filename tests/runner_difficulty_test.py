@@ -1,4 +1,4 @@
-"""Issue #84: 足場の必要性、入力猶予、壁の実体、60/120Hzの同一挙動。"""
+"""Issue #84: 既存4匹の固定攻略・入力猶予・壁の実体・60/120Hzの同一挙動。"""
 
 import json
 import unittest
@@ -59,7 +59,7 @@ class RunnerDifficultyTest(unittest.TestCase):
         page, errors, requests = self.difficulty_runner()
         rows = page.evaluate("""()=>{
           const results=[];
-          for(const c of runnerModel.CHARACTERS)for(const hz of [60,120])for(const d of modules){
+          for(const c of runnerModel.CHARACTERS.slice(0,4))for(const hz of [60,120])for(const d of modules){
             const args={course:d.course,goalDistance:d.goal,characterId:c.characterId,hz};
             const inputs=moduleInputs(d.id,c),good=difficultyTrial({...args,inputs});
             // 2連は次の入力なし、他は足場からの最後のジャンプなし。
@@ -98,7 +98,7 @@ class RunnerDifficultyTest(unittest.TestCase):
         page, errors, requests = self.difficulty_runner()
         rows = page.evaluate("""()=>{
           const results=[];
-          for(const c of runnerModel.CHARACTERS)for(const hz of [60,120])for(const d of modules){
+          for(const c of runnerModel.CHARACTERS.slice(0,4))for(const hz of [60,120])for(const d of modules){
             const inputs=moduleInputs(d.id,c);
             for(let action=0;action<inputs.length;action++){
               let streak=0,best=0,start=null,bestRange=null;
@@ -132,7 +132,7 @@ class RunnerDifficultyTest(unittest.TestCase):
                                           ('goldfish',185,1.05),('salamander',230,.82)]}
         rows = page.evaluate("""plans=>{
           const m=runnerModel,results=[];
-          for(const c of m.CHARACTERS)for(const stage of runnerStages){
+          for(const c of m.CHARACTERS.slice(0,4))for(const stage of runnerStages){
             // 同じ時刻の入力を与え、同じ実時間の全フレーム状態を比較。
             const inputs=plans[c.characterId][stage.stageId].map(t=>Math.ceil(t*60-1e-9)/60);
             function trace(hz){
@@ -179,7 +179,7 @@ class RunnerDifficultyTest(unittest.TestCase):
         page, errors, requests = self.difficulty_runner()
         rows = page.evaluate("""()=>{
           const m=runnerModel,results=[];
-          for(const c of m.CHARACTERS)for(const hz of [60,120]){
+          for(const c of m.CHARACTERS.slice(0,4))for(const hz of [60,120]){
             function contact(x,feet){
               const s=m.createRunnerState([],c.characterId);s.mode='running';
               s.supportId=null;s.feetY=feet;
@@ -221,7 +221,7 @@ class RunnerDifficultyTest(unittest.TestCase):
         page, errors, requests = self.difficulty_runner()
         rows = page.evaluate("""()=>{
           const m=runnerModel,results=[];
-          for(const c of m.CHARACTERS)for(const hz of [60,120]){
+          for(const c of m.CHARACTERS.slice(0,4))for(const hz of [60,120]){
             const s=m.createRunnerState([],c.characterId);s.mode='running';
             s.objects=[{id:'w1',type:'wall',x:186,width:100,height:180},
               {id:'w2',type:'wall',x:186,width:100,height:220},

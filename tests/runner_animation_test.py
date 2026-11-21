@@ -3,7 +3,7 @@ import unittest
 import runner_canvas_test as canvas
 import runner_character_ui_test as ui
 
-IDS = ('shiba', 'sloth', 'goldfish', 'salamander', 'secret_yuniko')
+IDS = ('shiba', 'sloth', 'goldfish', 'salamander', 'bear', 'secret_yuniko')
 
 class RunnerAnimationTest(unittest.TestCase):
     setUpClass = classmethod(canvas.RunnerCanvasTest.setUpClass.__func__)
@@ -34,7 +34,7 @@ class RunnerAnimationTest(unittest.TestCase):
             resolve([image.naturalWidth,image.naturalHeight,ctx.getImageData(0,0,1,1).data[3]]);
           };image.src=src;
         })))""", paths)
-        self.assertEqual(rows,[[512,512,0]]*36)
+        self.assertEqual(rows,[[512,512,0]]*45)
         self.assertEqual(errors,[])
 
     def test_all_poses_alignment_fallback_and_cache(self):
@@ -85,7 +85,7 @@ class RunnerAnimationTest(unittest.TestCase):
             return [u for u in requests if '/runner/assets/' in u and 'spike-rock' not in u]
         self.assertEqual(len(sprites()),9)
         self.assertTrue(all('/shiba/' in u for u in sprites()))
-        for id in IDS[1:4]:
+        for id in IDS[1:-1]:
             self.select_character(page,id)
             self.assertEqual(len([u for u in sprites() if f'/{id}/' in u]),9)
         count=len(sprites())
@@ -121,11 +121,11 @@ class RunnerAnimationTest(unittest.TestCase):
           window.animationDraws=[];
           const original=CanvasRenderingContext2D.prototype.drawImage;
           CanvasRenderingContext2D.prototype.drawImage=function(im,...a){
-            if(im.src.includes('/plush/')||/assets\\/(sloth|goldfish|salamander)\\//.test(im.src))animationDraws.push(im.src);
+            if(im.src.includes('/plush/')||/assets\\/(sloth|goldfish|salamander|bear)\\//.test(im.src))animationDraws.push(im.src);
             return original.call(this,im,...a);
           };
         }''')
-        for id in IDS[1:4]:
+        for id in IDS[1:-1]:
             held=[]
             page.route(f'**/runner/assets/{id}/*.webp',lambda route:held.append(route))
             page.locator(f'#runner-character-cards [data-choice="{id}"]').click()
@@ -140,7 +140,10 @@ class RunnerAnimationTest(unittest.TestCase):
             self.assertGreater(page.evaluate('runnerPreviewState.distance'),0)
             for route in held:
                 route.fulfill(status=404,body='missing')
-            page.wait_for_function('runnerImages.every(i=>i.complete)')
+            try:
+                page.wait_for_function('runnerImages.every(i=>i.complete)')
+            except Exception:
+                self.fail(f'{id}: pending images '+str(page.evaluate('runnerImages.filter(i=>!i.complete).map(i=>i.src)')))
             self.settle(page)
             self.assertTrue(page.evaluate('animationDraws.at(-1)').endswith(f'/plush/{id}.webp'))
             page.evaluate("runnerPreviewState.distance=runnerPreviewState.goalDistance-1")
