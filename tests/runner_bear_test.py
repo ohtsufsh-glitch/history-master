@@ -137,8 +137,11 @@ class RunnerBearSaveTest(unittest.TestCase):
             await plushInstall(plushFixture([], 'test'));
             // Student unlocks still come from preceding clears; test can select all stages.
             await runnerTransaction(['runnerPlays'],tx=>{
-              for(const old of before.runnerPlays.filter(p=>p.status==='finished').slice(0,4))
-                tx.objectStore('runnerPlays').put({...old,id:'unlock-'+old.characterId,stageId:'S0'+(1+['shiba','sloth','goldfish','salamander'].indexOf(old.characterId)),result:{...old.result,reason:'clear',livesRemaining:1}});
+              for(const [i,characterId] of ['shiba','sloth','goldfish','salamander'].entries()) {
+                // IndexedDB returns random UUID key order, not character order.
+                const old=before.runnerPlays.find(p=>p.status==='finished'&&p.characterId===characterId);
+                tx.objectStore('runnerPlays').put({...old,id:'unlock-'+characterId,stageId:'S0'+(i+1),result:{...old.result,reason:'clear',livesRemaining:1}});
+              }
               const old=before.runnerPlays.find(p=>p.status==='finished');
               tx.objectStore('runnerPlays').put({...old,id:'unlock5',stageId:'S05',result:{...old.result,reason:'clear',livesRemaining:1}});
             });
