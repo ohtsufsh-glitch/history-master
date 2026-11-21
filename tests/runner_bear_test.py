@@ -113,7 +113,7 @@ class RunnerBearSaveTest(unittest.TestCase):
         }''')
         self.assertEqual(len(result),6)
 
-    def test_mixed_backup_old_backups_and_s05_s06_version7_resume(self):
+    def test_mixed_backup_old_backups_and_s05_s06_latest_resume(self):
         self.assertTrue(self.page.evaluate('''async()=>{
           await plushInstall(plushFixture([], 'test'));
           for(const characterId of ['shiba','sloth','goldfish','salamander','bear']) {
@@ -147,11 +147,11 @@ class RunnerBearSaveTest(unittest.TestCase):
             });
             for(const profile of ['student','test']) {
               const p=await buy({profile,stageId,characterId:'bear'});
-              if(p.stageVersion!==7)throw Error('version');
+              if(p.stageVersion!==8)throw Error('version');
               const c=await openRunnerSession(profile,p.id,{lifecycle:false});await c.resume();await c.advance(.5);await c.jump();await c.advance(.25);await c.pause();
               const snap=m.snapshotRunner(c.view.state);await c.close();
               const r=await openRunnerSession(profile,p.id,{lifecycle:false});
-              if(JSON.stringify(m.snapshotRunner(r.view.state))!==JSON.stringify(snap))throw Error('v7 restore');
+              if(JSON.stringify(m.snapshotRunner(r.view.state))!==JSON.stringify(snap))throw Error('latest restore');
               await r.resume();await r.advance(.1);await r.close();
             }
           }

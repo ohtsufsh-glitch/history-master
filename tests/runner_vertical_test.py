@@ -5,7 +5,7 @@ import unittest
 import runner_canvas_test as canvas
 import runner_phase1_test as phase1
 from runner_vertical_cases import INPUTS, UPPER
-from runner_balance_cases import INPUTS as CURRENT_INPUTS
+from runner_extension_cases import INPUTS as CURRENT_INPUTS
 VARIETY_BASE = json.loads((Path(__file__).parent/'fixtures/runner85-variety-base.json').read_text())
 BASE = json.loads((Path(__file__).parent/'fixtures/runner85-vertical-base.json').read_text())
 
@@ -36,7 +36,7 @@ class RunnerVerticalCompatibilityTest(unittest.TestCase):
         for id,inputs in CURRENT_INPUTS.items():
             self.page.evaluate("""async id=>{
               await installPhase();window.paid=await buy({stageId:id});
-              if(paid.stageVersion!==(id==='S04'?5:7)||!runnerCanResume(paid)||paid.snapshot.version!==2||DB_VERSION!==10||BACKUP_VERSION!==10)throw Error('versions');
+              if(paid.stageVersion!==(id==='S04'?5:8)||!runnerCanResume(paid)||paid.snapshot.version!==2||DB_VERSION!==10||BACKUP_VERSION!==10)throw Error('versions');
               let c=await openRunnerSession('student',paid.id,{lifecycle:false});await c.resume();await c.advance(.1);await c.pause();
             }""",id)
             self.page.reload();self.page.wait_for_function('appReady')
@@ -44,7 +44,7 @@ class RunnerVerticalCompatibilityTest(unittest.TestCase):
               const m=await loadRunnerModel(),paid=(await readAll('runnerPlays')).find(p=>p.status==='active');
               if(!runnerCanResume(paid))throw Error('reload not resumable');
               let c=await openRunnerSession('student',paid.id,{lifecycle:false});
-              if(c.view.state.stageVersion!==(id==='S04'?5:7)||c.view.state.mode!=='paused')throw Error('reload version');
+              if(c.view.state.stageVersion!==(id==='S04'?5:8)||c.view.state.mode!=='paused')throw Error('reload version');
               await c.resume();let n=0;const seen=new Set();
               while(c.view.state.mode==='running'){
                 const s=c.view.state;if(n<inputs.length&&s.elapsed+1e-8>=inputs[n]){await c.jump();n++;}await c.advance(1/60);
@@ -57,7 +57,7 @@ class RunnerVerticalCompatibilityTest(unittest.TestCase):
                 }
               }await c.flush();
               const result=c.view.savedPlay,d=await snapshotAllStores();validateBackup({backupFormat:BACKUP_FORMAT,backupVersion:10,data:d});
-              if(result.status!=='finished'||result.result.reason!=='clear'||result.score!==100||result.result.livesRemaining!==2||result.stageVersion!==(id==='S04'?5:7)||(id!=='S01'&&(!seen.has('platform')||!seen.has('topJump'))))throw Error('official clear '+JSON.stringify({id,result,seen:[...seen]}));
+              if(result.status!=='finished'||result.result.reason!=='clear'||result.score!==100||result.result.livesRemaining!==2||result.stageVersion!==(id==='S04'?5:8)||(id!=='S01'&&(!seen.has('platform')||!seen.has('topJump'))))throw Error('official clear '+JSON.stringify({id,result,seen:[...seen]}));
               if(d.coinSpends.filter(s=>s.id===paid.id).length!==1||d.coinSpends.find(s=>s.id===paid.id).amount!==30)throw Error('charge');
               const summary=summarizeRunnerPlays(d.runnerPlays,'student');
               if(summary.bestByStage[id].score!==100||summary.bestByStageCharacter[id+':shiba'].score!==100)throw Error('score');
@@ -88,7 +88,7 @@ class RunnerVerticalCompatibilityTest(unittest.TestCase):
         probe="""async()=>{
           const m=await loadRunnerModel(),p=(await readAll('runnerPlays')).find(p=>p.profile==='test'&&p.status==='active');
           const c=await openRunnerSession('test',p.id,{lifecycle:false}),s=c.view.state;
-          if(s.stageVersion!==7||!s.birds.every(b=>b.speed===120)||s.mode!=='paused')throw Error('reload state');
+          if(s.stageVersion!==8||!s.birds.every(b=>b.speed===120)||s.mode!=='paused')throw Error('reload state');
           return {snapshot:m.snapshotRunner(s),birds:s.birds.map(b=>m.birdCenter(s,b)),spikes:s.spikes.map(b=>m.spikeCenter(s,b))};
         }"""
         saved=self.page.evaluate(probe)
@@ -112,11 +112,11 @@ class RunnerVerticalCompatibilityTest(unittest.TestCase):
           }
           const old=base.states.find(r=>r.play.stageId==='S06'&&r.play.snapshot.elapsed>30).play;
           await installPhase([old]);const fresh=await purchaseRunnerPlay({profile:'test',stageId:'S06',characterId:'shiba'});
-          if(fresh.stageVersion!==7)throw Error('new purchase version');
+          if(fresh.stageVersion!==8)throw Error('new purchase version');
           const data=await snapshotAllStores(),backup=JSON.parse(JSON.stringify({backupFormat:BACKUP_FORMAT,backupVersion:10,data}));
           validateBackup(backup);await plushInstall(backup.data);
           if(JSON.stringify(data)!==JSON.stringify(await snapshotAllStores()))throw Error('mixed backup changed');
-          for(const [profile,id,version] of [['student',old.id,3],['test',fresh.id,7]]){
+          for(const [profile,id,version] of [['student',old.id,3],['test',fresh.id,8]]){
             const c=await openRunnerSession(profile,id,{lifecycle:false});
             if(c.view.state.stageVersion!==version)throw Error('mixed version');
           }return true;
