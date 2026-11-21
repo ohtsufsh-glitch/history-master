@@ -56,20 +56,20 @@ class RunnerRecordsUITest(unittest.TestCase):
 
     def test_selection_records_stage_profile_and_keyboard(self):
         self.seed();self.enter()
-        names=['しば犬','なまけもの','金魚','オオサンショウウオ']
-        for char,name in [('goldfish','金魚'),('sloth','なまけもの'),('shiba','しば犬')]:
+        names=['しば犬','なまけもの','金魚','オオサンショウウオ','くま']
+        for char,name in [('goldfish','金魚'),('sloth','なまけもの'),('shiba','しば犬'),('bear','くま')]:
             self.page.locator(f'[data-choice="{char}"]').click()
             self.assertEqual(self.page.locator('#runner-character-bests .runner-record-name').all_text_contents(),names)
             self.assertEqual(self.page.locator('#runner-character-bests .is-selected dt').inner_text(),name+'\n選択中')
             self.assertEqual(self.page.locator('#runner-character-bests .runner-record-selected').count(),1)
             self.assertIn(name+' 選択中',self.page.locator('#runner-character-bests').aria_snapshot())
-        self.assertEqual(self.page.locator('#runner-character-bests dd').all_text_contents(),['0点','記録なし','100点','記録なし'])
+        self.assertEqual(self.page.locator('#runner-character-bests dd').all_text_contents(),['0点','記録なし','100点','記録なし','記録なし'])
         self.assertNotIn('▶',self.page.locator('#runner-character-bests').inner_text())
         self.assertNotIn('ゆにこ',self.page.locator('#runner').inner_text())
         self.assertIn('100点',self.page.locator('#runner-stage-best').inner_text())
         self.page.locator('[data-choice="S02"]').click()
         self.assertIn('42点',self.page.locator('#runner-stage-best').inner_text())
-        self.assertEqual(self.page.locator('#runner-character-bests dd').all_text_contents(),['記録なし','42点','記録なし','記録なし'])
+        self.assertEqual(self.page.locator('#runner-character-bests dd').all_text_contents(),['記録なし','42点','記録なし','記録なし','記録なし'])
         summary=self.page.locator('#runner-stage-bests').locator('..').locator('summary')
         summary.focus();summary.press('Enter')
         self.assertTrue(self.page.locator('#runner-stage-bests').is_visible())

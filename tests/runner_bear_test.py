@@ -182,7 +182,10 @@ class RunnerBearUITest(unittest.TestCase):
         frame=self.page.frame_locator('iframe');frame.locator('#runner-toggle').scroll_into_view_if_needed()
         self.page.once('dialog',lambda d:d.accept());frame.locator('#runner-toggle').click()
         self.page.wait_for_function("formalRunner.session?.view.state.mode==='running'")
+        frame.locator('#runner-toggle').filter(has_text='一時停止').wait_for()
         frame.locator('#runner-jump').click();frame.locator('#runner-toggle').click()
+        frame.locator('#runner-toggle').filter(has_text='再開').wait_for()
+        self.page.wait_for_function("formalRunner.session.view.state.mode==='paused'&&!formalRunner.session.view.dirty")
         before=self.page.evaluate('formalRunner.session.view.state.distance')
         self.page.reload();self.page.wait_for_function('appReady')
         if self.page.locator('#open-runner').is_visible():

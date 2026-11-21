@@ -75,8 +75,8 @@ Issue #85のS05/S06延長は今回実装していない。
   9枚のサイズ/透過/異なる内容/実足先とfeetRatio、正式購入→一時停止→再開→clear/gameover/retire、
   student/test分離、5匹混在＋両プロフィール途中状態のbackup v10復元、旧v1/v9復元、S05/S06版7の両プロフィール保存再開。
   実画面のページ再読込→無料再開、4サイズ・200%文字・44px以上カード・秘密ロック・クマ初期記録なし。
-- 既存37件: アニメーション6、選択5、権限/プロフィール統合1、最高得点1、能力カタログ1、
-  通常5匹UI/残ハート2、ゆにこ追加ジャンプ1、セッション11、保存9。
+- 既存39件: アニメーション6、選択5、権限/プロフィール統合1、最高得点1、能力カタログ1、
+  通常5匹UI/残ハート2、最高得点一覧UI2、ゆにこ追加ジャンプ1、セッション11、保存9。
 - 既存4匹×6現行ステージ×30/60/120Hzの72トレースを、変更前mainの同じ入力/全フレームsnapshotとSHA-256比較し全一致。
 - 版管理9件、ZIP内WebPとのバイト比較、親JS・変更JS構文、差分空白、コミット後のAPP_VERSION検査。
 
@@ -90,7 +90,7 @@ Issue #85のS05/S06延長は今回実装していない。
 
 ```sh
 PYTHONPATH=tests python3 -m unittest -v \
-  runner_bear_test runner_animation_test runner_selection_test \
+  runner_bear_test runner_animation_test runner_selection_test runner_records_ui_test \
   runner_session_test.RunnerSessionTest runner_storage_test.RunnerStorageTest \
   runner_integration_test.RunnerIntegrationTest.test_locks_secret_profiles_restore_and_free \
   runner_results_test.RunnerResultsTest.test_stage_character_records_and_strict_improvements \
@@ -100,6 +100,7 @@ PYTHONPATH=tests python3 -m unittest -v \
   runner_yuniko_test.RunnerYunikoTest.test_air_jump_budget_landing_and_normal_characters
 ```
 
+初回CIで見つかった最高得点一覧の4匹固定期待を5匹へ拡張し、再読込テストは一時停止の保存完了後に進むよう同期した。該当3件を手元で再実行し成功。
 CIにはrunner_bear_testを既存Runner iframe workflowに追加。CIの確定結果はドラフトPRのChecksで確認。
 Issue #74に従い、全体回帰・クマ全6ステージ100点攻略・無関係なUFO画面試験は省略。
 Safari実機、WebKit、VoiceOver実機は未実施。
