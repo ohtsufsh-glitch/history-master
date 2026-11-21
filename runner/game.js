@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.54";
-import { STAGES, getStage } from "./stages.js?v=1.7.54";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.54";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.55";
+import { STAGES, getStage } from "./stages.js?v=1.7.55";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.55";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -972,6 +972,7 @@ function initializeRunner(session = null) {
   const livesLabel = document.getElementById("runner-lives");
   const heartsLabel = document.getElementById("runner-hearts");
   const result = document.getElementById("runner-result");
+  const retireButton = document.getElementById("runner-retire");
   const preview = document.getElementById("runner-preview");
   const stageSelect = document.getElementById("runner-stage-select");
   const stageDetails = document.getElementById("runner-stage-details");
@@ -1090,6 +1091,10 @@ function initializeRunner(session = null) {
       if(state.mode==='finished')toggle.textContent='再挑戦';
       if(session.view.error&&session.view.savedPlay) {toggle.disabled=controlBusy;toggle.textContent='最後の保存から再開（無料）';}
     }
+    const retireView=session?.view;
+    retireButton.hidden=!retireView?.savedPlay||retireView.savedPlay.status!=='active'||!['running','paused'].includes(state.mode);
+    retireButton.disabled=!active||controlBusy||!!fall||!!retireView?.error||!!retireView?.confirmingRetire;
+    if(retireView?.confirmingRetire)toggle.disabled=true;
     if(fall) {
       toggle.disabled=true;
       toggle.textContent='落下中…';
@@ -1119,8 +1124,8 @@ function initializeRunner(session = null) {
       if(session){
         const view=session.view,r=view.result;
         const confirmed=r&&!view.dirty&&!view.error&&view.savedPlay?.status==='finished';
-        document.getElementById('runner-result-title').textContent=confirmed?(r.play.result.reason==='clear'?'クリア！':'ゲームオーバー'):'結果を保存中…';
-        document.getElementById('runner-result-message').textContent=confirmed?(isFatalHoleFall(state)?'穴に落ちてしまった！もう一度挑戦しよう！':'保存しました。下のボタンで再挑戦！'):view.error?'保存できませんでした。追加コインなしで最後の保存から再開できます。':'保存が終わるまで待ってね。';
+        document.getElementById('runner-result-title').textContent=confirmed?(r.play.result.reason==='retire'?'リタイアしました':r.play.result.reason==='clear'?'クリア！':'ゲームオーバー'):'結果を保存中…';
+        document.getElementById('runner-result-message').textContent=confirmed?(r.play.result.reason==='retire'?'途中の得点は最高記録にはなりません。ステージやキャラクターを選び直せます。':isFatalHoleFall(state)?'穴に落ちてしまった！もう一度挑戦しよう！':'保存しました。下のボタンで再挑戦！'):view.error?'保存できませんでした。追加コインなしで最後の保存から再開できます。':'保存が終わるまで待ってね。';
         if(view.error)document.getElementById('runner-result-title').textContent='まだ保存できていません';
         document.getElementById('runner-result-score').textContent=confirmed?r.play.score:state.score;
         document.getElementById('runner-result-record').textContent=confirmed?(r.stageRecord||r.characterRecord||''):'';
@@ -1253,6 +1258,11 @@ function initializeRunner(session = null) {
     requestRedraw();
   });
 
+  retireButton.addEventListener('click',()=>{
+    if(!session||retireButton.disabled||stopped)return;
+    try {session.beginRetire();}catch{saveFailure();}
+    syncSession();previousTimestamp=null;updateControls();requestRedraw();
+  });
   toggle.addEventListener("click", async () => {
     if (!active || document.hidden || controlBusy || fall) return;
     if(session) {
@@ -1357,7 +1367,7 @@ function restoreRunner(play) {
     !Number.isInteger(s.airJumpsRemaining)||s.airJumpsRemaining<0||s.airJumpsRemaining>getCharacter(play.characterId).airJumps||
     s.invincibleRemaining<0||s.invincibleRemaining>1||s.hitFeedbackRemaining<0||s.hitFeedbackRemaining>HIT_FEEDBACK_SECONDS||
     ![null,'jump','fall'].includes(s.airAction)|| !['ready','paused','running','finished'].includes(s.mode)||
-    (s.mode==='finished' ? !((s.reason==='clear'&&s.distance===state.goalDistance&&s.lives>0)||(s.reason==='collision'&&s.lives===0)) : s.reason!==null||s.lives<1||s.distance>=state.goalDistance))throw new Error('途中状態の値が不正です。');
+    (s.mode==='finished' ? !((s.reason==='clear'&&s.distance===state.goalDistance&&s.lives>0)||(s.reason==='collision'&&s.lives===0)||(s.reason==='retire'&&s.lives>0&&s.distance<state.goalDistance)) : s.reason!==null||s.lives<1||s.distance>=state.goalDistance))throw new Error('途中状態の値が不正です。');
   const next=state.course.filter(e=>e.at*SCROLL_SPEED<=s.distance+1e-9).length;
   if(s.nextSpawn!==next||!Array.isArray(s.collectedStarIds)||new Set(s.collectedStarIds).size!==s.collectedStarIds.length||
     !s.collectedStarIds.every(id=>Number.isInteger(id)&&id>=0&&id<next&&state.course[id].type==='star')||
