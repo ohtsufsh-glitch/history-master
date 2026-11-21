@@ -18,7 +18,7 @@ class RunnerSelectionTest(unittest.TestCase):
     def test_normal_cards_abilities_hearts_and_keyboard(self):
         self.enter()
         cases=[('shiba','しば犬','中','中',2),('sloth','なまけもの','低','中',2),
-               ('goldfish','金魚','中','高',2),('salamander','オオサンショウウオ','高','低',3)]
+               ('goldfish','金魚','中','高',2),('salamander','オオサンショウウオ','高','低',3),('bear','くま','低','中',3)]
         for id,name,speed,jump,hearts in cases:
             card=self.card('character',id)
             card.focus();card.press('Enter')
@@ -106,7 +106,7 @@ class RunnerSelectionTest(unittest.TestCase):
 
     def test_touch_sizes_and_focus_survives_refresh(self):
         self.enter()
-        for w,h in [(390,844),(844,390),(820,1180)]:
+        for w,h in [(390,844),(844,390),(1024,768),(507,768)]:
             self.page.set_viewport_size(dict(width=w,height=h))
             card=self.card('character','salamander');card.scroll_into_view_if_needed()
             box=card.bounding_box()

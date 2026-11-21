@@ -283,9 +283,9 @@ class RunnerCanvasTest(unittest.TestCase):
     def assert_isolated(self, page, errors, requests):
         self.assertEqual(errors, [])
         self.assertEqual(page.evaluate('runnerStorageAccesses'), [])
-        # 選択カードの既存4画像だけを許可。親アプリのJSやページは読まない。
+        # 選択カードの通常5画像だけを許可。親アプリのJSやページは読まない。
         allowed = {self.url.removesuffix('runner/') + f'assets/plush/{id}.webp'
-                   for id in ('shiba', 'sloth', 'goldfish', 'salamander')}
+                   for id in ('shiba', 'sloth', 'goldfish', 'salamander', 'bear')}
         self.assertTrue(all(url.startswith(self.url) or url in allowed for url in requests), requests)
 
     def assert_geometry(self, page):
