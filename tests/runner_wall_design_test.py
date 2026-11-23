@@ -101,7 +101,7 @@ class RunnerWallDesignTest(unittest.TestCase):
         (self.out/'wall-sizes.png').write_bytes(base64.b64decode(data))
         (self.out/'paint-metrics.json').write_text(json.dumps(checks, indent=2)+'\n')
 
-    def test_latest_main_all_frame_snapshots_and_refresh_rates_match(self):
+    def test_published_courses_all_frame_snapshots_and_refresh_rates_match(self):
         results = {}
         for key in ['before','after']:
             self.frame.evaluate('key=>window.runnerModel=window[key]',key)

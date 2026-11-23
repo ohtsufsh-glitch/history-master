@@ -11,6 +11,10 @@ on:
       - 'tests/runner_vertical_test.py'
       - 'tests/runner_balance_test.py'
       - 'tests/runner_crumbling_test.py'
+      - 'tests/runner_extension_test.py'
+      - 'tests/runner_extension_cases.py'
+      - 'tests/runner_extension_probe.js'
+      - 'tests/fixtures/runner85-extension-base.json'
       - 'tests/fixtures/runner85-crumbling-base.json'
       - 'tests/runner_balance_cases.py'
       - 'tests/runner_fall_test.py'
@@ -48,7 +52,7 @@ permissions:
 jobs:
   formal-iframe:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -91,7 +95,7 @@ jobs:
       - name: Course physics and paid-play compatibility
         env:
           PYTHONPATH: tests
-        run: python -m unittest -v runner_phase1_test runner_phase2a_test runner_tuning_test runner_density_test runner_vertical_test runner_ascent_test runner_balance_test runner_crumbling_test runner_fall_test runner_session_test runner_storage_test
+        run: python -m unittest -v runner_phase1_test runner_phase2a_test runner_tuning_test runner_density_test runner_vertical_test runner_ascent_test runner_balance_test runner_crumbling_test runner_extension_test runner_fall_test runner_session_test runner_storage_test
       - name: Syntax and version checks
         run: |
           python -c "import re,pathlib; s=pathlib.Path('index.html').read_text(); pathlib.Path('/tmp/runner-parent.js').write_text(re.search(r'<script>([\s\S]*?)</script>',s)[1])"

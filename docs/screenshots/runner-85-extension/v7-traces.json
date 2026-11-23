@@ -1,0 +1,86 @@
+[
+  {
+    "id": "S05",
+    "hz": 30,
+    "omit": false,
+    "frames": 1080,
+    "sha256": "3d4bec2829a63a99e601940592653e1c37fd6faeb7fbfedd158b96bc4a7b7fcd"
+  },
+  {
+    "id": "S05",
+    "hz": 30,
+    "omit": true,
+    "frames": 826,
+    "sha256": "de3da8bc64157413cfa9def6fa16ec2aac513e0e74bb8899a8d5d783eba1aec9"
+  },
+  {
+    "id": "S05",
+    "hz": 60,
+    "omit": false,
+    "frames": 2160,
+    "sha256": "9f47caa374e7a4930bb3a2e2e8c9b9d184f5d23e9a22abde21cb1dc5942bc4d6"
+  },
+  {
+    "id": "S05",
+    "hz": 60,
+    "omit": true,
+    "frames": 1651,
+    "sha256": "ebdfc57c29d5455f8ea53416060b0a1c3e255fe36f065a40c65876949fef8ac8"
+  },
+  {
+    "id": "S05",
+    "hz": 120,
+    "omit": false,
+    "frames": 4320,
+    "sha256": "88c5864a59fdbfdfc6d7084a839397991c4d9fb9ecf50c5f1d000756069c47a0"
+  },
+  {
+    "id": "S05",
+    "hz": 120,
+    "omit": true,
+    "frames": 3301,
+    "sha256": "e3998670e405f315697d9d445434fc246f826e5c32c95319f31d34b4b3a84b3c"
+  },
+  {
+    "id": "S06",
+    "hz": 30,
+    "omit": false,
+    "frames": 1200,
+    "sha256": "490b4bbdc3396f019acd525352670d88dae69db5ac6bc222e46bb72aac47fb36"
+  },
+  {
+    "id": "S06",
+    "hz": 30,
+    "omit": true,
+    "frames": 911,
+    "sha256": "648eb937c188fe45545fcda8d5c11f4aacb97813131e2ea30298fd527ce4a332"
+  },
+  {
+    "id": "S06",
+    "hz": 60,
+    "omit": false,
+    "frames": 2400,
+    "sha256": "26569d37501f804dbc8db6744e27d7ff55c89915756b13703bd74eb005b9eb95"
+  },
+  {
+    "id": "S06",
+    "hz": 60,
+    "omit": true,
+    "frames": 1822,
+    "sha256": "82b9bf67acd311b050a554c79e090f70b211c6afd1cf8a65ae676bd57151a82b"
+  },
+  {
+    "id": "S06",
+    "hz": 120,
+    "omit": false,
+    "frames": 4800,
+    "sha256": "85f16c36308f93af0433522398edee9736497cbd2218d3800fda69c493b1dfd5"
+  },
+  {
+    "id": "S06",
+    "hz": 120,
+    "omit": true,
+    "frames": 3643,
+    "sha256": "daa34fffb88a1cdf2b6ae1711ac4067860a8e72cfe862f4cfa85736ca55eb4d1"
+  }
+]

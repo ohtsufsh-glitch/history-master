@@ -488,8 +488,39 @@ const CRUMBLING_STAGES = BALANCED_STAGES.map(stage => Object.freeze({...stage,
     }))),
 }));
 
+// Issue #85 距離延長版。版7を含む公開済みコースは上のまま固定する。
+// 新版のIDはスター再配置・全イベント追加・安定ソートを終えてから求める。
+const EXTENDED_STAGES = CRUMBLING_STAGES.map(previous => {
+  const s05 = previous.stageId === "S05";
+  const movedStarX = 420;
+  const additions = s05 ? [platform(7310,280,120), platform(7650,280,70),
+    ...stars([[7650,70]])] : [platform(7880,280,110), platform(8220,280,170),
+    platform(8560,220,100), ...stars([[8560,100]])];
+  const course = Object.freeze([...previous.course.filter(e =>
+    !(e.type === "star" && Math.abs(e.at * 200 + 822 - movedStarX) < 1e-6)),
+    ...additions].sort((a,b) => a.at-b.at).map(e => Object.freeze(e)));
+  const crumblers = previous.crumbling.map(c =>
+    [previous.course[c.id].at * 200 + 822, c.seconds]);
+  crumblers.push(...(s05 ? [[7310,1.15],[7650,.95]] : [[7880,1.15],[8220,1.15],[8560,1.00]]));
+  return Object.freeze({...previous, stageVersion: 8, goalDistance: s05 ? 8000 : 9000,
+    course,
+    holes: Object.freeze([...previous.holes, Object.freeze(s05 ?
+      {start:7180,end:7770} : {start:7810,end:8730})]),
+    birds: Object.freeze([...previous.birds, ...(s05 ? [incoming(7490,163)] :
+      [incoming(8060,153),incoming(8400,213),incoming(8720,143)]).map(b=>Object.freeze(b))]),
+    spikes: Object.freeze([...previous.spikes, ...(s05 ? [spike(7760,60,25,2.6,.5)] :
+      [spike(8190,70,20,2.5,1),spike(8540,50,20,2.3,2)]).map(s=>Object.freeze(s))]),
+    crumbling: Object.freeze(crumblers.map(([x,seconds]) => {
+      const id = course.findIndex(e=>e.type === "platform" && Math.abs(e.at * 200 + 822 - x) < 1e-6);
+      if (id < 0) throw new Error("崩れる足場が見つかりません: " + x);
+      return Object.freeze({id,seconds});
+    })),
+  });
+});
+
 // 選択・新規購入は最新版。再開は必ず(ID, 版)で引く。未知版の推測は禁止。
 const STAGES = Object.freeze(LEGACY_STAGES.map(stage =>
+  EXTENDED_STAGES.find(current => current.stageId === stage.stageId) ??
   CRUMBLING_STAGES.find(current => current.stageId === stage.stageId) ??
   BALANCED_STAGES.find(current => current.stageId === stage.stageId) ??
   ASCENT_STAGES.find(current => current.stageId === stage.stageId) ??
@@ -497,7 +528,7 @@ const STAGES = Object.freeze(LEGACY_STAGES.map(stage =>
   VERTICAL_STAGES.find(current => current.stageId === stage.stageId) ??
   DENSE_STAGES.find(current => current.stageId === stage.stageId) ?? stage));
 function getStage(stageId, stageVersion) {
-  return [...LEGACY_STAGES, ...VERSION2_STAGES, ...VERSION3_STAGES, ...DENSE_STAGES, ...VERTICAL_STAGES, ...VARIED_STAGES, ...ASCENT_STAGES, ...BALANCED_STAGES, ...CRUMBLING_STAGES].find(stage =>
+  return [...LEGACY_STAGES, ...VERSION2_STAGES, ...VERSION3_STAGES, ...DENSE_STAGES, ...VERTICAL_STAGES, ...VARIED_STAGES, ...ASCENT_STAGES, ...BALANCED_STAGES, ...CRUMBLING_STAGES, ...EXTENDED_STAGES].find(stage =>
     stage.stageId === stageId && (stage.stageVersion ?? 1) === stageVersion);
 }
 export { STAGES, LEGACY_STAGES, getStage };

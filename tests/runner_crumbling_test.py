@@ -7,6 +7,7 @@ import runner_canvas_test as canvas
 import runner_phase1_test as phase1
 from runner_vertical_test import TRIAL
 from runner_balance_cases import INPUTS
+from runner_extension_cases import HISTORICAL
 BASE=json.loads((Path(__file__).parent/'fixtures/runner85-crumbling-base.json').read_text())
 FOLDER=Path('docs/screenshots/runner-85-crumbling')
 
@@ -36,7 +37,7 @@ class RunnerCrumblingPhysicsTest(unittest.TestCase):
     def test_published_v1_v6_exact_and_v7_geometry(self):
         p=self.model()
         self.assertEqual(p.evaluate('()=>runnerModel.STAGES.flatMap(s=>Array.from({length:6},(_,i)=>runnerModel.getStage(s.stageId,i+1)).filter(Boolean))'),BASE['stages'])
-        rows=p.evaluate("""()=>runnerModel.STAGES.slice(-2).map(s=>({id:s.stageId,v:s.stageVersion,d:s.goalDistance,stars:s.course.filter(o=>o.type==='star').length,crumbling:s.crumbling}))""")
+        rows=p.evaluate("""()=>runnerModel.STAGES.slice(-2).map(s=>runnerModel.getStage(s.stageId,7)).map(s=>({id:s.stageId,v:s.stageVersion,d:s.goalDistance,stars:s.course.filter(o=>o.type==='star').length,crumbling:s.crumbling}))""")
         for r,n,d in zip(rows,[4,7],[7200,8000]):
             self.assertEqual((r['v'],r['d'],r['stars'],len(r['crumbling'])),(7,d,10,n));self.assertTrue(all(x['id']>=0 for x in r['crumbling']))
     def test_clear_30_60_120_and_sequential_three_crumblers(self):
@@ -113,7 +114,9 @@ class RunnerCrumblingPhysicsTest(unittest.TestCase):
 class RunnerCrumblingCompatibilityTest(unittest.TestCase):
     setUpClass=classmethod(phase1.RunnerPhase1CompatibilityTest.setUpClass.__func__)
     tearDownClass=classmethod(phase1.RunnerPhase1CompatibilityTest.tearDownClass.__func__)
-    setUp=phase1.RunnerPhase1CompatibilityTest.setUp
+    def setUp(self):
+        phase1.RunnerPhase1CompatibilityTest.setUp(self)
+        self.page.evaluate('()=>window.buyHistorical=('+HISTORICAL+')')
     tearDown=phase1.RunnerPhase1CompatibilityTest.tearDown
     def test_frozen_v6_paid_trajectories_and_v6_v7_mixed_backups(self):
         self.assertTrue(self.page.evaluate("""async ({base,plans,landText})=>{
@@ -122,7 +125,7 @@ class RunnerCrumblingCompatibilityTest(unittest.TestCase):
             if(JSON.stringify(m.snapshotRunner(c.view.state))!==JSON.stringify(next))throw Error('v6 trajectory');}
           for(const id of ['S05','S06']){
             const old=base.states.find(r=>r.play.stageId===id).play;await installPhase([old]);
-            const fresh=await purchaseRunnerPlay({profile:'test',stageId:id,characterId:'shiba'});if(fresh.stageVersion!==7)throw Error('purchase');
+            const fresh=await buyHistorical(id,7);if(fresh.stageVersion!==7)throw Error('purchase');
             const s=land(id,m.getStage(id,7).crumbling.at(-1).id,plans),crumble=s.crumbling.at(-1);
             for(const t of [.2,crumble.seconds-.2,.02]){
               m.updateRunner(s,t);s.mode='paused';
@@ -141,7 +144,9 @@ class RunnerCrumblingCompatibilityTest(unittest.TestCase):
 class RunnerCrumblingFormalUITest(unittest.TestCase):
     setUpClass=classmethod(phase1.RunnerPhase1CompatibilityTest.setUpClass.__func__)
     tearDownClass=classmethod(phase1.RunnerPhase1CompatibilityTest.tearDownClass.__func__)
-    setUp=phase1.RunnerPhase1CompatibilityTest.setUp
+    def setUp(self):
+        phase1.RunnerPhase1CompatibilityTest.setUp(self)
+        self.page.evaluate('()=>window.buyHistorical=('+HISTORICAL+')')
     tearDown=phase1.RunnerPhase1CompatibilityTest.tearDown
     def test_formal_touch_cracks_hide_pause_collapse_fall_phone_tablet(self):
         import subprocess
@@ -149,9 +154,9 @@ class RunnerCrumblingFormalUITest(unittest.TestCase):
         for id in ['S05','S06']:
             for width,height in [(390,844),(1024,768)]:
                 self.page.set_viewport_size(dict(width=width,height=height))
-                self.page.evaluate("async()=>{await navigate('home','student');await installPhase();}")
-                self.page.locator('#open-runner').click();self.page.locator(f'#formal-stage-cards [data-choice="{id}"]').click()
-                f=self.page.frame_locator('iframe');f.locator('#runner-toggle').filter(has_text='ゲーム開始').wait_for()
+                self.page.evaluate("async id=>{await navigate('home','student');await installPhase();await buyHistorical(id,7,'student');}",id)
+                self.page.locator('#open-runner').click()
+                f=self.page.frame_locator('iframe');f.locator('#runner-toggle').filter(has_text='再開').wait_for()
                 f.locator('body').evaluate('()=>runnerClock.step(0)');f.locator('#runner-toggle').click()
                 self.page.wait_for_function("formalRunner.session?.view.state.mode==='running'")
                 f.locator('body').evaluate('()=>runnerClock.step(0)')
@@ -195,7 +200,7 @@ class RunnerCrumblingFormalUITest(unittest.TestCase):
             if index:self.tearDown();self.setUp()
             saved=self.page.evaluate("""async ({id,plans,landText})=>{
               await installPhase();window.runnerModel=m;const land=eval('('+landText+')');
-              const p=await buy({stageId:id}),s=land(id,m.getStage(id,7).crumbling.at(-1).id,plans);
+              const p=await buyHistorical(id,7,'student'),s=land(id,m.getStage(id,7).crumbling.at(-1).id,plans);
               m.updateRunner(s,.3);s.mode='paused';await saveRunnerState('student',p.id,p.updatedAt,m.snapshotRunner(s));
               m.resumeRunner(s);m.updateRunner(s,.51);s.mode='paused';return {id:p.id,expected:m.snapshotRunner(s)};
             }""",dict(id=id,plans=INPUTS,landText=LAND))

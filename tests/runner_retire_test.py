@@ -41,7 +41,7 @@ class RunnerRetireTest(unittest.TestCase):
           window.runnerModel=m;const land=eval('('+landText+')');
           for(const falling of [false,true]){
             await install();const p=await buy({profile:'test',stageId:'S05'});
-            const s=land('S05',m.getStage('S05',7).crumbling[0].id,plans);
+            const s=land('S05',m.getStage('S05',8).crumbling[0].id,plans);
             if(falling){m.startJump(s);while(s.velocityY<=0)m.updateRunner(s,1/120);}
             await saveRunnerState('test',p.id,p.updatedAt,m.snapshotRunner(s));
             const c=await openRunnerSession('test',p.id,{lifecycle:false});await c.resume();c.beginRetire();
@@ -51,7 +51,7 @@ class RunnerRetireTest(unittest.TestCase):
             if(r.score!==s.score||r.result.livesRemaining!==s.lives||r.score===0)throw Error('score/lives');
             if((await readAll('coinSpends'))[0].amount!==0)throw Error('test price');
           }return true;
-        }""",dict(landText=LAND,plans=INPUTS)))
+        }""",dict(landText=LAND.replace('getStage(id,7)','getStage(id,8)'),plans=INPUTS)))
 
     def test_inflight_save_serializes_and_double_confirm_writes_once(self):
         self.assertTrue(self.page.evaluate("""async()=>{
