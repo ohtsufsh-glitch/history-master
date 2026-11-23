@@ -161,6 +161,12 @@ PYTHONPATH=tests python3 -m unittest -v runner_phase1_test.RunnerPhase1Compatibi
 python3 scripts/runner_extension_review.py
 ```
 
+初回CI（d654f9e）は画面関連52件中50件成功、旧描画回帰の2件が失敗した。
+固定された版7の攻略入力に対して最新版8を走っていたため、共有TRACEがS01版2・S05/S06版7を明示して読むよう修正した。
+旧fixture・入力・期待snapshot・ゲーム本体は変更せず、該当2件は10.655秒で成功。新版攻略は独立したextension suiteで検証する。
+追加試験に必要な実行時間を確保するため、既存CIジョブの上限を10分から15分へ延長した。
+ローカルの重複を除いた成功件数は、新規12＋既存関連57＋旧版保存/密度27＋版管理9＋描画固定軌道2＝107件。
+
 図の生成だけ開発用matplotlibを使用（アプリ依存は追加しない）。CIに新版試験を追加する。CI結果はPRへ記載。
 全キャラ×全コース、無関係な学習/UFOの全面回帰は省略。既存CIが実行する広い範囲はその結果を別途確認する。
 

@@ -19,10 +19,11 @@ FOLDER = ROOT / 'docs/screenshots/runner-137-spike-rock'
 BASE = json.loads((ROOT / 'tests/fixtures/runner137-spike-baseline.json').read_text())
 PLANS = {**INPUTS, 'S01': SIMPLE['S01']}
 
-# This same trace was captured from the original main module, not this edited module.
+# Published course versions used by the frozen original-main trace.
+# Latest v8 routes are tested separately in runner_extension_test.
 TRACE = """plans=>{const m=runnerModel,rows=[];
  for(const id of ['S01','S05','S06'])for(const hz of [30,60,120])for(const path of ['clear','hit']){
- const s=m.createRunnerState(m.STAGES.find(s=>s.stageId===id));s.mode='running';let n=0;const trace=[];
+ const s=m.createRunnerState(m.getStage(id,id==='S01'?2:7));s.mode='running';let n=0;const trace=[];
  while(s.mode==='running'){
  if(path==='clear'&&n<plans[id].length&&s.elapsed+1e-9>=plans[id][n]){m.startJump(s);n++;}
  m.updateRunner(s,1/hz);trace.push(JSON.stringify(m.snapshotRunner(s)));
