@@ -118,7 +118,8 @@ class RunnerBearSaveTest(unittest.TestCase):
           await plushInstall(plushFixture([], 'test'));
           for(const characterId of ['shiba','sloth','goldfish','salamander','bear']) {
             const p=await buy({characterId}),c=await openRunnerSession('student',p.id,{lifecycle:false});
-            await c.resume();for(let f=0;f<1000&&c.view.state.mode==='running';f++)await c.advance(.05);
+            await c.resume();const maxFrames=Math.ceil(c.view.state.goalDistance/c.view.state.speed/.05)+1;
+            for(let f=0;f<maxFrames&&c.view.state.mode==='running';f++)await c.advance(.05);
             if(c.view.savedPlay.result.reason!=='gameover')throw Error('end');await c.close();
           }
           for(const profile of ['student','test']) {

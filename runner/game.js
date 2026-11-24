@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.57";
-import { STAGES, getStage } from "./stages.js?v=1.7.57";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.57";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.58";
+import { STAGES, getStage } from "./stages.js?v=1.7.58";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.58";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -67,7 +67,7 @@ function loadCharacterImages(cache, id, redraw) {
 }
 const OBSTACLE_WIDTH = 80;
 // 元画像の下端2pxは透明。実体の底面Y=464を地面に合わせる。
-const OBSTACLE_IMAGE = Object.freeze({ src: "./assets/spike-rock.webp?v=1.7.53", width: OBSTACLE_WIDTH,
+const OBSTACLE_IMAGE = Object.freeze({ src: "./assets/spike-rock.webp?v=1.7.58", width: OBSTACLE_WIDTH,
   height: OBSTACLE_WIDTH * 466 / 640, feetRatio: 464 / 466 });
 const PLATFORM = Object.freeze({ width: 190, thickness: 32, height: 80, footHalfWidth: 20 });
 const BIRD_RADIUS = 28; // 輪郭を含む円。描画と当たり判定で共有。

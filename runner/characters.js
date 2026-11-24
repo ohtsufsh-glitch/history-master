@@ -13,8 +13,8 @@ function defineCharacters(definitions) {
 const CHARACTERS = defineCharacters([
   { characterId: "shiba", name: "しば犬", speed: 200, height: 120, duration: 0.90,
     ability: Object.freeze({ speed: "中", jump: "中" }), initialLives: 2, feature: "バランスよく走る", feet: 465 },
-  { characterId: "sloth", name: "なまけもの", speed: 170, height: 125, duration: 1.10,
-    ability: Object.freeze({ speed: "低", jump: "中" }), initialLives: 2, feature: "ゆっくり走る", feet: 512 },
+  { characterId: "sloth", name: "なまけもの", speed: 34, height: 125, duration: 5.50,
+    ability: Object.freeze({ speed: "低", jump: "中" }), initialLives: 2, feature: "とてもゆっくり走って、長くジャンプ", feet: 512 },
   { characterId: "goldfish", name: "金魚", speed: 185, height: 160, duration: 1.05,
     ability: Object.freeze({ speed: "中", jump: "高" }), initialLives: 2, feature: "高くジャンプ", feet: 454 },
   { characterId: "salamander", name: "オオサンショウウオ", speed: 230, height: 105, duration: 0.82,
