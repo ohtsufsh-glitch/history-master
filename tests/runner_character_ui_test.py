@@ -13,7 +13,7 @@ import runner_preview_test as preview
 
 CHARACTERS = {
     'shiba': ('しば犬', 200, 120, .90, 2),
-    'sloth': ('なまけもの', 170, 125, 1.10, 2),
+    'sloth': ('なまけもの', 34, 125, 5.50, 2),
     'goldfish': ('金魚', 185, 160, 1.05, 2),
     'salamander': ('オオサンショウウオ', 230, 105, .82, 3),
     'bear': ('くま', 180, 130, 1.00, 3),
@@ -114,7 +114,7 @@ class RunnerCharacterUITest(unittest.TestCase):
                 self.assertTrue(image.get_attribute('src').endswith(f'/assets/plush/{key}.webp'))
                 self.assertGreater(image.evaluate('image=>image.naturalWidth'), 0)
                 self.assertIn(name, page.locator('#runner-canvas').get_attribute('aria-label'))
-                self.assertIn(f'{math.ceil(8000 / speed)}秒', page.locator('#runner-stage-details').inner_text())
+                self.assertIn(f'{math.ceil(9000 / speed)}秒', page.locator('#runner-stage-details').inner_text())
         self.assert_isolated(page, errors, requests)
 
     def test_stage_and_character_are_independent_and_finished_change_resets(self):

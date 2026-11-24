@@ -42,6 +42,7 @@ on:
       - 'tests/runner_safari_test.py'
       - 'tests/runner_animation_test.py'
       - 'tests/runner_bear_test.py'
+      - 'tests/runner_sloth_test.py'
       - 'tests/runner_layout_test.py'
       - 'tests/runner_header_test.py'
       - 'tests/home_arcade_test.py'
@@ -81,6 +82,7 @@ jobs:
             runner_records_ui_test.RunnerRecordsUITest \
             runner_animation_test \
             runner_bear_test \
+            runner_sloth_test \
             runner_integration_test.RunnerIntegrationTest.test_representative_touch_layout_and_single_engine \
             runner_integration_test.RunnerIntegrationTest.test_home_formal_purchase_reload_resume_return \
             runner_integration_test.RunnerIntegrationTest.test_formal_touch_result_and_manual_return \

@@ -101,7 +101,7 @@ class RunnerCharactersTest(unittest.TestCase):
             invalid:['unknown',''].map(id=>{try{m.createRunnerState([],id);return false;}
               catch(e){return e instanceof TypeError;}})};
         }""")
-        expected = {'shiba': (200, 120, .9, 2), 'sloth': (170, 125, 1.1, 2),
+        expected = {'shiba': (200, 120, .9, 2), 'sloth': (34, 125, 5.5, 2),
                     'goldfish': (185, 160, 1.05, 2), 'salamander': (230, 105, .82, 3), 'bear': (180, 130, 1.00, 3)}
         self.assertEqual(actual['defaultId'], 'shiba')
         self.assertTrue(all(actual['invalid']))
