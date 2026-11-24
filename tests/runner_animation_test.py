@@ -49,7 +49,7 @@ class RunnerAnimationTest(unittest.TestCase):
             const context={fillText:t=>calls.push({text:t}),beginPath(){},ellipse(){},fill(){},drawImage:(im,x,y,w,h)=>calls.push({src:im.src,x,y,w,h})};
             for(const pose of Object.keys(m.ANIMATION_SETS[id].frames)) {
               state.mode=pose==='idle'?'ready':'running';state.supportId='ground';state.landingUntil=0;
-              if(pose.startsWith('run_')) state.animationTime=(Number(pose.slice(-1))-1)*.1;
+              if(pose.startsWith('run_')) state.animationTime=(Number(pose.slice(-1))-1)*(id==='sloth'?.5:.1);
               if(pose==='land')state.landingUntil=100;
               if(pose.startsWith('jump_')){state.supportId=null;state.airAction='jump';state.velocityY=pose==='jump_up'?-500:pose==='jump_down'?500:0;}
               if(m.characterPose(state)!==pose)throw Error('pose '+id+pose);
@@ -100,13 +100,15 @@ class RunnerAnimationTest(unittest.TestCase):
           const m=runnerModel;
           for(const id of ids) for(const hz of [60,120]) {
             const s=m.createRunnerState([],id);s.mode='running';
+            const frameSeconds=id==='sloth'?.5:.1;
+            if(m.ANIMATION_SETS[id].runFrameSeconds!==frameSeconds)throw Error('run frame seconds');
             for(let f=0;f<4;f++) {
               if(m.characterPose(s)!=='run_'+(f+1))throw Error('run cycle');
-              for(let i=0;i<hz/10;i++)m.updateRunner(s,1/hz);
+              for(let i=0;i<hz*frameSeconds;i++)m.updateRunner(s,1/hz);
             }
             s.mode='paused';const frozen=JSON.stringify(s);m.updateRunner(s,1);
             if(JSON.stringify(s)!==frozen)throw Error('pause');
-            s.mode='running';m.updateRunner(s,.1);if(s.animationTime<=.4)throw Error('resume');
+            s.mode='running';m.updateRunner(s,.1);if(s.animationTime<=4*frameSeconds)throw Error('resume');
             m.startJump(s);m.updateRunner(s,.1);
             if(id==='secret_yuniko') {
               if(s.lives!==3||!m.startJump(s)||s.airJumpsRemaining!==0||m.characterPose(s)!=='jump_up')throw Error('extra jump');

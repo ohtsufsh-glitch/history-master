@@ -1,6 +1,6 @@
-import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.58";
-import { STAGES, getStage } from "./stages.js?v=1.7.58";
-import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.58";
+import { describeCharacter, selectionItems, renderSelectionCards } from "./selection.js?v=1.7.59";
+import { STAGES, getStage } from "./stages.js?v=1.7.59";
+import { CHARACTERS, getCharacter } from "./characters.js?v=1.7.59";
 
 // 正式な30コイン課金を導入する際は必ずfalseにするか、試遊入口を削除する。
 // この無料入口は権限検証の代わりにはならない。課金・保存処理とは接続しない。
@@ -43,7 +43,7 @@ const ANIMATION_SETS = Object.freeze({
     bear: [449,449,449,449,449,420,404,422,449],
     secret_yuniko: [461,461,460,461,460,461,461,461,461],
   }).map(([id, feet]) => [id, Object.freeze({
-    maxSize: 100, runFrameSeconds: 0.1, bob: false,
+    maxSize: 100, runFrameSeconds: id === "sloth" ? 0.5 : 0.1, bob: false,
     frames: Object.freeze(Object.fromEntries(Object.keys(CHARACTER_SET.frames).map((pose, i) =>
       [pose, Object.freeze({src: `./assets/${id}/${pose}.webp`, feetRatio: feet[i] / 512})]))),
   })])),
@@ -67,7 +67,7 @@ function loadCharacterImages(cache, id, redraw) {
 }
 const OBSTACLE_WIDTH = 80;
 // 元画像の下端2pxは透明。実体の底面Y=464を地面に合わせる。
-const OBSTACLE_IMAGE = Object.freeze({ src: "./assets/spike-rock.webp?v=1.7.58", width: OBSTACLE_WIDTH,
+const OBSTACLE_IMAGE = Object.freeze({ src: "./assets/spike-rock.webp?v=1.7.59", width: OBSTACLE_WIDTH,
   height: OBSTACLE_WIDTH * 466 / 640, feetRatio: 464 / 466 });
 const PLATFORM = Object.freeze({ width: 190, thickness: 32, height: 80, footHalfWidth: 20 });
 const BIRD_RADIUS = 28; // 輪郭を含む円。描画と当たり判定で共有。
